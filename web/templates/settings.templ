@@ -66,6 +66,21 @@ templ settingsContent(v SettingsView) {
 		</div>
 	</form>
 	<div id="plex-test"></div>
+
+	<h2>OpenSubtitles</h2>
+	<form class="form" method="post" action="/settings/opensubtitles" hx-post="/settings/opensubtitles" hx-target="body">
+		<label>
+			API key
+			if v.OpenSubsSet {
+				<input type="password" name="api_key" placeholder="•••••••• (guardada, dejá vacío para conservar)"/>
+			} else {
+				<input type="password" name="api_key" placeholder="API key de OpenSubtitles"/>
+			}
+		</label>
+		<label>Usuario<input type="text" name="username" value={ v.OpenSubsUser } placeholder="usuario (para descargar)"/></label>
+		<label>Contraseña<input type="password" name="password" placeholder="contraseña (dejá vacío para conservar)"/></label>
+		<button type="submit" class="btn">Guardar</button>
+	</form>
 }
 
 // PlexTest renders the result of a Plex connection test.

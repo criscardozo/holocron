@@ -1,0 +1,78 @@
+package templates
+
+import "fmt"
+
+// SubtitlesBody is the dashboard subtitles widget body.
+templ SubtitlesBody(v SubtitlesCardView) {
+	if !v.Configured {
+		<p class="muted">OpenSubtitles no configurado. <a href="/settings">Configurar</a>.</p>
+	} else if v.Missing == 0 {
+		<p class="ok-badge">✓ Todo con subtítulos ES</p>
+	} else {
+		<a href="/subtitles" class="naming-count">
+			<span class="stat-val big">{ fmt.Sprintf("%d", v.Missing) }</span>
+			<span class="muted">sin subtítulos en español</span>
+		</a>
+	}
+}
+
+// SubtitlesPage lists media without Spanish subtitles and lets you search and
+// download them.
+templ SubtitlesPage(v SubtitlesPageView) {
+	@Layout("Subtítulos") {
+		<h1>Subtítulos</h1>
+		if !v.Configured {
+			<p class="muted">Configurá tu API key de OpenSubtitles en <a href="/settings">Ajustes</a>.</p>
+		} else if len(v.Rows) == 0 {
+			<p class="ok-badge">✓ Todos tus medios tienen subtítulos en español.</p>
+		} else {
+			<p class="muted">Medios sin subtítulo en español. Buscá y descargá desde OpenSubtitles.</p>
+			<ul class="sub-list">
+				for _, row := range v.Rows {
+					<li class="sub-item">
+						<div class="sub-item-head">
+							<span>{ row.Title } <span class="muted">{ yearStr(row.Year) } · { row.Type }</span></span>
+							<button class="btn secondary" hx-get={ row.SearchHref } hx-target={ "#" + row.ResultsID } hx-swap="innerHTML" hx-indicator={ "#" + row.ResultsID }>Buscar</button>
+						</div>
+						<div class="sub-results" id={ row.ResultsID }></div>
+					</li>
+				}
+			</ul>
+		}
+	}
+}
+
+// SubtitleResults is the search-results fragment for one media item.
+templ SubtitleResults(v SubtitleSearchView) {
+	if v.None {
+		<p class="muted">Sin resultados.</p>
+	} else {
+		<table class="table">
+			<tbody>
+				for _, res := range v.Results {
+					<tr>
+						<td>{ res.Language }</td>
+						<td class="mono">{ res.FileName }</td>
+						<td class="muted">{ res.Release }</td>
+						<td>
+							<form hx-post="/subtitles/download" hx-target="closest .sub-results" hx-swap="innerHTML">
+								<input type="hidden" name="file_id" value={ res.FileID }/>
+								<input type="hidden" name="path" value={ v.Path }/>
+								<button class="btn" type="submit">Descargar</button>
+							</form>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+// SubtitleDownloadResult reports the outcome of a download.
+templ SubtitleDownloadResult(ok bool, message string) {
+	if ok {
+		<span class="ok-badge">✓ { message }</span>
+	} else {
+		<span class="error">{ message }</span>
+	}
+}

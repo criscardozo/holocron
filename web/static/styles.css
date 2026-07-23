@@ -161,6 +161,13 @@ details.errors { margin-top: 1rem; font-size: 0.85rem; color: var(--muted); }
 .badge.ok { background: rgba(76,175,130,0.2); color: #4caf82; }
 .badge.no { background: rgba(255,107,107,0.15); color: #ff6b6b; }
 
+/* Subtitles */
+.sub-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.sub-item { border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.8rem; }
+.sub-item-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.sub-results { margin-top: 0.5rem; }
+.sub-results.htmx-request { opacity: 0.5; }
+
 @media (prefers-color-scheme: light) {
 	:root {
 		--bg: #f4f6f9;

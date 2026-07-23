@@ -25,6 +25,10 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	if _, ok, _ := s.deps.Settings.Get(ctx, settings.KeyPlexToken); ok {
 		view.PlexTokenSet = true
 	}
+	view.OpenSubsUser = s.deps.Settings.GetDefault(ctx, settings.KeyOpenSubtitlesUser, "")
+	if _, ok, _ := s.deps.Settings.Get(ctx, settings.KeyOpenSubtitlesKey); ok {
+		view.OpenSubsSet = true
+	}
 	for _, f := range list {
 		view.Folders = append(view.Folders, templates.SettingsFolderRow{
 			ID:      f.ID,
@@ -76,6 +80,32 @@ func (s *Server) handleSavePlex(w http.ResponseWriter, r *http.Request) {
 	// blank keeps the stored token.
 	if token := strings.TrimSpace(r.PostFormValue("token")); token != "" {
 		if err := s.deps.Settings.Set(ctx, settings.KeyPlexToken, token); err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+	}
+	s.redirect(w, r, "/settings")
+}
+
+func (s *Server) handleSaveOpenSubtitles(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	// Username is always stored (may be blank); secrets only when provided.
+	if err := s.deps.Settings.Set(ctx, settings.KeyOpenSubtitlesUser, strings.TrimSpace(r.PostFormValue("username"))); err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	if key := strings.TrimSpace(r.PostFormValue("api_key")); key != "" {
+		if err := s.deps.Settings.Set(ctx, settings.KeyOpenSubtitlesKey, key); err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+	}
+	if pass := r.PostFormValue("password"); pass != "" {
+		if err := s.deps.Settings.Set(ctx, settings.KeyOpenSubtitlesPass, pass); err != nil {
 			s.serverError(w, r, err)
 			return
 		}
