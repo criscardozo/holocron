@@ -74,6 +74,15 @@ func (s *Service) MissingItems(ctx context.Context, limit int) ([]MissingItem, e
 	return out, rows.Err()
 }
 
+// isKnownMediaFolder reports whether folder is a path Holocron recorded in the
+// media inventory. Client-supplied paths are only trusted if they match.
+func (s *Service) isKnownMediaFolder(ctx context.Context, folder string) bool {
+	var one int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT 1 FROM media_items WHERE path = ?`, folder).Scan(&one)
+	return err == nil
+}
+
 func (s *Service) client(ctx context.Context) (*opensubtitles.Client, error) {
 	key := s.settings.GetDefault(ctx, settings.KeyOpenSubtitlesKey, "")
 	if key == "" {
@@ -93,7 +102,14 @@ func (s *Service) Search(ctx context.Context, title string, year int) ([]opensub
 
 // Download fetches the subtitle for fileID and writes it into folder as a
 // ".es.srt" file, then marks the media item as having a Spanish subtitle.
+//
+// folder is supplied by the client, so it MUST be validated: only folders that
+// Holocron itself recorded in the inventory (from Plex) are writable. This
+// prevents an arbitrary file write to any path on the host.
 func (s *Service) Download(ctx context.Context, fileID int, folder string) (string, error) {
+	if !s.isKnownMediaFolder(ctx, folder) {
+		return "", fmt.Errorf("unknown media folder: %s", folder)
+	}
 	c, err := s.client(ctx)
 	if err != nil {
 		return "", err
