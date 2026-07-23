@@ -1,0 +1,25 @@
+package templates
+
+// Widget is the card shell for a dashboard widget: a title, a small refresh
+// button that re-fetches just this card, and an arbitrary body. The refresh
+// button swaps the whole card (outerHTML) with the response of
+// GET /widgets/{id}.
+templ Widget(id string, title string, body templ.Component) {
+	<section class="widget" id={ "widget-" + id }>
+		<header class="widget-head">
+			<h2>{ title }</h2>
+			<button
+				class="refresh"
+				hx-get={ "/widgets/" + id }
+				hx-target={ "#widget-" + id }
+				hx-swap="outerHTML"
+				hx-indicator={ "#widget-" + id }
+				aria-label="Refrescar"
+				title="Refrescar"
+			>&#8635;</button>
+		</header>
+		<div class="widget-body">
+			@body
+		</div>
+	</section>
+}

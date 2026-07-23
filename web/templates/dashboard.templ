@@ -1,0 +1,9 @@
+package templates
+
+// Dashboard renders the widget grid (built in Go, see Grid) inside the shared
+// layout.
+templ Dashboard(grid templ.Component) {
+	@Layout("Dashboard") {
+		@grid
+	}
+}

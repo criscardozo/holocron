@@ -1,0 +1,26 @@
+package templates
+
+// Layout is the outer HTML shell shared by every page. hx-boost on the body
+// turns plain links into partial navigation without any custom JavaScript.
+templ Layout(title string) {
+	<!DOCTYPE html>
+	<html lang="es">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title } · Holocron</title>
+			<link rel="icon" href="/static/favicon.svg"/>
+			<link rel="stylesheet" href="/static/styles.css"/>
+			<script src="/static/htmx.min.js" defer></script>
+		</head>
+		<body hx-boost="true">
+			<header class="topbar">
+				<a class="brand" href="/">Holocron</a>
+				<span class="tagline">HTPC Manager</span>
+			</header>
+			<main class="container">
+				{ children... }
+			</main>
+		</body>
+	</html>
+}

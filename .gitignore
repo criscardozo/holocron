@@ -1,0 +1,18 @@
+# Build output
+/dist/
+/holocron
+
+# Local data / DB
+*.db
+*.db-wal
+*.db-shm
+
+# OS junk
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+
+# Agent instructions (local only)
+CLAUDE.md
