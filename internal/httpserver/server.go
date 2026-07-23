@@ -15,6 +15,7 @@ import (
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/settings"
+	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/widgets"
 	"github.com/cristian/holocron/web"
 	"github.com/cristian/holocron/web/templates"
@@ -23,13 +24,14 @@ import (
 // Deps are the dependencies shared by the HTTP handlers. Later phases add their
 // own services here.
 type Deps struct {
-	Log      *slog.Logger
-	Widgets  *widgets.Registry
-	Folders  *folders.Store
-	Disk     *diskusage.Service
-	Naming   *naming.Service
-	Settings *settings.Store
-	Library  *library.Service
+	Log       *slog.Logger
+	Widgets   *widgets.Registry
+	Folders   *folders.Store
+	Disk      *diskusage.Service
+	Naming    *naming.Service
+	Settings  *settings.Store
+	Library   *library.Service
+	Subtitles *subtitles.Service
 }
 
 // Server serves the Holocron web UI.
@@ -73,12 +75,18 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /media/nfo", s.handleMediaNFO)
 	mux.HandleFunc("GET /media/status", s.handleMediaStatus)
 
-	// Phase 1: settings (watched folders) + Plex credentials.
+	// Phase 4: subtitles (OpenSubtitles).
+	mux.HandleFunc("GET /subtitles", s.handleSubtitlesPage)
+	mux.HandleFunc("GET /subtitles/search", s.handleSubtitlesSearch)
+	mux.HandleFunc("POST /subtitles/download", s.handleSubtitlesDownload)
+
+	// Phase 1: settings (watched folders) + service credentials.
 	mux.HandleFunc("GET /settings", s.handleSettings)
 	mux.HandleFunc("POST /settings/folders", s.handleAddFolder)
 	mux.HandleFunc("POST /settings/folders/delete", s.handleDeleteFolder)
 	mux.HandleFunc("POST /settings/plex", s.handleSavePlex)
 	mux.HandleFunc("GET /settings/plex/test", s.handlePlexTest)
+	mux.HandleFunc("POST /settings/opensubtitles", s.handleSaveOpenSubtitles)
 
 	return chain(mux, s.recoverer, s.logRequests, securityHeaders, gzipMW)
 }

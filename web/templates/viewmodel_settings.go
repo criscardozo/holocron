@@ -8,6 +8,8 @@ type SettingsView struct {
 	Notice       string
 	PlexURL      string
 	PlexTokenSet bool
+	OpenSubsUser string
+	OpenSubsSet  bool
 }
 
 // SettingsFolderRow is one configured watched folder.
