@@ -1,0 +1,60 @@
+package templates
+
+import "fmt"
+
+// NamingCard is the dashboard naming widget. Its refresh button re-scans (the
+// scan is cheap: a top-level readdir plus a regex) and swaps the card in place.
+templ NamingCard(v NamingCardView) {
+	<section class="widget" id="widget-naming">
+		<header class="widget-head">
+			<h2>Nombres</h2>
+			<button class="refresh" hx-post="/naming/scan" hx-target="#widget-naming" hx-swap="outerHTML" hx-indicator="#widget-naming" aria-label="Escanear" title="Escanear">&#8635;</button>
+		</header>
+		<div class="widget-body">
+			if !v.HasMediaFolders {
+				<p class="muted">Configurá carpetas de Películas/Series en <a href="/settings">Ajustes</a>.</p>
+			} else if v.Count == 0 {
+				<p class="ok-badge">✓ Todo cumple «Título (Año)»</p>
+			} else {
+				<a href="/naming" class="naming-count">
+					<span class="stat-val big">{ fmt.Sprintf("%d", v.Count) }</span>
+					<span class="muted">carpetas con nombre inválido</span>
+				</a>
+			}
+		</div>
+	</section>
+}
+
+// NamingPage lists the folders that break the convention.
+templ NamingPage(v NamingPageView) {
+	@Layout("Nombres") {
+		@namingContent(v)
+	}
+}
+
+templ namingContent(v NamingPageView) {
+	<h1>Convención de nombres</h1>
+	<p class="muted">Las carpetas de Películas y Series deberían llamarse «Título (Año)».</p>
+	<form method="post" action="/naming/scan" hx-post="/naming/scan?to=page" hx-target="body">
+		<button class="btn" type="submit">Escanear ahora</button>
+	</form>
+	if !v.HasMediaFolders {
+		<p class="muted">No hay carpetas de Películas/Series configuradas. Agregá una en <a href="/settings">Ajustes</a>.</p>
+	} else if v.Count == 0 {
+		<p class="ok-badge">✓ Todas las carpetas cumplen la convención.</p>
+	} else {
+		<h2>{ fmt.Sprintf("%d carpetas con problemas", v.Count) }</h2>
+		<table class="table">
+			<thead><tr><th>Tipo</th><th>Nombre actual</th><th>Sugerido</th></tr></thead>
+			<tbody>
+				for _, is := range v.Issues {
+					<tr>
+						<td>{ is.Type }</td>
+						<td class="mono">{ is.Found }</td>
+						<td class="mono">{ is.Expected }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}

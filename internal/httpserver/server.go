@@ -12,6 +12,7 @@ import (
 
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
+	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/widgets"
 	"github.com/cristian/holocron/web"
 	"github.com/cristian/holocron/web/templates"
@@ -24,6 +25,7 @@ type Deps struct {
 	Widgets *widgets.Registry
 	Folders *folders.Store
 	Disk    *diskusage.Service
+	Naming  *naming.Service
 }
 
 // Server serves the Holocron web UI.
@@ -56,6 +58,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /disk/scan", s.handleDiskScan)
 	mux.HandleFunc("GET /disk/status", s.handleDiskStatus)
 	mux.HandleFunc("GET /disk/browse", s.handleDiskBrowse)
+
+	// Phase 2: naming validator.
+	mux.HandleFunc("GET /naming", s.handleNamingPage)
+	mux.HandleFunc("POST /naming/scan", s.handleNamingScan)
 
 	// Phase 1: settings (watched folders).
 	mux.HandleFunc("GET /settings", s.handleSettings)
