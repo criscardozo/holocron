@@ -3,6 +3,12 @@
 Se construye escalado: cada fase deja algo usable y desplegable en la Pi antes de
 pasar a la siguiente. Los números de feature refieren a los pedidos originales.
 
+## Estado
+
+Fases 0 a 5 implementadas, con tests (incluido `-race`) y binario `arm64`
+cross-compilado. El login por PIN de Plex (`plexauth`) quedó como mejora futura: la
+conexión a Plex se configura con URL + token en Ajustes.
+
 ## Fase 0 — Fundaciones
 
 Base sobre la que se apoya todo. No entrega ninguna herramienta todavía, pero sí un
