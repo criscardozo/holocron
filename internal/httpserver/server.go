@@ -3,7 +3,6 @@
 package httpserver
 
 import (
-	"database/sql"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -11,23 +10,31 @@ import (
 
 	"github.com/a-h/templ"
 
-	"github.com/cristian/holocron/internal/jobs"
+	"github.com/cristian/holocron/internal/diskusage"
+	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/widgets"
 	"github.com/cristian/holocron/web"
 	"github.com/cristian/holocron/web/templates"
 )
 
-// Server holds the dependencies shared by the HTTP handlers.
+// Deps are the dependencies shared by the HTTP handlers. Later phases add their
+// own services here.
+type Deps struct {
+	Log     *slog.Logger
+	Widgets *widgets.Registry
+	Folders *folders.Store
+	Disk    *diskusage.Service
+}
+
+// Server serves the Holocron web UI.
 type Server struct {
-	log     *slog.Logger
-	db      *sql.DB
-	jobs    *jobs.Manager
-	widgets *widgets.Registry
+	deps Deps
+	log  *slog.Logger
 }
 
 // New creates a Server.
-func New(log *slog.Logger, database *sql.DB, jm *jobs.Manager, reg *widgets.Registry) *Server {
-	return &Server{log: log, db: database, jobs: jm, widgets: reg}
+func New(d Deps) *Server {
+	return &Server{deps: d, log: d.Log}
 }
 
 // Handler builds the fully wrapped HTTP handler.
@@ -36,8 +43,7 @@ func (s *Server) Handler() http.Handler {
 
 	staticFS, err := fs.Sub(web.StaticFS, "static")
 	if err != nil {
-		// Embedded FS layout is fixed at build time; a failure here is a bug.
-		panic(err)
+		panic(err) // embedded layout is fixed at build time
 	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(staticFS)))
 
@@ -45,17 +51,27 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /{$}", s.handleDashboard)
 	mux.HandleFunc("GET /widgets/{id}", s.handleWidget)
 
-	// Outermost first.
+	// Phase 1: disk usage.
+	mux.HandleFunc("GET /disk", s.handleDiskPage)
+	mux.HandleFunc("POST /disk/scan", s.handleDiskScan)
+	mux.HandleFunc("GET /disk/status", s.handleDiskStatus)
+	mux.HandleFunc("GET /disk/browse", s.handleDiskBrowse)
+
+	// Phase 1: settings (watched folders).
+	mux.HandleFunc("GET /settings", s.handleSettings)
+	mux.HandleFunc("POST /settings/folders", s.handleAddFolder)
+	mux.HandleFunc("POST /settings/folders/delete", s.handleDeleteFolder)
+
 	return chain(mux, s.recoverer, s.logRequests, securityHeaders, gzipMW)
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	grid := templates.Grid(s.widgets.Cards(r.Context()))
+	grid := templates.Grid(s.deps.Widgets.Cards(r.Context()))
 	s.render(w, r, templates.Dashboard(grid))
 }
 
 func (s *Server) handleWidget(w http.ResponseWriter, r *http.Request) {
-	widget, ok := s.widgets.Get(r.PathValue("id"))
+	widget, ok := s.deps.Widgets.Get(r.PathValue("id"))
 	if !ok {
 		http.NotFound(w, r)
 		return
@@ -75,4 +91,15 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, c templ.Componen
 	if err := c.Render(r.Context(), w); err != nil {
 		s.log.Error("render component", "path", r.URL.Path, "error", err)
 	}
+}
+
+// redirect sends the client to url. For HTMX requests it uses HX-Redirect so
+// the browser performs a full navigation; otherwise a 303.
+func (s *Server) redirect(w http.ResponseWriter, r *http.Request, url string) {
+	if r.Header.Get("HX-Request") != "" {
+		w.Header().Set("HX-Redirect", url)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	http.Redirect(w, r, url, http.StatusSeeOther)
 }

@@ -44,7 +44,7 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " · Holocron</title><link rel=\"icon\" href=\"/static/favicon.svg\"><link rel=\"stylesheet\" href=\"/static/styles.css\"><script src=\"/static/htmx.min.js\" defer></script></head><body hx-boost=\"true\"><header class=\"topbar\"><a class=\"brand\" href=\"/\">Holocron</a> <span class=\"tagline\">HTPC Manager</span></header><main class=\"container\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " · Holocron</title><link rel=\"icon\" href=\"/static/favicon.svg\"><link rel=\"stylesheet\" href=\"/static/styles.css\"><script src=\"/static/htmx.min.js\" defer></script></head><body hx-boost=\"true\"><header class=\"topbar\"><a class=\"brand\" href=\"/\">Holocron</a> <span class=\"tagline\">HTPC Manager</span><nav class=\"nav\"><a href=\"/\">Dashboard</a> <a href=\"/disk\">Disco</a> <a href=\"/naming\">Nombres</a> <a href=\"/media\">Medios</a> <a href=\"/subtitles\">Subtítulos</a> <a href=\"/torrents\">Torrents</a> <a href=\"/settings\">Ajustes</a></nav></header><main class=\"container\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

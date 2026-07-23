@@ -1,0 +1,51 @@
+package templates
+
+// SettingsPage lets the user manage watched folders.
+templ SettingsPage(v SettingsView) {
+	@Layout("Ajustes") {
+		@settingsContent(v)
+	}
+}
+
+templ settingsContent(v SettingsView) {
+	<h1>Ajustes</h1>
+	if v.Notice != "" {
+		<div class="notice">{ v.Notice }</div>
+	}
+	<h2>Carpetas vigiladas</h2>
+	if len(v.Folders) == 0 {
+		<p class="muted">Todavía no hay carpetas.</p>
+	} else {
+		<table class="table">
+			<thead><tr><th>Etiqueta</th><th>Ruta</th><th>Tipo</th><th></th></tr></thead>
+			<tbody>
+				for _, f := range v.Folders {
+					<tr>
+						<td>{ f.Label }</td>
+						<td class="mono">{ f.Path }</td>
+						<td>{ f.Purpose }</td>
+						<td>
+							<form method="post" action="/settings/folders/delete" hx-post="/settings/folders/delete" hx-confirm="¿Quitar esta carpeta?" hx-target="body">
+								<input type="hidden" name="id" value={ intToStr(f.ID) }/>
+								<button type="submit" class="btn danger">Quitar</button>
+							</form>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+	<h2>Agregar carpeta</h2>
+	<form class="form" method="post" action="/settings/folders" hx-post="/settings/folders" hx-target="body">
+		<label>Etiqueta<input type="text" name="label" required placeholder="Películas"/></label>
+		<label>Ruta<input type="text" name="path" required placeholder="/mnt/media/movies"/></label>
+		<label>Tipo
+			<select name="purpose">
+				for _, p := range v.Purposes {
+					<option value={ p }>{ p }</option>
+				}
+			</select>
+		</label>
+		<button type="submit" class="btn">Agregar</button>
+	</form>
+}
