@@ -1,0 +1,12 @@
+package templates
+
+// SystemBody renders the metrics of the system widget.
+templ SystemBody(v SystemView) {
+	<ul class="stat-list">
+		<li><span class="stat-key">CPU</span><span class="stat-val">{ v.CPU }</span></li>
+		<li><span class="stat-key">RAM</span><span class="stat-val">{ v.RAM }</span></li>
+		<li><span class="stat-key">Temp</span><span class="stat-val">{ v.Temp }</span></li>
+		<li><span class="stat-key">Uptime</span><span class="stat-val">{ v.Uptime }</span></li>
+		<li><span class="stat-key">Load</span><span class="stat-val">{ v.Load }</span></li>
+	</ul>
+}

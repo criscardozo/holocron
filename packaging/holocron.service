@@ -1,0 +1,29 @@
+[Unit]
+Description=Holocron HTPC manager
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/holocron --addr :8080
+Restart=on-failure
+RestartSec=3
+
+# Run as an unprivileged user. Create it once on the Pi:
+#   sudo useradd --system --home /var/lib/holocron --create-home holocron
+User=holocron
+Group=holocron
+
+# The DB lives under the service's state directory (/var/lib/holocron).
+Environment=HOLOCRON_DB=/var/lib/holocron/holocron.db
+StateDirectory=holocron
+
+# Hardening. Note: the media/library paths Holocron scans must remain readable
+# by this user; add ReadWritePaths / ReadOnlyPaths as needed once configured.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

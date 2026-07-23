@@ -1,0 +1,22 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose
+    - nilerr
+    - errorlint
+
+  exclusions:
+    generated: lax
+    paths:
+      # templ codegen output
+      - ".*_templ\\.go$"
+
+formatters:
+  enable:
+    - gofmt
