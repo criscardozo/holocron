@@ -168,6 +168,12 @@ details.errors { margin-top: 1rem; font-size: 0.85rem; color: var(--muted); }
 .sub-results { margin-top: 0.5rem; }
 .sub-results.htmx-request { opacity: 0.5; }
 
+/* Torrents */
+.magnet-form { max-width: 640px; margin-bottom: 1.5rem; }
+.torrent-actions { display: flex; gap: 0.3rem; }
+.torrent-actions form { display: inline; }
+#torrents-table .bar { min-width: 80px; }
+
 @media (prefers-color-scheme: light) {
 	:root {
 		--bg: #f4f6f9;

@@ -81,6 +81,21 @@ templ settingsContent(v SettingsView) {
 		<label>Contraseña<input type="password" name="password" placeholder="contraseña (dejá vacío para conservar)"/></label>
 		<button type="submit" class="btn">Guardar</button>
 	</form>
+
+	<h2>qBittorrent</h2>
+	<form class="form" method="post" action="/settings/qbittorrent" hx-post="/settings/qbittorrent" hx-target="body">
+		<label>URL de la WebUI<input type="text" name="url" value={ v.QbitURL } placeholder="http://127.0.0.1:8080"/></label>
+		<label>Usuario<input type="text" name="username" value={ v.QbitUser } placeholder="admin"/></label>
+		<label>
+			Contraseña
+			if v.QbitSet {
+				<input type="password" name="password" placeholder="•••••••• (guardada, dejá vacío para conservar)"/>
+			} else {
+				<input type="password" name="password" placeholder="contraseña de la WebUI"/>
+			}
+		</label>
+		<button type="submit" class="btn">Guardar</button>
+	</form>
 }
 
 // PlexTest renders the result of a Plex connection test.

@@ -10,6 +10,9 @@ type SettingsView struct {
 	PlexTokenSet bool
 	OpenSubsUser string
 	OpenSubsSet  bool
+	QbitURL      string
+	QbitUser     string
+	QbitSet      bool
 }
 
 // SettingsFolderRow is one configured watched folder.
