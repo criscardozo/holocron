@@ -95,19 +95,21 @@ var ErrKindBusy = fmt.Errorf("a job of this kind is already running")
 
 // Manager tracks jobs and enforces one-per-kind concurrency.
 type Manager struct {
-	mu      sync.Mutex
-	byID    map[string]*jobState
-	running map[string]*jobState // kind -> running job
-	now     func() time.Time
-	seq     int
+	mu         sync.Mutex
+	byID       map[string]*jobState
+	running    map[string]*jobState // kind -> running job
+	lastByKind map[string]string    // kind -> most recent job id
+	now        func() time.Time
+	seq        int
 }
 
 // NewManager creates an empty job manager.
 func NewManager() *Manager {
 	return &Manager{
-		byID:    make(map[string]*jobState),
-		running: make(map[string]*jobState),
-		now:     time.Now,
+		byID:       make(map[string]*jobState),
+		running:    make(map[string]*jobState),
+		lastByKind: make(map[string]string),
+		now:        time.Now,
 	}
 }
 
@@ -129,6 +131,7 @@ func (m *Manager) Start(kind string, fn Func) (Job, error) {
 	}
 	m.byID[st.id] = st
 	m.running[kind] = st
+	m.lastByKind[kind] = st.id
 	m.mu.Unlock()
 
 	go m.run(st, fn)
@@ -182,4 +185,16 @@ func (m *Manager) IsRunning(kind string) bool {
 	defer m.mu.Unlock()
 	_, ok := m.running[kind]
 	return ok
+}
+
+// Latest returns a snapshot of the most recent job of the given kind (running
+// or finished), or false if none has ever run.
+func (m *Manager) Latest(kind string) (Job, bool) {
+	m.mu.Lock()
+	id, ok := m.lastByKind[kind]
+	m.mu.Unlock()
+	if !ok {
+		return Job{}, false
+	}
+	return m.Get(id)
 }

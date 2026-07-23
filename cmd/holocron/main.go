@@ -13,6 +13,8 @@ import (
 
 	"github.com/cristian/holocron/internal/config"
 	"github.com/cristian/holocron/internal/db"
+	"github.com/cristian/holocron/internal/diskusage"
+	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/httpserver"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/widgets"
@@ -39,8 +41,20 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	defer func() { _ = database.Close() }()
 
 	jobManager := jobs.NewManager()
-	registry := widgets.NewRegistry(widgets.SystemWidget{})
-	srv := httpserver.New(logger, database, jobManager, registry)
+	folderStore := folders.NewStore(database)
+	diskService := diskusage.NewService(database, folderStore, jobManager)
+
+	registry := widgets.NewRegistry(
+		widgets.SystemWidget{},
+		widgets.NewDiskWidget(folderStore),
+	)
+
+	srv := httpserver.New(httpserver.Deps{
+		Log:     logger,
+		Widgets: registry,
+		Folders: folderStore,
+		Disk:    diskService,
+	})
 
 	httpSrv := &http.Server{
 		Addr:              cfg.Addr,

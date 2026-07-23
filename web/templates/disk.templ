@@ -1,0 +1,164 @@
+package templates
+
+import "fmt"
+
+// DiskWidgetBody is the dashboard disk widget body: one row per watched disk
+// folder with its filesystem usage.
+templ DiskWidgetBody(v DiskWidgetView) {
+	if v.Empty {
+		<p class="muted">Sin carpetas configuradas. <a href="/settings">Agregar</a>.</p>
+	} else {
+		<ul class="disk-rows">
+			for _, row := range v.Rows {
+				<li>
+					<a class="disk-row" href={ templ.SafeURL(row.Href) }>
+						<div class="disk-row-head">
+							<span>{ row.Name }</span>
+							if row.Err == "" {
+								<span class="stat-val">{ fmt.Sprintf("%d%%", row.UsedPercent) }</span>
+							} else {
+								<span class="stat-val error">error</span>
+							}
+						</div>
+						if row.Err == "" {
+							@bar(row.UsedPercent)
+							<div class="disk-row-sub">{ row.UsedHuman } / { row.TotalHuman }</div>
+						} else {
+							<div class="disk-row-sub error">{ row.Err }</div>
+						}
+					</a>
+				</li>
+			}
+		</ul>
+	}
+}
+
+// bar renders a proportion bar filled to pct percent.
+templ bar(pct int) {
+	<div class="bar"><div class="bar-fill" style={ fmt.Sprintf("width:%d%%", clampPct(pct)) }></div></div>
+}
+
+// DiskPage is the disk detail page.
+templ DiskPage(v DiskPageView) {
+	@Layout("Disco") {
+		@diskContent(v)
+	}
+}
+
+templ diskContent(v DiskPageView) {
+	<h1>Uso de disco</h1>
+	if v.Empty {
+		<p class="muted">No hay carpetas de disco configuradas. Agregá una en <a href="/settings">Ajustes</a>.</p>
+	} else {
+		<nav class="tabs">
+			for _, item := range v.Nav {
+				<a class={ "tab", templ.KV("active", item.Active) } href={ templ.SafeURL(item.Href) }>{ item.Label }</a>
+			}
+		</nav>
+		if v.Selected != nil {
+			@DiskDetailSection(*v.Selected)
+		}
+	}
+}
+
+// DiskDetailSection is the per-folder detail; it is re-fetched via hx-select
+// after a scan completes, so it carries a stable id.
+templ DiskDetailSection(d DiskDetail) {
+	<section id="disk-detail" class="disk-detail">
+		<div class="disk-summary">
+			<div>
+				<div class="stat-val big">{ fmt.Sprintf("%d%%", d.UsedPercent) }</div>
+				<div class="muted">{ d.UsedHuman } usados de { d.TotalHuman } · { d.FreeHuman } libres</div>
+			</div>
+			<form method="post" action="/disk/scan" hx-post="/disk/scan" hx-target="#scan-status" hx-swap="innerHTML">
+				<input type="hidden" name="folder" value={ d.FolderID }/>
+				<button type="submit" class="btn" disabled?={ d.Scanning }>
+					if d.Scanning {
+						Escaneando…
+					} else {
+						Escanear
+					}
+				</button>
+			</form>
+		</div>
+		@bar(d.UsedPercent)
+		<div id="scan-status">
+			if d.Scanning {
+				@ScanStatus(ScanStatusView{Running: true, StatusHref: "/disk/status?folder=" + d.FolderID})
+			}
+		</div>
+		if d.HasResult {
+			<h2>Carpetas más grandes <span class="muted">({ d.ScannedAt })</span></h2>
+			<ul class="top-list">
+				for _, t := range d.Top {
+					<li>
+						<a class="top-row" href="#" hx-get={ t.BrowseHref } hx-target="#browse" hx-swap="innerHTML">
+							<div class="disk-row-head"><span>{ t.Name }</span><span class="stat-val">{ t.BytesHuman }</span></div>
+							@bar(t.Percent)
+						</a>
+					</li>
+				}
+			</ul>
+			@errorList(d.Errors)
+			<h2>Explorar</h2>
+			<div id="browse"><p class="muted">Clickeá una carpeta de arriba para explorarla.</p></div>
+		} else if !d.Scanning {
+			<p class="muted">Todavía no se escaneó esta carpeta. Tocá «Escanear».</p>
+		}
+	</section>
+}
+
+templ errorList(errs []string) {
+	if len(errs) > 0 {
+		<details class="errors">
+			<summary>{ fmt.Sprintf("%d avisos", len(errs)) }</summary>
+			<ul>
+				for _, e := range errs {
+					<li>{ e }</li>
+				}
+			</ul>
+		</details>
+	}
+}
+
+// ScanStatus is the scan progress fragment. While running it polls itself; when
+// done it triggers a reload of the detail section.
+templ ScanStatus(v ScanStatusView) {
+	if v.Running {
+		<div class="scan-status running" hx-get={ v.StatusHref } hx-trigger="every 2s" hx-swap="outerHTML">
+			<span class="spinner"></span> Escaneando…
+		</div>
+	} else if v.Error != "" {
+		<div class="scan-status error">Error: { v.Error }</div>
+	} else {
+		<div class="scan-status done" hx-get={ v.ReloadHref } hx-trigger="load delay:300ms" hx-select="#disk-detail" hx-target="#disk-detail" hx-swap="outerHTML">
+			Listo. { v.Summary }
+		</div>
+	}
+}
+
+// BrowseFragment is one level of the drill-down.
+templ BrowseFragment(v BrowseView) {
+	<div class="browse">
+		<div class="browse-head">
+			<span class="muted">{ v.Path }</span>
+			<span class="stat-val">{ v.TotalHuman }</span>
+		</div>
+		if v.HasParent {
+			<a class="browse-up" href="#" hx-get={ v.ParentHref } hx-target="#browse" hx-swap="innerHTML">↑ Subir</a>
+		}
+		<ul class="browse-list">
+			for _, e := range v.Entries {
+				<li>
+					if e.IsDir {
+						<a class="browse-row dir" href="#" hx-get={ e.BrowseHref } hx-target="#browse" hx-swap="innerHTML">
+							<span>📁 { e.Name }</span><span class="stat-val">{ e.BytesHuman }</span>
+						</a>
+					} else {
+						<div class="browse-row file"><span>📄 { e.Name }</span><span class="stat-val">{ e.BytesHuman }</span></div>
+					}
+				</li>
+			}
+		</ul>
+	</div>
+}

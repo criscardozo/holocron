@@ -41,3 +41,7 @@ En planificación. Ver el [roadmap por fases](docs/roadmap.md).
 - [Arquitectura y decisiones técnicas](docs/arquitectura.md)
 - [Roadmap por fases](docs/roadmap.md)
 - [Especificación de features](docs/features.md)
+
+## Licencia
+
+[MIT](LICENSE).
