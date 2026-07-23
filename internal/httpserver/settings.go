@@ -29,6 +29,11 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	if _, ok, _ := s.deps.Settings.Get(ctx, settings.KeyOpenSubtitlesKey); ok {
 		view.OpenSubsSet = true
 	}
+	view.QbitURL = s.deps.Settings.GetDefault(ctx, settings.KeyQbitURL, "")
+	view.QbitUser = s.deps.Settings.GetDefault(ctx, settings.KeyQbitUser, "")
+	if _, ok, _ := s.deps.Settings.Get(ctx, settings.KeyQbitPass); ok {
+		view.QbitSet = true
+	}
 	for _, f := range list {
 		view.Folders = append(view.Folders, templates.SettingsFolderRow{
 			ID:      f.ID,
@@ -106,6 +111,29 @@ func (s *Server) handleSaveOpenSubtitles(w http.ResponseWriter, r *http.Request)
 	}
 	if pass := r.PostFormValue("password"); pass != "" {
 		if err := s.deps.Settings.Set(ctx, settings.KeyOpenSubtitlesPass, pass); err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+	}
+	s.redirect(w, r, "/settings")
+}
+
+func (s *Server) handleSaveQbit(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	if err := s.deps.Settings.Set(ctx, settings.KeyQbitURL, strings.TrimSpace(r.PostFormValue("url"))); err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	if err := s.deps.Settings.Set(ctx, settings.KeyQbitUser, strings.TrimSpace(r.PostFormValue("username"))); err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	if pass := r.PostFormValue("password"); pass != "" {
+		if err := s.deps.Settings.Set(ctx, settings.KeyQbitPass, pass); err != nil {
 			s.serverError(w, r, err)
 			return
 		}

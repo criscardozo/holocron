@@ -16,6 +16,7 @@ import (
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
+	"github.com/cristian/holocron/internal/torrents"
 	"github.com/cristian/holocron/internal/widgets"
 	"github.com/cristian/holocron/web"
 	"github.com/cristian/holocron/web/templates"
@@ -32,6 +33,7 @@ type Deps struct {
 	Settings  *settings.Store
 	Library   *library.Service
 	Subtitles *subtitles.Service
+	Torrents  *torrents.Service
 }
 
 // Server serves the Holocron web UI.
@@ -80,6 +82,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /subtitles/search", s.handleSubtitlesSearch)
 	mux.HandleFunc("POST /subtitles/download", s.handleSubtitlesDownload)
 
+	// Phase 5: qBittorrent.
+	mux.HandleFunc("GET /torrents", s.handleTorrentsPage)
+	mux.HandleFunc("GET /torrents/list", s.handleTorrentsList)
+	mux.HandleFunc("POST /torrents/action", s.handleTorrentsAction)
+	mux.HandleFunc("POST /torrents/add", s.handleTorrentsAdd)
+
 	// Phase 1: settings (watched folders) + service credentials.
 	mux.HandleFunc("GET /settings", s.handleSettings)
 	mux.HandleFunc("POST /settings/folders", s.handleAddFolder)
@@ -87,6 +95,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /settings/plex", s.handleSavePlex)
 	mux.HandleFunc("GET /settings/plex/test", s.handlePlexTest)
 	mux.HandleFunc("POST /settings/opensubtitles", s.handleSaveOpenSubtitles)
+	mux.HandleFunc("POST /settings/qbittorrent", s.handleSaveQbit)
 
 	return chain(mux, s.recoverer, s.logRequests, securityHeaders, gzipMW)
 }

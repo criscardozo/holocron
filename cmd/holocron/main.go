@@ -21,6 +21,7 @@ import (
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
+	"github.com/cristian/holocron/internal/torrents"
 	"github.com/cristian/holocron/internal/widgets"
 )
 
@@ -51,6 +52,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	namingService := naming.NewService(database, folderStore)
 	libraryService := library.NewService(database, settingsStore, jobManager)
 	subtitlesService := subtitles.NewService(database, settingsStore)
+	torrentsService := torrents.NewService(settingsStore)
 
 	registry := widgets.NewRegistry(
 		widgets.SystemWidget{},
@@ -58,6 +60,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		widgets.NewNamingWidget(namingService),
 		widgets.NewMediaWidget(libraryService),
 		widgets.NewSubtitlesWidget(subtitlesService),
+		widgets.NewTorrentsWidget(torrentsService),
 	)
 
 	srv := httpserver.New(httpserver.Deps{
@@ -69,6 +72,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Settings:  settingsStore,
 		Library:   libraryService,
 		Subtitles: subtitlesService,
+		Torrents:  torrentsService,
 	})
 
 	httpSrv := &http.Server{

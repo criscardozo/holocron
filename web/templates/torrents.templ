@@ -1,0 +1,100 @@
+package templates
+
+import "fmt"
+
+// TorrentsBody is the dashboard torrents widget body.
+templ TorrentsBody(v TorrentsCardView) {
+	if !v.Configured {
+		<p class="muted">qBittorrent no configurado. <a href="/settings">Configurar</a>.</p>
+	} else if v.Err {
+		<p class="muted">Sin conexión con qBittorrent.</p>
+	} else {
+		<a href="/torrents" class="stat-list-link">
+			<ul class="stat-list">
+				<li><span class="stat-key">Activos</span><span class="stat-val">{ fmt.Sprintf("%d / %d", v.Active, v.Total) }</span></li>
+				<li><span class="stat-key">↓</span><span class="stat-val">{ v.DlHuman }</span></li>
+				<li><span class="stat-key">↑</span><span class="stat-val">{ v.UpHuman }</span></li>
+			</ul>
+		</a>
+	}
+}
+
+// TorrentsPage is the torrents management page.
+templ TorrentsPage(v TorrentsPageView) {
+	@Layout("Torrents") {
+		<h1>Torrents</h1>
+		if !v.Configured {
+			<p class="muted">Configurá tu qBittorrent en <a href="/settings">Ajustes</a>.</p>
+		} else {
+			<form class="form magnet-form" hx-post="/torrents/add" hx-target="#add-status" hx-swap="innerHTML">
+				<label>Agregar magnet-link<input type="text" name="magnet" required placeholder="magnet:?xt=urn:btih:…"/></label>
+				<div class="actions">
+					<button class="btn" type="submit">Agregar</button>
+					<span id="add-status"></span>
+				</div>
+			</form>
+			@TorrentsTable(v)
+		}
+	}
+}
+
+// TorrentsTable is the torrent list fragment; it refreshes itself every few
+// seconds.
+templ TorrentsTable(v TorrentsPageView) {
+	<div id="torrents-table" hx-get="/torrents/list" hx-trigger="every 3s" hx-swap="outerHTML">
+		if v.Err != "" {
+			<p class="error">{ v.Err }</p>
+		} else if len(v.Rows) == 0 {
+			<p class="muted">No hay torrents.</p>
+		} else {
+			<table class="table">
+				<thead><tr><th>Nombre</th><th>Estado</th><th>Progreso</th><th>Tamaño</th><th>↓</th><th>↑</th><th>S/L</th><th></th></tr></thead>
+				<tbody>
+					for _, t := range v.Rows {
+						<tr>
+							<td>{ t.Name }</td>
+							<td>{ t.State }</td>
+							<td>
+								<div class="bar"><div class="bar-fill" style={ fmt.Sprintf("width:%d%%", clampPct(t.Percent)) }></div></div>
+								<span class="muted">{ fmt.Sprintf("%d%%", t.Percent) }</span>
+							</td>
+							<td>{ t.SizeHuman }</td>
+							<td>{ t.DlHuman }</td>
+							<td>{ t.UpHuman }</td>
+							<td>{ fmt.Sprintf("%d/%d", t.Seeds, t.Leechs) }</td>
+							<td class="torrent-actions">
+								if t.Paused {
+									@torrentAction(t.Hash, "resume", "▶")
+								} else {
+									@torrentAction(t.Hash, "pause", "⏸")
+								}
+								<form hx-post="/torrents/action" hx-target="#torrents-table" hx-swap="outerHTML" hx-confirm="¿Borrar este torrent?">
+									<input type="hidden" name="hash" value={ t.Hash }/>
+									<input type="hidden" name="action" value="delete"/>
+									<button class="btn danger" type="submit">🗑</button>
+								</form>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	</div>
+}
+
+templ torrentAction(hash, action, label string) {
+	<form hx-post="/torrents/action" hx-target="#torrents-table" hx-swap="outerHTML">
+		<input type="hidden" name="hash" value={ hash }/>
+		<input type="hidden" name="action" value={ action }/>
+		<button class="btn secondary" type="submit">{ label }</button>
+	</form>
+}
+
+// TorrentAddResult reports the outcome of adding a magnet.
+templ TorrentAddResult(ok bool, message string) {
+	if ok {
+		<span class="ok-badge">✓ { message }</span>
+	} else {
+		<span class="error">{ message }</span>
+	}
+}
