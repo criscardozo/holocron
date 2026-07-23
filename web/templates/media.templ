@@ -1,0 +1,92 @@
+package templates
+
+import "fmt"
+
+// JobStatus is a generic progress fragment reused by long-running features.
+templ JobStatus(v JobStatusView) {
+	if v.Running {
+		<div class="scan-status running" hx-get={ v.StatusHref } hx-trigger="every 2s" hx-swap="outerHTML">
+			<span class="spinner"></span> { v.Label }
+		</div>
+	} else if v.Error != "" {
+		<div class="scan-status error">Error: { v.Error }</div>
+	} else {
+		<div class="scan-status done" hx-get={ v.ReloadHref } hx-trigger="load delay:300ms" hx-select={ v.ReloadSelect } hx-target={ v.ReloadTarget } hx-swap="outerHTML">
+			Listo. { v.Summary }
+		</div>
+	}
+}
+
+// MediaBody is the dashboard media widget body.
+templ MediaBody(v MediaCardView) {
+	if !v.Configured {
+		<p class="muted">Plex no configurado. <a href="/settings">Conectar</a>.</p>
+	} else {
+		<a href="/media" class="stat-list-link">
+			<ul class="stat-list">
+				<li><span class="stat-key">Ítems</span><span class="stat-val">{ fmt.Sprintf("%d", v.Total) }</span></li>
+				<li><span class="stat-key">Con .nfo</span><span class="stat-val">{ fmt.Sprintf("%d", v.WithNFO) }</span></li>
+				<li><span class="stat-key">Sin subs ES</span><span class="stat-val">{ fmt.Sprintf("%d", v.WithoutSubs) }</span></li>
+			</ul>
+		</a>
+	}
+}
+
+// MediaPage is the media detail page.
+templ MediaPage(v MediaPageView) {
+	@Layout("Medios") {
+		<h1>Medios</h1>
+		if !v.Configured {
+			<p class="muted">Conectá tu servidor Plex en <a href="/settings">Ajustes</a> para inventariar tus medios.</p>
+		} else {
+			@MediaDetailSection(v)
+		}
+	}
+}
+
+// MediaDetailSection is re-fetched after sync/nfo jobs complete.
+templ MediaDetailSection(v MediaPageView) {
+	<section id="media-detail" class="media-detail">
+		<div class="stat-row">
+			<div><div class="stat-val big">{ fmt.Sprintf("%d", v.Total) }</div><div class="muted">ítems</div></div>
+			<div><div class="stat-val big">{ fmt.Sprintf("%d", v.WithNFO) }</div><div class="muted">con .nfo</div></div>
+			<div><div class="stat-val big">{ fmt.Sprintf("%d", v.WithoutSubs) }</div><div class="muted">sin subtítulos ES</div></div>
+		</div>
+		<div class="actions">
+			<form hx-post="/media/sync" hx-target="#media-status" hx-swap="innerHTML">
+				<button class="btn" type="submit" disabled?={ v.Syncing }>Sincronizar desde Plex</button>
+			</form>
+			<form hx-post="/media/nfo" hx-target="#media-status" hx-swap="innerHTML">
+				<button class="btn" type="submit" disabled?={ v.GeneratingNFO }>Generar .nfo</button>
+			</form>
+		</div>
+		<div id="media-status"></div>
+		if len(v.Items) > 0 {
+			<h2>Inventario</h2>
+			<table class="table">
+				<thead><tr><th>Tipo</th><th>Título</th><th>Año</th><th>.nfo</th><th>Subs ES</th></tr></thead>
+				<tbody>
+					for _, it := range v.Items {
+						<tr>
+							<td>{ it.Type }</td>
+							<td>{ it.Title }</td>
+							<td>{ yearStr(it.Year) }</td>
+							<td>@yesNoBadge(it.HasNFO)</td>
+							<td>@yesNoBadge(it.HasSubsES)</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		} else {
+			<p class="muted">Sin inventario. Tocá «Sincronizar desde Plex».</p>
+		}
+	</section>
+}
+
+templ yesNoBadge(ok bool) {
+	if ok {
+		<span class="badge ok">sí</span>
+	} else {
+		<span class="badge no">no</span>
+	}
+}

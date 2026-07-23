@@ -48,4 +48,36 @@ templ settingsContent(v SettingsView) {
 		</label>
 		<button type="submit" class="btn">Agregar</button>
 	</form>
+
+	<h2>Plex Media Server</h2>
+	<form class="form" method="post" action="/settings/plex" hx-post="/settings/plex" hx-target="body">
+		<label>URL del servidor<input type="text" name="url" value={ v.PlexURL } placeholder="http://192.168.1.10:32400"/></label>
+		<label>
+			Token (X-Plex-Token)
+			if v.PlexTokenSet {
+				<input type="password" name="token" placeholder="•••••••• (guardado, dejá vacío para conservar)"/>
+			} else {
+				<input type="password" name="token" placeholder="Token de Plex"/>
+			}
+		</label>
+		<div class="actions">
+			<button type="submit" class="btn">Guardar</button>
+			<button type="button" class="btn secondary" hx-get="/settings/plex/test" hx-target="#plex-test" hx-swap="innerHTML">Probar conexión</button>
+		</div>
+	</form>
+	<div id="plex-test"></div>
+}
+
+// PlexTest renders the result of a Plex connection test.
+templ PlexTest(ok bool, message string, libraries []string) {
+	if ok {
+		<p class="ok-badge">{ message }</p>
+		<ul class="browse-list">
+			for _, lib := range libraries {
+				<li>{ lib }</li>
+			}
+		</ul>
+	} else {
+		<p class="error">{ message }</p>
+	}
 }

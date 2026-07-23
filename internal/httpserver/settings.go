@@ -1,14 +1,18 @@
 package httpserver
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/cristian/holocron/internal/folders"
+	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/web/templates"
 )
 
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
-	list, err := s.deps.Folders.List(r.Context(), "")
+	ctx := r.Context()
+	list, err := s.deps.Folders.List(ctx, "")
 	if err != nil {
 		s.serverError(w, r, err)
 		return
@@ -16,6 +20,10 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	view := templates.SettingsView{
 		Purposes: []string{folders.PurposeDisk, folders.PurposeMovies, folders.PurposeTV},
 		Notice:   r.URL.Query().Get("notice"),
+		PlexURL:  s.deps.Settings.GetDefault(ctx, settings.KeyPlexURL, ""),
+	}
+	if _, ok, _ := s.deps.Settings.Get(ctx, settings.KeyPlexToken); ok {
+		view.PlexTokenSet = true
 	}
 	for _, f := range list {
 		view.Folders = append(view.Folders, templates.SettingsFolderRow{
@@ -52,4 +60,39 @@ func (s *Server) handleDeleteFolder(w http.ResponseWriter, r *http.Request) {
 		s.log.Warn("delete folder", "id", id, "error", err)
 	}
 	s.redirect(w, r, "/settings")
+}
+
+func (s *Server) handleSavePlex(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	if err := s.deps.Settings.Set(ctx, settings.KeyPlexURL, strings.TrimSpace(r.PostFormValue("url"))); err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	// Only overwrite the token when a new one is provided, so leaving the field
+	// blank keeps the stored token.
+	if token := strings.TrimSpace(r.PostFormValue("token")); token != "" {
+		if err := s.deps.Settings.Set(ctx, settings.KeyPlexToken, token); err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+	}
+	s.redirect(w, r, "/settings")
+}
+
+func (s *Server) handlePlexTest(w http.ResponseWriter, r *http.Request) {
+	libs, err := s.deps.Library.TestConnection(r.Context())
+	if err != nil {
+		s.log.Warn("plex test", "error", err)
+		s.render(w, r, templates.PlexTest(false, "No se pudo conectar con Plex. Revisá la URL y el token.", nil))
+		return
+	}
+	names := make([]string, 0, len(libs))
+	for _, l := range libs {
+		names = append(names, l.Title)
+	}
+	s.render(w, r, templates.PlexTest(true, fmt.Sprintf("Conectado: %d bibliotecas.", len(libs)), names))
 }

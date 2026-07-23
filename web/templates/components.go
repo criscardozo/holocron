@@ -11,6 +11,14 @@ import (
 // intToStr formats an int64 id for use in form values and URLs.
 func intToStr(v int64) string { return strconv.FormatInt(v, 10) }
 
+// yearStr renders a media year, blank when unknown (zero).
+func yearStr(year int) string {
+	if year == 0 {
+		return "—"
+	}
+	return strconv.Itoa(year)
+}
+
 // clampPct constrains a percentage to the 0..100 range for use in bar widths.
 func clampPct(p int) int {
 	switch {
