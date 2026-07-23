@@ -152,6 +152,15 @@ details.errors { margin-top: 1rem; font-size: 0.85rem; color: var(--muted); }
 .naming-count { display: flex; flex-direction: column; text-decoration: none; color: inherit; }
 .naming-count .big { color: #ffb454; }
 
+/* Media */
+.stat-list-link { text-decoration: none; color: inherit; }
+.stat-row { display: flex; gap: 2rem; margin-bottom: 1rem; }
+.actions { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+.btn.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+.badge { font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 6px; }
+.badge.ok { background: rgba(76,175,130,0.2); color: #4caf82; }
+.badge.no { background: rgba(255,107,107,0.15); color: #ff6b6b; }
+
 @media (prefers-color-scheme: light) {
 	:root {
 		--bg: #f4f6f9;

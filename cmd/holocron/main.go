@@ -17,7 +17,9 @@ import (
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/httpserver"
 	"github.com/cristian/holocron/internal/jobs"
+	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
+	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/widgets"
 )
 
@@ -43,21 +45,26 @@ func run(cfg config.Config, logger *slog.Logger) error {
 
 	jobManager := jobs.NewManager()
 	folderStore := folders.NewStore(database)
+	settingsStore := settings.NewStore(database)
 	diskService := diskusage.NewService(database, folderStore, jobManager)
 	namingService := naming.NewService(database, folderStore)
+	libraryService := library.NewService(database, settingsStore, jobManager)
 
 	registry := widgets.NewRegistry(
 		widgets.SystemWidget{},
 		widgets.NewDiskWidget(folderStore),
 		widgets.NewNamingWidget(namingService),
+		widgets.NewMediaWidget(libraryService),
 	)
 
 	srv := httpserver.New(httpserver.Deps{
-		Log:     logger,
-		Widgets: registry,
-		Folders: folderStore,
-		Disk:    diskService,
-		Naming:  namingService,
+		Log:      logger,
+		Widgets:  registry,
+		Folders:  folderStore,
+		Disk:     diskService,
+		Naming:   namingService,
+		Settings: settingsStore,
+		Library:  libraryService,
 	})
 
 	httpSrv := &http.Server{
