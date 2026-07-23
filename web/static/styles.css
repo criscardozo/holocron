@@ -147,6 +147,11 @@ a { color: var(--accent); }
 @keyframes spin { to { transform: rotate(360deg); } }
 details.errors { margin-top: 1rem; font-size: 0.85rem; color: var(--muted); }
 
+/* Naming widget */
+.ok-badge { color: #4caf82; margin: 0; }
+.naming-count { display: flex; flex-direction: column; text-decoration: none; color: inherit; }
+.naming-count .big { color: #ffb454; }
+
 @media (prefers-color-scheme: light) {
 	:root {
 		--bg: #f4f6f9;
