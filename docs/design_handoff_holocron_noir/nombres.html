@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es" data-font="archivo">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Holocron · Nombres — Noir</title>
+<link rel="stylesheet" href="_ds/nocturne-023a3a08-7a81-4cca-a5b8-cc5ff64e30a5/styles.css">
+<link rel="stylesheet" href="noir.css">
+<style>
+  .lib-group { margin-bottom: var(--space-8); }
+  .lib-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: var(--space-3); }
+  .lib-head h2 { font-size: 16px; margin: 0; font-weight: 600; }
+  .lib-head .count { font-size: 12px; color: var(--color-accent-300); }
+  .fix td { vertical-align: top; }
+  .found { color: var(--danger); }
+  .expected { color: var(--ok); }
+  .why { font-size: 11.5px; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="diamond" viewBox="0 0 24 24"><path d="M12 2 22 12 12 22 2 12Z"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></symbol>
+  <symbol id="alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/></symbol>
+</svg>
+
+<header class="nav">
+  <a class="nav-brand" href="dash-noir.html"><svg class="ic ic-fill"><use href="#diamond"/></svg> Holocron</a>
+  <span class="nav-tag">HTPC Manager</span>
+  <nav class="nav-links">
+    <a href="dash-noir.html">Dashboard</a>
+    <a href="disco.html">Disco</a>
+    <a href="nombres.html" aria-current="page">Nombres</a>
+    <a href="medios.html">Medios</a>
+    <a href="subtitulos.html">Subtítulos</a>
+    <a href="torrents.html">Torrents</a>
+    <a href="ajustes.html">Ajustes</a>
+  </nav>
+</header>
+
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1>Nombres</h1>
+      <p class="sub">Carpetas que no cumplen la convención «Título (Año)»</p>
+    </div>
+    <div class="head-actions">
+      <div class="job done"><svg class="ic ic-sm"><use href="#refresh"/></svg> Re-escaneado hace 1 min</div>
+      <button class="btn btn-primary"><svg class="ic ic-sm"><use href="#refresh"/></svg> Re-escanear</button>
+    </div>
+  </div>
+
+  <div class="notice" style="margin-bottom:var(--space-8);">
+    <svg class="ic ic-sm"><use href="#alert"/></svg>
+    <span><strong>7 carpetas</strong> con nombre inválido. El patrón esperado es <span class="mono">Título (Año)</span> — corregilas para que Plex las reconozca bien.</span>
+  </div>
+
+  <div class="lib-group">
+    <div class="lib-head"><h2>Películas</h2><span class="count">5 con problemas</span></div>
+    <table class="table fix">
+      <thead><tr><th style="width:90px">Tipo</th><th>Nombre actual</th><th>Sugerido</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-neutral">Peli</span></td><td><span class="mono found">Interstellar 2014</span><div class="why">Año presente pero sin paréntesis</div></td><td><span class="mono expected">Interstellar (2014)</span></td></tr>
+        <tr><td><span class="badge badge-neutral">Peli</span></td><td><span class="mono found">Dune.Part.Two.2024.1080p</span><div class="why">Sufijo de release + año sin formato</div></td><td><span class="mono expected">Dune Part Two (2024)</span></td></tr>
+        <tr><td><span class="badge badge-neutral">Peli</span></td><td><span class="mono found">Blade Runner 2049</span><div class="why">Sin año</div></td><td><span class="mono expected">Blade Runner 2049 (2017)</span></td></tr>
+        <tr><td><span class="badge badge-neutral">Peli</span></td><td><span class="mono found">Matrix {edition-Director's Cut}</span><div class="why">Etiqueta de edición y sin año</div></td><td><span class="mono expected">Matrix (1999)</span></td></tr>
+        <tr><td><span class="badge badge-neutral">Peli</span></td><td><span class="mono found">amelie (2001)</span><div class="why">Debería ir en mayúscula inicial</div></td><td><span class="mono expected">Amélie (2001)</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="lib-group">
+    <div class="lib-head"><h2>Series</h2><span class="count">2 con problemas</span></div>
+    <table class="table fix">
+      <thead><tr><th style="width:90px">Tipo</th><th>Nombre actual</th><th>Sugerido</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-neutral">Serie</span></td><td><span class="mono found">Cosmos</span><div class="why">Sin año</div></td><td><span class="mono expected">Cosmos (1980)</span></td></tr>
+        <tr><td><span class="badge badge-neutral">Serie</span></td><td><span class="mono found">The Bear S01-S03</span><div class="why">Rango de temporadas + sin año</div></td><td><span class="mono expected">The Bear (2022)</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+</body>
+</html>

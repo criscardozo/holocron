@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es" data-font="archivo">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Holocron · Torrents — Noir</title>
+<link rel="stylesheet" href="_ds/nocturne-023a3a08-7a81-4cca-a5b8-cc5ff64e30a5/styles.css">
+<link rel="stylesheet" href="noir.css">
+<style>
+  .magnet-form { display: flex; gap: var(--space-3); padding: var(--space-4) var(--space-6); margin-bottom: var(--space-6); align-items: center; flex-wrap: wrap; }
+  .magnet-form .input { flex: 1; min-width: 260px; }
+  .tor-head { display: flex; align-items: center; gap: var(--space-6); margin-bottom: var(--space-4); flex-wrap: wrap; }
+  .tor-stat { display: inline-flex; align-items: baseline; gap: 7px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 60%, transparent); }
+  .tor-stat b { font-size: 17px; color: var(--color-text); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .tor-stat .ic { align-self: center; }
+  .tor-stat.dn .ic { color: var(--ok); } .tor-stat.up .ic { color: var(--color-accent-300); }
+  .live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-left: auto; }
+  .live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .tname { font-family: var(--mono); font-size: 12.5px; }
+</style>
+</head>
+<body>
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="diamond" viewBox="0 0 24 24"><path d="M12 2 22 12 12 22 2 12Z"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="adown" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+  <symbol id="aup" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+  <symbol id="play" viewBox="0 0 24 24"><path d="M6 3v18l14-9z"/></symbol>
+  <symbol id="pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></symbol>
+  <symbol id="trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+</svg>
+
+<header class="nav">
+  <a class="nav-brand" href="dash-noir.html"><svg class="ic ic-fill"><use href="#diamond"/></svg> Holocron</a>
+  <span class="nav-tag">HTPC Manager</span>
+  <nav class="nav-links">
+    <a href="dash-noir.html">Dashboard</a>
+    <a href="disco.html">Disco</a>
+    <a href="nombres.html">Nombres</a>
+    <a href="medios.html">Medios</a>
+    <a href="subtitulos.html">Subtítulos</a>
+    <a href="torrents.html" aria-current="page">Torrents</a>
+    <a href="ajustes.html">Ajustes</a>
+  </nav>
+</header>
+
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1>Torrents</h1>
+      <p class="sub">Descargas de qBittorrent · se refresca sola cada 3 s</p>
+    </div>
+  </div>
+
+  <div class="card elev-sm magnet-form">
+    <svg class="ic" style="color:var(--color-accent)"><use href="#plus"/></svg>
+    <input class="input" type="text" placeholder="Pegá un magnet: aquí…" value="">
+    <button class="btn btn-primary">Agregar</button>
+  </div>
+
+  <div class="tor-head">
+    <span class="tor-stat"><b>3 / 5</b> activos</span>
+    <span class="tor-stat dn"><svg class="ic ic-sm"><use href="#adown"/></svg> <b>4.2</b> MB/s</span>
+    <span class="tor-stat up"><svg class="ic ic-sm"><use href="#aup"/></svg> <b>640</b> kB/s</span>
+    <span class="live"><span class="dot"></span> En vivo</span>
+  </div>
+
+  <table class="table">
+    <thead><tr><th>Nombre</th><th style="width:120px">Estado</th><th style="width:190px">Progreso</th><th class="num">Tamaño</th><th class="num">↓</th><th class="num">↑</th><th class="num">S/L</th><th style="width:90px"></th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="tname">Cosmos.S01E03.1080p.WEB</td>
+        <td><span class="st st-dl">Descargando</span></td>
+        <td><div class="prog-cell"><div class="bar" style="flex:1"><div class="bar-fill" style="width:63%"></div></div><span class="p">63%</span></div></td>
+        <td class="num">2.4 GB</td><td class="num">4.1 MB/s</td><td class="num">210 kB/s</td><td class="num">38/5</td>
+        <td><div class="row-act"><button class="btn btn-secondary btn-icon" aria-label="Pausar"><svg class="ic ic-sm"><use href="#pause"/></svg></button><button class="btn btn-icon" aria-label="Borrar" style="color:var(--danger)"><svg class="ic ic-sm"><use href="#trash"/></svg></button></div></td>
+      </tr>
+      <tr>
+        <td class="tname">La.Ciudad.2023.1080p.BluRay</td>
+        <td><span class="st st-seed">Sembrando</span></td>
+        <td><div class="prog-cell"><div class="bar" style="flex:1"><div class="bar-fill" style="width:100%;background:var(--ok)"></div></div><span class="p">100%</span></div></td>
+        <td class="num">8.1 GB</td><td class="num">—</td><td class="num">1.2 MB/s</td><td class="num">120/0</td>
+        <td><div class="row-act"><button class="btn btn-secondary btn-icon" aria-label="Pausar"><svg class="ic ic-sm"><use href="#pause"/></svg></button><button class="btn btn-icon" aria-label="Borrar" style="color:var(--danger)"><svg class="ic ic-sm"><use href="#trash"/></svg></button></div></td>
+      </tr>
+      <tr>
+        <td class="tname">Documental.Planeta.S01.720p</td>
+        <td><span class="st st-dl">Descargando</span></td>
+        <td><div class="prog-cell"><div class="bar" style="flex:1"><div class="bar-fill" style="width:41%"></div></div><span class="p">41%</span></div></td>
+        <td class="num">3.6 GB</td><td class="num">180 kB/s</td><td class="num">64 kB/s</td><td class="num">9/12</td>
+        <td><div class="row-act"><button class="btn btn-secondary btn-icon" aria-label="Pausar"><svg class="ic ic-sm"><use href="#pause"/></svg></button><button class="btn btn-icon" aria-label="Borrar" style="color:var(--danger)"><svg class="ic ic-sm"><use href="#trash"/></svg></button></div></td>
+      </tr>
+      <tr>
+        <td class="tname">Serie.Documental.S01.720p</td>
+        <td><span class="st st-pause">Pausado</span></td>
+        <td><div class="prog-cell"><div class="bar" style="flex:1"><div class="bar-fill" style="width:12%"></div></div><span class="p">12%</span></div></td>
+        <td class="num">1.1 GB</td><td class="num">—</td><td class="num">—</td><td class="num">4/2</td>
+        <td><div class="row-act"><button class="btn btn-secondary btn-icon" aria-label="Reanudar"><svg class="ic ic-sm"><use href="#play"/></svg></button><button class="btn btn-icon" aria-label="Borrar" style="color:var(--danger)"><svg class="ic ic-sm"><use href="#trash"/></svg></button></div></td>
+      </tr>
+      <tr>
+        <td class="tname">Pelicula.Vieja.1998.DVDRip</td>
+        <td><span class="st st-err">Error</span></td>
+        <td><div class="prog-cell"><div class="bar" style="flex:1"><div class="bar-fill" style="width:0%"></div></div><span class="p">0%</span></div></td>
+        <td class="num">1.4 GB</td><td class="num">—</td><td class="num">—</td><td class="num">0/0</td>
+        <td><div class="row-act"><button class="btn btn-secondary btn-icon" aria-label="Reanudar"><svg class="ic ic-sm"><use href="#play"/></svg></button><button class="btn btn-icon" aria-label="Borrar" style="color:var(--danger)"><svg class="ic ic-sm"><use href="#trash"/></svg></button></div></td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>
