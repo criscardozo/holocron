@@ -58,8 +58,8 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		widgets.SystemWidget{},
 		widgets.NewDiskWidget(folderStore),
 		widgets.NewNamingWidget(namingService),
-		widgets.NewMediaWidget(libraryService),
 		widgets.NewSubtitlesWidget(subtitlesService),
+		widgets.NewMediaWidget(libraryService),
 		widgets.NewTorrentsWidget(torrentsService),
 	)
 

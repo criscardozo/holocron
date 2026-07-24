@@ -74,11 +74,21 @@ func (s *Server) buildDiskDetail(ctx context.Context, f folders.Folder) template
 	if res, scannedAt, ok, err := s.deps.Disk.CachedResult(ctx, f.ID); err == nil && ok {
 		d.HasResult = true
 		d.ScannedAt = scannedAt
+		var maxTop uint64
 		for _, t := range res.TopFolders {
+			if t.Bytes > maxTop {
+				maxTop = t.Bytes
+			}
+		}
+		for _, t := range res.TopFolders {
+			pct := 0
+			if maxTop > 0 {
+				pct = int(float64(t.Bytes) / float64(maxTop) * 100)
+			}
 			d.Top = append(d.Top, templates.DiskTopRow{
 				Name:       t.Name,
 				BytesHuman: system.HumanBytes(t.Bytes),
-				Percent:    int(t.PercentOfDisk),
+				Percent:    pct,
 				BrowseHref: browseHref(f.ID, t.Path),
 			})
 		}
@@ -152,11 +162,20 @@ func (s *Server) handleDiskBrowse(w http.ResponseWriter, r *http.Request) {
 		view.HasParent = true
 		view.ParentHref = browseHref(id, res.Parent)
 	}
+	var maxBytes uint64
+	for _, e := range res.Entries {
+		if e.Bytes > maxBytes {
+			maxBytes = e.Bytes
+		}
+	}
 	for _, e := range res.Entries {
 		row := templates.BrowseRow{
 			Name:       e.Name,
 			BytesHuman: system.HumanBytes(e.Bytes),
 			IsDir:      e.IsDir,
+		}
+		if maxBytes > 0 {
+			row.Percent = int(float64(e.Bytes) / float64(maxBytes) * 100)
 		}
 		if e.IsDir {
 			row.BrowseHref = browseHref(id, e.Path)

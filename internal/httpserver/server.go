@@ -101,8 +101,9 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	grid := templates.Grid(s.deps.Widgets.Cards(r.Context()))
-	s.render(w, r, templates.Dashboard(grid))
+	ctx := r.Context()
+	grid := templates.Grid(s.deps.Widgets.Cards(ctx))
+	s.render(w, r, templates.Dashboard(s.attentionChips(ctx), grid))
 }
 
 func (s *Server) handleWidget(w http.ResponseWriter, r *http.Request) {

@@ -14,6 +14,7 @@ type DiskStatRow struct {
 	UsedPercent int
 	UsedHuman   string
 	TotalHuman  string
+	Hot         bool // usage >= 90%: render the bar with the "hot" gradient
 	Err         string
 }
 
@@ -73,10 +74,12 @@ type BrowseView struct {
 	Entries    []BrowseRow
 }
 
-// BrowseRow is one child entry in the drill-down.
+// BrowseRow is one child entry in the drill-down. Percent is the size relative
+// to the largest entry in the level (0..100), for the mini proportion bar.
 type BrowseRow struct {
 	Name       string
 	BrowseHref string // for directories
 	BytesHuman string
+	Percent    int
 	IsDir      bool
 }

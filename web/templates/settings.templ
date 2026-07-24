@@ -1,6 +1,6 @@
 package templates
 
-// SettingsPage lets the user manage watched folders.
+// SettingsPage lets the user manage watched folders and service credentials.
 templ SettingsPage(v SettingsView) {
 	@Layout("Ajustes") {
 		@settingsContent(v)
@@ -8,101 +8,173 @@ templ SettingsPage(v SettingsView) {
 }
 
 templ settingsContent(v SettingsView) {
-	<h1>Ajustes</h1>
-	if v.Notice != "" {
-		<div class="notice">{ v.Notice }</div>
-	}
-	<h2>Carpetas vigiladas</h2>
-	if len(v.Folders) == 0 {
-		<p class="muted">Todavía no hay carpetas.</p>
-	} else {
-		<table class="table">
-			<thead><tr><th>Etiqueta</th><th>Ruta</th><th>Tipo</th><th></th></tr></thead>
-			<tbody>
-				for _, f := range v.Folders {
-					<tr>
-						<td>{ f.Label }</td>
-						<td class="mono">{ f.Path }</td>
-						<td>{ f.Purpose }</td>
-						<td>
-							<form method="post" action="/settings/folders/delete" hx-post="/settings/folders/delete" hx-confirm="¿Quitar esta carpeta?" hx-target="body">
-								<input type="hidden" name="id" value={ intToStr(f.ID) }/>
-								<button type="submit" class="btn danger">Quitar</button>
-							</form>
-						</td>
-					</tr>
-				}
-			</tbody>
-		</table>
-	}
-	<h2>Agregar carpeta</h2>
-	<form class="form" method="post" action="/settings/folders" hx-post="/settings/folders" hx-target="body">
-		<label>Etiqueta<input type="text" name="label" required placeholder="Películas"/></label>
-		<label>Ruta<input type="text" name="path" required placeholder="/mnt/media/movies"/></label>
-		<label>Tipo
-			<select name="purpose">
-				for _, p := range v.Purposes {
-					<option value={ p }>{ p }</option>
-				}
-			</select>
-		</label>
-		<button type="submit" class="btn">Agregar</button>
-	</form>
-
-	<h2>Plex Media Server</h2>
-	<form class="form" method="post" action="/settings/plex" hx-post="/settings/plex" hx-target="body">
-		<label>URL del servidor<input type="text" name="url" value={ v.PlexURL } placeholder="http://192.168.1.10:32400"/></label>
-		<label>
-			Token (X-Plex-Token)
-			if v.PlexTokenSet {
-				<input type="password" name="token" placeholder="•••••••• (guardado, dejá vacío para conservar)"/>
-			} else {
-				<input type="password" name="token" placeholder="Token de Plex"/>
-			}
-		</label>
-		<div class="actions">
-			<button type="submit" class="btn">Guardar</button>
-			<button type="button" class="btn secondary" hx-get="/settings/plex/test" hx-target="#plex-test" hx-swap="innerHTML">Probar conexión</button>
+	<div class="page-head">
+		<div>
+			<h1>Ajustes</h1>
+			<p class="sub">Carpetas vigiladas y credenciales de los servicios</p>
 		</div>
-	</form>
-	<div id="plex-test"></div>
+	</div>
+	if v.Notice != "" {
+		<div class="notice mb-6">
+			@IconSm("check")
+			<span>{ v.Notice }</span>
+		</div>
+	}
+	<div class="settings-grid">
 
-	<h2>OpenSubtitles</h2>
-	<form class="form" method="post" action="/settings/opensubtitles" hx-post="/settings/opensubtitles" hx-target="body">
-		<label>
-			API key
-			if v.OpenSubsSet {
-				<input type="password" name="api_key" placeholder="•••••••• (guardada, dejá vacío para conservar)"/>
+		<div class="card elev-sm block span-2">
+			<h2>
+				@Icon("folder")
+				Carpetas vigiladas
+			</h2>
+			<p class="desc">Holocron escanea disco, nombres y medios sobre estas carpetas.</p>
+			if len(v.Folders) == 0 {
+				<p class="muted">Todavía no hay carpetas.</p>
 			} else {
-				<input type="password" name="api_key" placeholder="API key de OpenSubtitles"/>
+				<div>
+					for _, f := range v.Folders {
+						@folderRow(f)
+					}
+				</div>
 			}
-		</label>
-		<label>Usuario<input type="text" name="username" value={ v.OpenSubsUser } placeholder="usuario (para descargar)"/></label>
-		<label>Contraseña<input type="password" name="password" placeholder="contraseña (dejá vacío para conservar)"/></label>
-		<button type="submit" class="btn">Guardar</button>
-	</form>
+			<form class="add-row" method="post" action="/settings/folders" hx-post="/settings/folders" hx-target="body">
+				<input class="input" type="text" name="label" required placeholder="Etiqueta (Películas)"/>
+				<input class="input" type="text" name="path" required placeholder="/ruta/a/la/carpeta"/>
+				<select class="input" name="purpose">
+					for _, p := range v.Purposes {
+						<option value={ p }>{ p }</option>
+					}
+				</select>
+				<button class="btn btn-primary" type="submit">
+					@IconSm("plus")
+					Agregá carpeta
+				</button>
+			</form>
+		</div>
 
-	<h2>qBittorrent</h2>
-	<form class="form" method="post" action="/settings/qbittorrent" hx-post="/settings/qbittorrent" hx-target="body">
-		<label>URL de la WebUI<input type="text" name="url" value={ v.QbitURL } placeholder="http://127.0.0.1:8080"/></label>
-		<label>Usuario<input type="text" name="username" value={ v.QbitUser } placeholder="admin"/></label>
-		<label>
-			Contraseña
-			if v.QbitSet {
-				<input type="password" name="password" placeholder="•••••••• (guardada, dejá vacío para conservar)"/>
-			} else {
-				<input type="password" name="password" placeholder="contraseña de la WebUI"/>
-			}
-		</label>
-		<button type="submit" class="btn">Guardar</button>
-	</form>
+		<div class="card elev-sm block">
+			<h2>
+				@Icon("plug")
+				Plex
+			</h2>
+			<p class="desc">Para sincronizar el inventario y generar los <span class="mono">.nfo</span>.</p>
+			<form method="post" action="/settings/plex" hx-post="/settings/plex" hx-target="body">
+				<div class="field">
+					<label>URL del servidor</label>
+					<input class="input" type="text" name="url" value={ v.PlexURL } placeholder="http://192.168.1.10:32400"/>
+				</div>
+				<div class="field">
+					<label>
+						Token (X-Plex-Token)
+						if v.PlexTokenSet {
+							<span class="saved">
+								@IconSm("check")
+								guardado
+							</span>
+						}
+					</label>
+					<input class="input" type="password" name="token" placeholder="Token de Plex"/>
+				</div>
+				<div class="block-foot actions">
+					<button type="submit" class="btn btn-primary">Guardá</button>
+					<button type="button" class="btn btn-secondary" hx-get="/settings/plex/test" hx-target="#plex-test" hx-swap="innerHTML">Probar conexión</button>
+				</div>
+			</form>
+			<div id="plex-test"></div>
+		</div>
+
+		<div class="card elev-sm block">
+			<h2>
+				@Icon("cap")
+				OpenSubtitles
+			</h2>
+			<p class="desc">Para buscar y descargar subtítulos en español.</p>
+			<form method="post" action="/settings/opensubtitles" hx-post="/settings/opensubtitles" hx-target="body">
+				<div class="field">
+					<label>Usuario</label>
+					<input class="input" type="text" name="username" value={ v.OpenSubsUser } placeholder="usuario (para descargar)"/>
+				</div>
+				<div class="field">
+					<label>
+						API key
+						if v.OpenSubsSet {
+							<span class="saved">
+								@IconSm("check")
+								guardado
+							</span>
+						}
+					</label>
+					<input class="input" type="password" name="api_key" placeholder="API key de OpenSubtitles"/>
+				</div>
+				<div class="field">
+					<label>Contraseña</label>
+					<input class="input" type="password" name="password" placeholder="contraseña (dejá vacío para conservar)"/>
+				</div>
+				<div class="block-foot">
+					<button type="submit" class="btn btn-primary">Guardá</button>
+				</div>
+			</form>
+		</div>
+
+		<div class="card elev-sm block span-2">
+			<h2>
+				@Icon("down-cloud")
+				qBittorrent
+			</h2>
+			<p class="desc">WebUI de qBittorrent-nox para administrar las descargas.</p>
+			<form method="post" action="/settings/qbittorrent" hx-post="/settings/qbittorrent" hx-target="body">
+				<div class="settings-grid">
+					<div class="field">
+						<label>URL de la WebUI</label>
+						<input class="input" type="text" name="url" value={ v.QbitURL } placeholder="http://127.0.0.1:8080"/>
+					</div>
+					<div class="field">
+						<label>Usuario</label>
+						<input class="input" type="text" name="username" value={ v.QbitUser } placeholder="admin"/>
+					</div>
+					<div class="field">
+						<label>
+							Contraseña
+							if v.QbitSet {
+								<span class="saved">
+									@IconSm("check")
+									guardado
+								</span>
+							}
+						</label>
+						<input class="input" type="password" name="password" placeholder="contraseña de la WebUI"/>
+					</div>
+				</div>
+				<div class="block-foot">
+					<button type="submit" class="btn btn-primary">Guardá</button>
+				</div>
+			</form>
+		</div>
+
+	</div>
+}
+
+templ folderRow(f SettingsFolderRow) {
+	<div class="folder-row">
+		<span class="badge badge-neutral">{ f.Label }</span>
+		<span class="mono">{ f.Path }</span>
+		<form method="post" action="/settings/folders/delete" hx-post="/settings/folders/delete" hx-confirm="¿Quitar esta carpeta?" hx-target="body">
+			<input type="hidden" name="id" value={ intToStr(f.ID) }/>
+			<button type="submit" class="btn btn-icon btn-danger" aria-label="Quitar">
+				@IconSm("trash")
+			</button>
+		</form>
+	</div>
 }
 
 // PlexTest renders the result of a Plex connection test.
 templ PlexTest(ok bool, message string, libraries []string) {
 	if ok {
-		<p class="ok-badge">{ message }</p>
-		<ul class="browse-list">
+		<div class="notice mb-6">
+			@IconSm("check")
+			<span>{ message }</span>
+		</div>
+		<ul class="stat-list">
 			for _, lib := range libraries {
 				<li>{ lib }</li>
 			}
