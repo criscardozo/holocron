@@ -1,9 +1,30 @@
 package templates
 
-// Dashboard renders the widget grid (built in Go, see Grid) inside the shared
-// layout.
-templ Dashboard(grid templ.Component) {
+// Dashboard renders the "Atención" strip (chips linking to sections that need
+// action) and the widget grid (built in Go, see Grid) inside the shared layout.
+templ Dashboard(chips []AttnChip, grid templ.Component) {
 	@Layout("Dashboard") {
+		<div class="page-head">
+			<div>
+				<h1>Dashboard</h1>
+				<p class="sub">Estado del equipo y accesos rápidos a cada herramienta</p>
+			</div>
+			if len(chips) > 0 {
+				<div class="attn">
+					<span class="attn-label">Atención</span>
+					for _, c := range chips {
+						@attnChip(c)
+					}
+				</div>
+			}
+		</div>
 		@grid
 	}
+}
+
+templ attnChip(c AttnChip) {
+	<a class="chip" href={ templ.SafeURL(c.Href) }>
+		@IconSm(c.Icon)
+		{ c.Label }
+	</a>
 }

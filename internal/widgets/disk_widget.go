@@ -25,11 +25,12 @@ func (DiskWidget) ID() string    { return "disk" }
 func (DiskWidget) Title() string { return "Disco" }
 
 func (w DiskWidget) Card(ctx context.Context) templ.Component {
+	chrome := templates.WidgetChrome{ID: w.ID(), Title: w.Title(), Icon: "drive", Span: "span-2"}
 	view := templates.DiskWidgetView{}
 	list, err := w.folders.List(ctx, folders.PurposeDisk)
 	if err != nil || len(list) == 0 {
 		view.Empty = true
-		return templates.Widget(w.ID(), w.Title(), templates.DiskWidgetBody(view))
+		return templates.Widget(chrome, templates.DiskWidgetBody(view))
 	}
 
 	for _, f := range list {
@@ -45,9 +46,10 @@ func (w DiskWidget) Card(ctx context.Context) templ.Component {
 			row.UsedHuman = system.HumanBytes(used)
 			if total > 0 {
 				row.UsedPercent = int(float64(used) / float64(total) * 100)
+				row.Hot = row.UsedPercent >= 90
 			}
 		}
 		view.Rows = append(view.Rows, row)
 	}
-	return templates.Widget(w.ID(), w.Title(), templates.DiskWidgetBody(view))
+	return templates.Widget(chrome, templates.DiskWidgetBody(view))
 }

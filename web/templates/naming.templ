@@ -4,28 +4,41 @@ import "fmt"
 
 // NamingCard is the dashboard naming widget. Its refresh button re-scans (the
 // scan is cheap: a top-level readdir plus a regex) and swaps the card in place.
+// It reads as an attention card when there are invalid names.
 templ NamingCard(v NamingCardView) {
-	<section class="widget" id="widget-naming">
-		<header class="widget-head">
-			<h2>Nombres</h2>
-			<button class="refresh" hx-post="/naming/scan" hx-target="#widget-naming" hx-swap="outerHTML" hx-indicator="#widget-naming" aria-label="Escanear" title="Escanear">&#8635;</button>
+	<section class={ "card", "elev-sm", "widget", templ.KV("attn-widget", v.Count > 0) } id="widget-naming">
+		<header class="w-head">
+			<h2 class="w-title">
+				@Icon("alert")
+				Nombres
+			</h2>
+			<button class="btn btn-ghost btn-icon refresh" hx-post="/naming/scan" hx-target="#widget-naming" hx-swap="outerHTML" hx-indicator="#widget-naming" aria-label="Escanear" title="Escanear">
+				@Icon("refresh")
+			</button>
 		</header>
 		<div class="widget-body">
 			if !v.HasMediaFolders {
 				<p class="muted">Configurá carpetas de Películas/Series en <a href="/settings">Ajustes</a>.</p>
 			} else if v.Count == 0 {
-				<p class="ok-badge">✓ Todo cumple «Título (Año)»</p>
+				<span class="w-ok">
+					@IconSm("check")
+					Todo cumple «Título (Año)»
+				</span>
 			} else {
-				<a href="/naming" class="naming-count">
-					<span class="stat-val big">{ fmt.Sprintf("%d", v.Count) }</span>
-					<span class="muted">carpetas con nombre inválido</span>
-				</a>
+				<div class="big-num">{ fmt.Sprintf("%d", v.Count) }</div>
+				<div class="big-label">carpetas con nombre inválido</div>
+				<div class="w-foot">
+					<a class="w-link" href="/naming">
+						Revisar
+						@IconSm("chev")
+					</a>
+				</div>
 			}
 		</div>
 	</section>
 }
 
-// NamingPage lists the folders that break the convention.
+// NamingPage lists the folders that break the convention, grouped by library.
 templ NamingPage(v NamingPageView) {
 	@Layout("Nombres") {
 		@namingContent(v)
@@ -33,28 +46,58 @@ templ NamingPage(v NamingPageView) {
 }
 
 templ namingContent(v NamingPageView) {
-	<h1>Convención de nombres</h1>
-	<p class="muted">Las carpetas de Películas y Series deberían llamarse «Título (Año)».</p>
-	<form method="post" action="/naming/scan" hx-post="/naming/scan?to=page" hx-target="body">
-		<button class="btn" type="submit">Escanear ahora</button>
-	</form>
+	<div class="page-head">
+		<div>
+			<h1>Nombres</h1>
+			<p class="sub">Carpetas que no cumplen la convención «Título (Año)»</p>
+		</div>
+		<div class="head-actions">
+			<form method="post" action="/naming/scan" hx-post="/naming/scan?to=page" hx-target="body">
+				<button class="btn btn-primary" type="submit">
+					@IconSm("refresh")
+					Re-escanear
+				</button>
+			</form>
+		</div>
+	</div>
 	if !v.HasMediaFolders {
 		<p class="muted">No hay carpetas de Películas/Series configuradas. Agregá una en <a href="/settings">Ajustes</a>.</p>
 	} else if v.Count == 0 {
-		<p class="ok-badge">✓ Todas las carpetas cumplen la convención.</p>
+		<div class="notice">
+			@IconSm("check")
+			<span>Todas las carpetas cumplen la convención «Título (Año)».</span>
+		</div>
 	} else {
-		<h2>{ fmt.Sprintf("%d carpetas con problemas", v.Count) }</h2>
-		<table class="table">
-			<thead><tr><th>Tipo</th><th>Nombre actual</th><th>Sugerido</th></tr></thead>
-			<tbody>
-				for _, is := range v.Issues {
-					<tr>
-						<td>{ is.Type }</td>
-						<td class="mono">{ is.Found }</td>
-						<td class="mono">{ is.Expected }</td>
-					</tr>
-				}
-			</tbody>
-		</table>
+		<div class="notice mb-6">
+			@IconSm("alert")
+			<span>
+				<strong>{ fmt.Sprintf("%d carpetas", v.Count) }</strong> con nombre inválido. El patrón esperado es <span class="mono">Título (Año)</span> — corregilas para que Plex las reconozca bien.
+			</span>
+		</div>
+		@namingGroup("Películas", filterIssues(v.Issues, "movies"))
+		@namingGroup("Series", filterIssues(v.Issues, "tv"))
+	}
+}
+
+templ namingGroup(title string, issues []NamingIssueRow) {
+	if len(issues) > 0 {
+		<div class="lib-group">
+			<div class="lib-head">
+				<h2>{ title }</h2>
+				<span class="count">{ fmt.Sprintf("%d con problemas", len(issues)) }</span>
+			</div>
+			<table class="table fix">
+				<thead><tr><th class="w-90">Tipo</th><th>Nombre actual</th><th>Sugerido</th></tr></thead>
+				<tbody>
+					for _, is := range issues {
+						<tr>
+							<td><span class="badge badge-neutral">{ typeLabel(is.Type) }</span></td>
+							<td class="mono found">{ is.Found }</td>
+							<td class="mono expected">{ is.Expected }</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
 	}
 }

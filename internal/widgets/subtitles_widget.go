@@ -25,5 +25,11 @@ func (w SubtitlesWidget) Card(ctx context.Context) templ.Component {
 	if count, err := w.subtitles.MissingCount(ctx); err == nil {
 		view.Missing = count
 	}
-	return templates.Widget(w.ID(), w.Title(), templates.SubtitlesBody(view))
+	chrome := templates.WidgetChrome{
+		ID:    w.ID(),
+		Title: w.Title(),
+		Icon:  "cap",
+		Attn:  view.Configured && view.Missing > 0,
+	}
+	return templates.Widget(chrome, templates.SubtitlesBody(view))
 }

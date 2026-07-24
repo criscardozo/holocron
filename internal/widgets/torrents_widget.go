@@ -34,5 +34,6 @@ func (w TorrentsWidget) Card(ctx context.Context) templ.Component {
 			view.UpHuman = system.HumanBytes(uint64(sum.UpSpeed)) + "/s"
 		}
 	}
-	return templates.Widget(w.ID(), w.Title(), templates.TorrentsBody(view))
+	chrome := templates.WidgetChrome{ID: w.ID(), Title: w.Title(), Icon: "adown", Span: "span-4"}
+	return templates.Widget(chrome, templates.TorrentsBody(view))
 }

@@ -30,5 +30,6 @@ func (w MediaWidget) Card(ctx context.Context) templ.Component {
 			view.WithoutSubs = st.WithoutSubs
 		}
 	}
-	return templates.Widget(w.ID(), w.Title(), templates.MediaBody(view))
+	chrome := templates.WidgetChrome{ID: w.ID(), Title: w.Title(), Icon: "film", Span: "span-2"}
+	return templates.Widget(chrome, templates.MediaBody(view))
 }

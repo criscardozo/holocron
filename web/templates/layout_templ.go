@@ -9,7 +9,9 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 // Layout is the outer HTML shell shared by every page. hx-boost on the body
-// turns plain links into partial navigation without any custom JavaScript.
+// turns plain links into partial navigation without any custom JavaScript. The
+// title also selects the active nav link (labels match the page titles). The
+// hidden <svg> holds the icon sprite referenced by Icon/IconSm across pages.
 func Layout(title string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -38,13 +40,31 @@ func Layout(title string) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 11, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 13, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " · Holocron</title><link rel=\"icon\" href=\"/static/favicon.svg\"><link rel=\"stylesheet\" href=\"/static/styles.css\"><script src=\"/static/htmx.min.js\" defer></script></head><body hx-boost=\"true\"><header class=\"topbar\"><a class=\"brand\" href=\"/\">Holocron</a> <span class=\"tagline\">HTPC Manager</span><nav class=\"nav\"><a href=\"/\">Dashboard</a> <a href=\"/disk\">Disco</a> <a href=\"/naming\">Nombres</a> <a href=\"/media\">Medios</a> <a href=\"/subtitles\">Subtítulos</a> <a href=\"/torrents\">Torrents</a> <a href=\"/settings\">Ajustes</a></nav></header><main class=\"container\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " · Holocron</title><link rel=\"icon\" href=\"/static/favicon.svg\"><link rel=\"stylesheet\" href=\"/static/styles.css\"><script src=\"/static/htmx.min.js\" defer></script></head><body hx-boost=\"true\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = iconSprite().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<header class=\"nav\"><a class=\"nav-brand\" href=\"/\"><svg class=\"ic ic-fill\"><use href=\"#diamond\"></use></svg> Holocron</a> <span class=\"nav-tag\">HTPC Manager</span><nav class=\"nav-links\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		for _, it := range navItems {
+			templ_7745c5c3_Err = navLink(it.Label, it.Href, title).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</nav></header><main class=\"page\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -52,7 +72,38 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</main></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</main></body></html>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+// iconSprite is the hidden SVG sprite: every symbol Icon/IconSm can reference.
+// Stroke icons (1.75) that inherit currentColor; a few use ic-fill.
+func iconSprite() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var3 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var3 == nil {
+			templ_7745c5c3_Var3 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<svg class=\"sprite\" aria-hidden=\"true\"><symbol id=\"diamond\" viewBox=\"0 0 24 24\"><path d=\"M12 2 22 12 12 22 2 12Z\"></path><circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"currentColor\" stroke=\"none\"></circle></symbol> <symbol id=\"refresh\" viewBox=\"0 0 24 24\"><path d=\"M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path></symbol> <symbol id=\"drive\" viewBox=\"0 0 24 24\"><line x1=\"22\" x2=\"2\" y1=\"12\" y2=\"12\"></line><path d=\"M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z\"></path><line x1=\"6\" x2=\"6.01\" y1=\"16\" y2=\"16\"></line><line x1=\"10\" x2=\"10.01\" y1=\"16\" y2=\"16\"></line></symbol> <symbol id=\"film\" viewBox=\"0 0 24 24\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"></rect><path d=\"M7 3v18M17 3v18M3 7.5h4M3 12h18M3 16.5h4M17 7.5h4M17 16.5h4\"></path></symbol> <symbol id=\"cap\" viewBox=\"0 0 24 24\"><rect width=\"18\" height=\"14\" x=\"3\" y=\"5\" rx=\"2\"></rect><path d=\"M7 15h4M15 15h2M7 11h2M13 11h4\"></path></symbol> <symbol id=\"activity\" viewBox=\"0 0 24 24\"><path d=\"M22 12h-4l-3 9L9 3l-3 9H2\"></path></symbol> <symbol id=\"alert\" viewBox=\"0 0 24 24\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z\"></path><path d=\"M12 9v4M12 17h.01\"></path></symbol> <symbol id=\"check\" viewBox=\"0 0 24 24\"><path d=\"M21.8 10A10 10 0 1 1 17 3.34\"></path><path d=\"m9 11 3 3L22 4\"></path></symbol> <symbol id=\"folder\" viewBox=\"0 0 24 24\"><path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\"></path></symbol> <symbol id=\"file\" viewBox=\"0 0 24 24\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"></path><path d=\"M14 2v6h6\"></path></symbol> <symbol id=\"up\" viewBox=\"0 0 24 24\"><path d=\"M12 19V5M5 12l7-7 7 7\"></path></symbol> <symbol id=\"chev\" viewBox=\"0 0 24 24\"><path d=\"m9 18 6-6-6-6\"></path></symbol> <symbol id=\"adown\" viewBox=\"0 0 24 24\"><path d=\"M12 5v14M19 12l-7 7-7-7\"></path></symbol> <symbol id=\"aup\" viewBox=\"0 0 24 24\"><path d=\"M12 19V5M5 12l7-7 7 7\"></path></symbol> <symbol id=\"play\" viewBox=\"0 0 24 24\"><path d=\"M6 3v18l14-9z\"></path></symbol> <symbol id=\"pause\" viewBox=\"0 0 24 24\"><rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"></rect><rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"></rect></symbol> <symbol id=\"trash\" viewBox=\"0 0 24 24\"><path d=\"M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"></path></symbol> <symbol id=\"plus\" viewBox=\"0 0 24 24\"><path d=\"M5 12h14M12 5v14\"></path></symbol> <symbol id=\"search\" viewBox=\"0 0 24 24\"><circle cx=\"11\" cy=\"11\" r=\"8\"></circle><path d=\"m21 21-4.3-4.3\"></path></symbol> <symbol id=\"download\" viewBox=\"0 0 24 24\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3\"></path></symbol> <symbol id=\"plug\" viewBox=\"0 0 24 24\"><path d=\"M12 22v-5M9 8V2M15 8V2M18 8v4a6 6 0 0 1-12 0V8z\"></path></symbol> <symbol id=\"doc\" viewBox=\"0 0 24 24\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"></path><path d=\"M14 2v6h6M9 13h6M9 17h4\"></path></symbol> <symbol id=\"down-cloud\" viewBox=\"0 0 24 24\"><path d=\"M12 13v8M8 17l4 4 4-4\"></path><path d=\"M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25\"></path></symbol> <symbol id=\"key\" viewBox=\"0 0 24 24\"><path d=\"m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L21 4M2 21l6.5-6.5M7.5 16.5 5.5 14.5\"></path><circle cx=\"11\" cy=\"11\" r=\"5\"></circle></symbol></svg>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

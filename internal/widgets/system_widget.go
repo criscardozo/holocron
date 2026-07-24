@@ -27,7 +27,8 @@ func (w SystemWidget) Card(_ context.Context) templ.Component {
 		Uptime: dash(s.HasUptime, system.HumanDuration(s.Uptime)),
 		Load:   dash(s.HasLoad, fmt.Sprintf("%.2f", s.Load1)),
 	}
-	return templates.Widget(w.ID(), w.Title(), templates.SystemBody(v))
+	chrome := templates.WidgetChrome{ID: w.ID(), Title: w.Title(), Icon: "activity", Span: "span-2"}
+	return templates.Widget(chrome, templates.SystemBody(v))
 }
 
 func percentOrDash(ok bool, pct float64) string {

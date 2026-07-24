@@ -7,12 +7,19 @@ templ SubtitlesBody(v SubtitlesCardView) {
 	if !v.Configured {
 		<p class="muted">OpenSubtitles no configurado. <a href="/settings">Configurar</a>.</p>
 	} else if v.Missing == 0 {
-		<p class="ok-badge">✓ Todo con subtítulos ES</p>
+		<span class="w-ok">
+			@IconSm("check")
+			Todo con subtítulos ES
+		</span>
 	} else {
-		<a href="/subtitles" class="naming-count">
-			<span class="stat-val big">{ fmt.Sprintf("%d", v.Missing) }</span>
-			<span class="muted">sin subtítulos en español</span>
-		</a>
+		<div class="big-num">{ fmt.Sprintf("%d", v.Missing) }</div>
+		<div class="big-label">medios sin subtítulo en español</div>
+		<div class="w-foot">
+			<a class="w-link" href="/subtitles">
+				Buscar y descargar
+				@IconSm("chev")
+			</a>
+		</div>
 	}
 }
 
@@ -20,59 +27,95 @@ templ SubtitlesBody(v SubtitlesCardView) {
 // download them.
 templ SubtitlesPage(v SubtitlesPageView) {
 	@Layout("Subtítulos") {
-		<h1>Subtítulos</h1>
+		<div class="page-head">
+			<div>
+				<h1>Subtítulos</h1>
+				<p class="sub">Medios sin subtítulo en español · buscá y descargá desde OpenSubtitles</p>
+			</div>
+			if len(v.Rows) > 0 {
+				<div class="head-actions">
+					<span class="badge badge-warn">{ fmt.Sprintf("%d pendientes", len(v.Rows)) }</span>
+				</div>
+			}
+		</div>
 		if !v.Configured {
 			<p class="muted">Configurá tu API key de OpenSubtitles en <a href="/settings">Ajustes</a>.</p>
 		} else if len(v.Rows) == 0 {
-			<p class="ok-badge">✓ Todos tus medios tienen subtítulos en español.</p>
+			<div class="notice">
+				@IconSm("check")
+				<span>Todos tus medios tienen subtítulos en español.</span>
+			</div>
 		} else {
-			<p class="muted">Medios sin subtítulo en español. Buscá y descargá desde OpenSubtitles.</p>
-			<ul class="sub-list">
+			<div class="stack">
 				for _, row := range v.Rows {
-					<li class="sub-item">
-						<div class="sub-item-head">
-							<span>{ row.Title } <span class="muted">{ yearStr(row.Year) } · { row.Type }</span></span>
-							<button class="btn secondary" hx-get={ row.SearchHref } hx-target={ "#" + row.ResultsID } hx-swap="innerHTML" hx-indicator={ "#" + row.ResultsID }>Buscar</button>
-						</div>
-						<div class="sub-results" id={ row.ResultsID }></div>
-					</li>
+					@subtitleItem(row)
 				}
-			</ul>
+			</div>
 		}
 	}
 }
 
+templ subtitleItem(row SubtitleMissingRow) {
+	<div class="card elev-sm sub-item">
+		<div class="sub-top">
+			<div class="meta">
+				<span class="t">{ row.Title } <span class="muted">{ yearStr(row.Year) } · { row.Type }</span></span>
+			</div>
+			<div class="act">
+				<button class="btn btn-primary" hx-get={ row.SearchHref } hx-target={ "#" + row.ResultsID } hx-swap="innerHTML" hx-indicator={ "#" + row.ResultsID }>
+					@IconSm("search")
+					Buscar
+				</button>
+			</div>
+		</div>
+		<div class="sub-results" id={ row.ResultsID }></div>
+	</div>
+}
+
 // SubtitleResults is the search-results fragment for one media item.
 templ SubtitleResults(v SubtitleSearchView) {
-	if v.None {
-		<p class="muted">Sin resultados.</p>
-	} else {
-		<table class="table">
-			<tbody>
-				for _, res := range v.Results {
-					<tr>
-						<td>{ res.Language }</td>
-						<td class="mono">{ res.FileName }</td>
-						<td class="muted">{ res.Release }</td>
-						<td>
-							<form hx-post="/subtitles/download" hx-target="closest .sub-results" hx-swap="innerHTML">
-								<input type="hidden" name="file_id" value={ res.FileID }/>
-								<input type="hidden" name="path" value={ v.Path }/>
-								<button class="btn" type="submit">Descargar</button>
-							</form>
-						</td>
-					</tr>
-				}
-			</tbody>
-		</table>
-	}
+	<div class="results">
+		<h3>Resultados de OpenSubtitles · español</h3>
+		if v.None {
+			<p class="muted">Sin resultados.</p>
+		} else {
+			<table class="table">
+				<thead><tr><th>Archivo</th><th class="w-90">Idioma</th><th class="w-130"></th></tr></thead>
+				<tbody>
+					for _, res := range v.Results {
+						<tr>
+							<td class="mono">{ res.FileName }</td>
+							<td class="muted">{ res.Language }</td>
+							<td>
+								<div class="row-act">
+									<form hx-post="/subtitles/download" hx-target="closest .sub-results" hx-swap="innerHTML">
+										<input type="hidden" name="file_id" value={ res.FileID }/>
+										<input type="hidden" name="path" value={ v.Path }/>
+										<button class="btn btn-secondary" type="submit">
+											@IconSm("download")
+											Descargar
+										</button>
+									</form>
+								</div>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	</div>
 }
 
 // SubtitleDownloadResult reports the outcome of a download.
 templ SubtitleDownloadResult(ok bool, message string) {
-	if ok {
-		<span class="ok-badge">✓ { message }</span>
-	} else {
-		<span class="error">{ message }</span>
-	}
+	<div class="results">
+		if ok {
+			<span class="ok-badge">
+				@IconSm("check")
+				{ message }
+			</span>
+		} else {
+			<span class="error">{ message }</span>
+		}
+	</div>
 }

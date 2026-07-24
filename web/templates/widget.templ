@@ -1,22 +1,27 @@
 package templates
 
-// Widget is the card shell for a dashboard widget: a title, a small refresh
-// button that re-fetches just this card, and an arbitrary body. The refresh
-// button swaps the whole card (outerHTML) with the response of
-// GET /widgets/{id}.
-templ Widget(id string, title string, body templ.Component) {
-	<section class="widget" id={ "widget-" + id }>
-		<header class="widget-head">
-			<h2>{ title }</h2>
+// Widget is the card shell for a dashboard widget: an icon + title, a small
+// refresh button that re-fetches just this card (GET /widgets/{id}, swapped
+// outerHTML), and an arbitrary body. The chrome carries the grid span and the
+// attention flag (accent inset) so a refreshed fragment keeps its place.
+templ Widget(c WidgetChrome, body templ.Component) {
+	<section class={ "card", "elev-sm", "widget", c.Span, templ.KV("attn-widget", c.Attn) } id={ "widget-" + c.ID }>
+		<header class="w-head">
+			<h2 class="w-title">
+				@Icon(c.Icon)
+				{ c.Title }
+			</h2>
 			<button
-				class="refresh"
-				hx-get={ "/widgets/" + id }
-				hx-target={ "#widget-" + id }
+				class="btn btn-ghost btn-icon refresh"
+				hx-get={ "/widgets/" + c.ID }
+				hx-target={ "#widget-" + c.ID }
 				hx-swap="outerHTML"
-				hx-indicator={ "#widget-" + id }
+				hx-indicator={ "#widget-" + c.ID }
 				aria-label="Refrescar"
 				title="Refrescar"
-			>&#8635;</button>
+			>
+				@Icon("refresh")
+			</button>
 		</header>
 		<div class="widget-body">
 			@body

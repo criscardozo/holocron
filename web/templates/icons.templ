@@ -1,0 +1,21 @@
+package templates
+
+// Icon and IconSm reference a symbol from the shared SVG sprite embedded in the
+// layout (see Layout). Stroke line-icons that replace the old emoji/entities.
+templ Icon(id string) {
+	<svg class="ic"><use href={ "#" + id }></use></svg>
+}
+
+templ IconSm(id string) {
+	<svg class="ic ic-sm"><use href={ "#" + id }></use></svg>
+}
+
+// navLink renders one top-bar link, marking it aria-current when its label
+// matches the current page title.
+templ navLink(label, href, current string) {
+	if label == current {
+		<a href={ templ.SafeURL(href) } aria-current="page">{ label }</a>
+	} else {
+		<a href={ templ.SafeURL(href) }>{ label }</a>
+	}
+}
