@@ -136,6 +136,8 @@ make deploy PI=usuario@raspberrypi.local
 - [Arquitectura y decisiones técnicas](docs/arquitectura.md) — stack, estructura,
   modelo de datos, seguridad, compilación y despliegue.
 - [Especificación de features](docs/features.md) — detalle de cada pantalla.
+- [Guía de UI](docs/ui.md) — tema «Noir»: tokens, componentes y las reglas a
+  respetar al tocar la interfaz.
 - [Roadmap por fases](docs/roadmap.md) — orden de construcción.
 
 ## Licencia

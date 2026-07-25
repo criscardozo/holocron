@@ -21,7 +21,7 @@ concretas se describen en [features.md](features.md); el orden de construcción 
 
 | Capa | Elección | Motivo |
 |---|---|---|
-| Lenguaje | Go 1.23+ | Liviano, binario estático, cross-compila a ARM. |
+| Lenguaje | Go 1.26 | Liviano, binario estático, cross-compila a ARM. |
 | HTTP | `net/http` (stdlib) | Router con métodos de Go 1.22 (`GET /ruta`). Sin framework. |
 | Vistas | [templ](https://templ.guide) | Componentes tipados que compilan a Go. Se genera en la Mac. |
 | Interactividad | [HTMX](https://htmx.org) | Updates parciales (refresh de widgets) sin escribir JS ni SPA. Se vendoriza embebido (~14 KB). |
@@ -44,29 +44,38 @@ holocron/
   cmd/holocron/
     main.go                 # arranque, flags/env, señales, graceful shutdown
   internal/
-    config/                 # config del server (flags + env) y helpers
-    db/                     # conexión SQLite, migraciones embebidas, queries
-    jobs/                   # runner de trabajos en background con estado y progreso
+    config/                 # config del server (flags + env)
+    db/                     # conexión SQLite, migraciones embebidas
+    jobs/                   # runner de trabajos en background (estado, progreso, shutdown)
     system/                 # stats de la Pi: CPU, RAM, temperatura, uptime, load
-    scanner/                # uso de disco (portado de diskusage-pi)
-    naming/                 # validador de convención "Título (Año)"
+    scanner/                # uso de disco (portado de diskusage-pi), Browse con os.Root
+    diskusage/              # orquesta scanner + folders + cache en scan_results
+    folders/                # store de carpetas vigiladas (disk | movies | tv)
+    naming/                 # validador de convención "Título (Año)" + service
+    settings/               # store key/value de credenciales de servicios
     plex/                   # cliente de Plex Media Server (portado de plexmatch-generator)
-    plexauth/               # login por PIN + autodescubrimiento (portado)
+    library/                # sync de inventario Plex→media_items + generación de .nfo
     nfo/                    # generación de archivos .nfo desde metadata de Plex
-    subtitles/              # cliente de OpenSubtitles + detección de subs presentes
+    subs/                   # detección de subtítulos presentes junto al medio
+    opensubtitles/          # cliente de la API v1 de OpenSubtitles
+    subtitles/              # medios sin subs ES + búsqueda/descarga
     qbittorrent/            # cliente de la WebUI API de qBittorrent
+    torrents/               # service sobre qbittorrent (config desde settings)
     widgets/                # registro de widgets del dashboard
-    httpserver/             # rutas, middleware, wiring
+    httpserver/             # rutas, middleware, handlers por feature
   web/
-    templates/              # archivos .templ (layout, dashboard, páginas por feature)
+    templates/              # archivos .templ + view-models (structs ya formateados)
     static/                 # htmx.min.js, styles.css, favicon — embebidos con //go:embed
   docs/                     # esta documentación (en español)
-  packaging/                # unit de systemd, config de nfpm (.deb) opcional
-  scripts/                  # build.sh (cross-compile), deploy.sh (scp a la Pi)
+  packaging/                # unit de systemd de referencia
+  scripts/                  # install.sh (instala/actualiza en la Pi), deploy.sh (scp)
+  .github/workflows/        # CI (test/lint/vulncheck) y release (binario arm64)
   Makefile
   go.mod
-  CLAUDE.md
 ```
+
+El login por PIN de Plex (`plexauth` en el proyecto hermano) todavía no se portó:
+la conexión se configura con URL + token desde Ajustes.
 
 Los paquetes `scanner`, `plex`, `plexauth` se **portan** desde los proyectos
 hermanos, no se reescriben de cero. Se adaptan a la interfaz de `jobs` y a las
@@ -149,12 +158,20 @@ Dos niveles, igual criterio que `diskusage-pi`:
 - Sin autenticación en esta etapa (red interna de confianza). El diseño deja lugar
   para sumar Basic Auth como middleware sin tocar el resto; cuando se agregue, la
   comparación de credenciales será **constant-time** (`crypto/subtle`).
-- **Path traversal**: todo acceso al filesystem (escaneo, drill-down, escritura de
-  .nfo) se confina a las carpetas configuradas usando **`os.Root`** (Go 1.24+), que
-  ata las operaciones a un directorio raíz y bloquea el escape vía `..` o symlinks a
-  nivel del kernel. Se descarta el patrón `filepath.Clean` + `strings.HasPrefix`
-  (frágil, desaconsejado por las guías de seguridad de Go). Nota: el `scanner`
-  portado de `diskusage-pi` usa el enfoque viejo; al integrarlo se migra a `os.Root`.
+- **Path traversal**: el drill-down de disco (`GET /disk/browse?path=…`) es el único
+  lugar donde una ruta llega desde el cliente, y se confina con **`os.Root`**
+  (Go 1.24+). El handle del root queda **abierto durante toda la operación** y cada
+  `stat`, `open`, `readdir` y walk recursivo pasa por él, así que el kernel bloquea
+  el escape vía `..` o symlinks incluso si el árbol cambia en el medio (sin ventana
+  TOCTOU). Se descarta el patrón `filepath.Clean` + `strings.HasPrefix` (frágil), y
+  también usar `os.Root` sólo como validador previo. Tests:
+  `internal/scanner/scanner_test.go`.
+- **Escrituras derivadas de Plex**: los `.nfo` y los subtítulos se escriben en las
+  rutas que **reporta el servidor Plex** (guardadas en `media_items`), no en rutas
+  que elija el cliente: la descarga de subtítulos valida el destino contra el
+  inventario antes de escribir. Es una confianza explícita en Plex; un servidor
+  comprometido podría inducir escrituras donde reporte. El hardening de systemd
+  (`ProtectSystem=strict` + `ReadWritePaths`) acota el daño a las carpetas de medios.
 - **Errores hacia el usuario**: mensajes genéricos en la UI; el detalle técnico va al
   log del servidor. Nunca exponer rutas internas, stack traces ni errores crudos de
   la DB o de APIs externas al navegador.
@@ -185,19 +202,23 @@ Convenciones (stdlib, sin dependencias extra):
 
 ## 10. Calidad y verificación
 
-Todo corre en la Mac (o en CI opcional). El objetivo es que un binario que llega a
-la Pi ya pasó por estos filtros:
+El objetivo es que un binario que llega a la Pi ya pasó por estos filtros:
 
 - `go test -race -shuffle=on ./...` — tests con detección de data races y orden
   aleatorio.
 - `go vet ./...` y **golangci-lint** (config en `.golangci.yml`).
 - `go mod tidy` + `git diff --exit-code` — falla si `go.mod`/`go.sum` quedaron sucios.
+- `templ generate` + `git diff --exit-code` — falla si las vistas generadas quedaron
+  desactualizadas respecto de los `.templ`.
 - `govulncheck ./...` — vulnerabilidades conocidas en el código realmente alcanzado.
-- `gosec ./...` — análisis estático de seguridad.
 
-Estos comandos se agrupan en el `Makefile` (`make check`). Un workflow de GitHub
-Actions que los corra en cada push es **opcional** y se puede sumar más adelante
-(ver `docs/roadmap.md`); no es necesario para el flujo personal de deploy por `scp`.
+Localmente se agrupan en el `Makefile` (`make check`). En el repo corren además en
+**GitHub Actions** ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)) en
+cada push y PR a `main`.
+
+> `golangci-lint` se instala con `go install` (no con el binario precompilado de la
+> action): las releases de golangci-lint se compilan con un Go más viejo que el que
+> targetea el módulo y se niegan a correr.
 
 ## Compilación y despliegue
 
@@ -216,15 +237,34 @@ Actions que los corra en cada push es **opcional** y se puede sumar más adelant
    ```
    scp dist/holocron pi@raspberry:/usr/local/bin/holocron
    ```
-4. En la Pi corre como servicio de **systemd** (unit provista en `packaging/`).
-   Alternativa: empaquetar un `.deb` con nfpm para instalar/actualizar prolijo, como
-   ya hace `diskusage-pi`.
+4. En la Pi corre como servicio de **systemd**.
 
-Todo esto se automatiza en el `Makefile` y `scripts/` (`make build`, `make deploy`).
+Todo esto se automatiza en el `Makefile` (`make build-pi`, `make deploy`).
 
-> **Opción a futuro — GoReleaser**: si se quiere versionar releases prolijos
-> (binario `arm64` + checksums + changelog), GoReleaser en modo `--snapshot` local
-> hace el cross-compile en la Mac sin depender de GitHub. Es opcional; el `Makefile`
-> alcanza para el flujo personal.
+### Vía recomendada: releases + instalador
+
+En lugar de copiar el binario a mano, el flujo normal es:
+
+1. **Publicar**: `git tag vX.Y.Z && git push origin vX.Y.Z`. El workflow
+   [`release.yml`](../.github/workflows/release.yml) cross-compila el binario
+   `arm64`, calcula su SHA-256 y crea la release de GitHub con ambos adjuntos.
+   (`make release VERSION=vX.Y.Z` hace lo mismo desde la Mac con el CLI `gh`.)
+2. **Instalar o actualizar en la Pi**, por terminal:
+   ```
+   curl -fsSL https://raw.githubusercontent.com/criscardozo/holocron/main/scripts/install.sh | sudo bash
+   ```
+   `scripts/install.sh` baja el binario de la última release, **verifica el
+   checksum**, crea el usuario de servicio, escribe la unit de systemd y arranca
+   el servicio. Es idempotente: el mismo comando actualiza. Acepta
+   `HOLOCRON_VERSION`, `HOLOCRON_ADDR` y `HOLOCRON_MEDIA_PATHS`, y tiene
+   `--uninstall` (que conserva la base de datos).
+
+`packaging/holocron.service` queda como unit de referencia para una instalación
+manual; si se cambia el hardening, hay que tocar los dos lugares.
+
+> **Importante**: la unit usa `ProtectSystem=strict`, así que **generar `.nfo` y
+> descargar subtítulos requiere listar las carpetas de medios en `ReadWritePaths`**
+> (el instalador lo hace con `HOLOCRON_MEDIA_PATHS`). Sin eso, esos trabajos fallan
+> y ahora lo informan explícitamente en la UI en vez de quedarse en silencio.
 
 > **Target confirmado:** Raspberry Pi 4/5 con SO de 64 bits → `GOARCH=arm64`.

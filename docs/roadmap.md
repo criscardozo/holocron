@@ -74,11 +74,19 @@ dashboard vacío que arranca en la Pi.
 - **Agregar magnet-links** para descargar por BitTorrent.
 - Widget de resumen (descargas activas, velocidad total) en el dashboard.
 
+## Ya sumado después de las fases
+
+- **Rediseño visual «Noir»** (negro + naranja, íconos SVG, jerarquía por
+  atención). Ver [ui.md](ui.md).
+- **CI en GitHub Actions**: vet, tests con `-race`, `golangci-lint`, `govulncheck`
+  y chequeos de `go mod tidy`/`templ generate` en cada push y PR.
+- **Releases automáticas** por tag `v*` (binario `arm64` + checksum) e
+  **instalador/actualizador** para la Pi headless (`scripts/install.sh`).
+
 ## Ideas para más adelante (fuera de alcance inicial)
 
 - Renombrado asistido de carpetas mal nombradas (Fase 2).
+- Login por PIN de Plex (portar `plexauth`); hoy se configura URL + token.
 - Control del servicio de Plex (reiniciar, refrescar bibliotecas).
 - Notificaciones (descargas terminadas, disco casi lleno).
 - Basic Auth opcional (con comparación constant-time).
-- CI en GitHub Actions (test/lint/security) y releases con GoReleaser, si el repo se
-  publica. No es necesario para el flujo personal de deploy por `scp`.
