@@ -36,6 +36,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	if _, ok, _ := s.deps.Settings.Get(ctx, settings.KeyQbitPass); ok {
 		view.QbitSet = true
 	}
+	view.APITokenSet = s.deps.APIToken.Configured(ctx)
 	for _, f := range list {
 		view.Folders = append(view.Folders, templates.SettingsFolderRow{
 			ID:      f.ID,
@@ -146,6 +147,25 @@ func (s *Server) handleSaveQbit(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.redirect(w, r, "/settings")
+}
+
+// handleGenerateAPIToken issues a new API token and shows it once. Only its
+// digest is stored, so this is the only chance to copy it.
+func (s *Server) handleGenerateAPIToken(w http.ResponseWriter, r *http.Request) {
+	token, err := s.deps.APIToken.Generate(r.Context())
+	if err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	s.render(w, r, templates.APITokenIssued(token))
+}
+
+func (s *Server) handleRevokeAPIToken(w http.ResponseWriter, r *http.Request) {
+	if err := s.deps.APIToken.Revoke(r.Context()); err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	s.redirect(w, r, "/settings?notice="+url.QueryEscape("Token de la API revocado."))
 }
 
 func (s *Server) handlePlexTest(w http.ResponseWriter, r *http.Request) {

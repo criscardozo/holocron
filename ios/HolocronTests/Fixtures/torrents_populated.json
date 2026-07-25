@@ -1,0 +1,17 @@
+{
+  "configured": true,
+  "total": 4,
+  "active": 1,
+  "dlSpeed": 4300000,
+  "upSpeed": 655360,
+  "torrents": [
+    {"hash":"a1","name":"Cosmos.S01E03.1080p.WEB","state":"downloading","progress":0.63,
+     "sizeBytes":2576980377,"dlSpeed":4300000,"upSpeed":215040,"seeds":38,"leechs":5,"paused":false},
+    {"hash":"b2","name":"La.Ciudad.2023.1080p.BluRay","state":"uploading","progress":1,
+     "sizeBytes":8696061132,"dlSpeed":0,"upSpeed":1258291,"seeds":120,"leechs":0,"paused":false},
+    {"hash":"c3","name":"Serie.Documental.S01.720p","state":"pausedDL","progress":0.12,
+     "sizeBytes":1181116006,"dlSpeed":0,"upSpeed":0,"seeds":4,"leechs":2,"paused":true},
+    {"hash":"d4","name":"Pelicula.Vieja.1998.DVDRip","state":"error","progress":0,
+     "sizeBytes":1503238553,"dlSpeed":0,"upSpeed":0,"seeds":0,"leechs":0,"paused":false}
+  ]
+}

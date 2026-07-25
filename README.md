@@ -30,6 +30,19 @@ HTMX) va embebida en el ejecutable. Corre como servicio de systemd en la Pi.
 Los escaneos y trabajos pesados son **bajo demanda**: el usuario los dispara y los
 resultados se cachean; nada corre en loop consumiendo la Pi de fondo.
 
+## App iOS
+
+Además de la web hay una **app nativa en SwiftUI** ([`ios/`](ios/)) que cubre las
+mismas cuatro áreas desde el teléfono: estado de la Pi, torrents (pegar un magnet
+desde el celular es el caso estrella), subtítulos y medios con explorador de disco.
+
+Habla con el servidor por una [API JSON versionada](docs/api.md) bajo `/api/v1`,
+que es la **única parte autenticada**: la web sigue abierta dentro de la LAN, pero
+un teléfono se va de la red. El token se genera en **Ajustes → App iOS**, se
+muestra una sola vez y el servidor guarda sólo su digest.
+
+Ver [`ios/README.md`](ios/README.md) para compilarla y configurarla.
+
 ## Instalación
 
 En la Raspberry Pi (headless, por terminal). Descarga el último binario `arm64`

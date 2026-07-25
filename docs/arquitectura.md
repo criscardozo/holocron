@@ -62,7 +62,9 @@ holocron/
     qbittorrent/            # cliente de la WebUI API de qBittorrent
     torrents/               # service sobre qbittorrent (config desde settings)
     widgets/                # registro de widgets del dashboard
-    httpserver/             # rutas, middleware, handlers por feature
+    apitoken/               # token de la API JSON (genera, revoca, verifica)
+    httpserver/             # rutas, middleware, handlers por feature, API JSON
+  ios/                      # app iOS en SwiftUI (proyecto generado con xcodegen)
   web/
     templates/              # archivos .templ + view-models (structs ya formateados)
     static/                 # htmx.min.js, styles.css, favicon — embebidos con //go:embed
@@ -155,9 +157,12 @@ Dos niveles, igual criterio que `diskusage-pi`:
 
 ## 8. Seguridad
 
-- Sin autenticación en esta etapa (red interna de confianza). El diseño deja lugar
-  para sumar Basic Auth como middleware sin tocar el resto; cuando se agregue, la
-  comparación de credenciales será **constant-time** (`crypto/subtle`).
+- **La interfaz web no tiene autenticación** (red interna de confianza). Sí la
+  tiene la **API JSON** (`/api/v1`, ver [api.md](api.md)), porque la consume la
+  app iOS y un teléfono se va de la LAN: bearer token generado con `crypto/rand`,
+  almacenado **sólo como digest SHA-256** y comparado en tiempo constante
+  (`crypto/subtle`). Ver `internal/apitoken`. Si algún día se quiere cerrar
+  también la web, el mismo patrón sirve como middleware.
 - **Path traversal**: el drill-down de disco (`GET /disk/browse?path=…`) es el único
   lugar donde una ruta llega desde el cliente, y se confina con **`os.Root`**
   (Go 1.24+). El handle del root queda **abierto durante toda la operación** y cada

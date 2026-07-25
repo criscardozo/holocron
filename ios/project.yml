@@ -1,0 +1,79 @@
+# Xcode project definition for the Holocron iOS app.
+#
+# The .xcodeproj is generated, not committed: it is machine-written, merges
+# badly and drifts. Regenerate it with `xcodegen generate` in this directory
+# (or `make ios-project` from the repo root).
+name: Holocron
+options:
+  bundleIdPrefix: ar.com.criscardozo
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  Holocron:
+    type: application
+    platform: iOS
+    sources:
+      - path: Holocron
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ar.com.criscardozo.holocron
+        PRODUCT_NAME: Holocron
+        GENERATE_INFOPLIST_FILE: YES
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "0.1.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_KEY_CFBundleDisplayName: Holocron
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: >-
+          UIInterfaceOrientationPortrait
+          UIInterfaceOrientationLandscapeLeft
+          UIInterfaceOrientationLandscapeRight
+        # The app is dark-only, matching the Noir theme of the web UI.
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+    info:
+      path: Holocron/Info.plist
+      properties:
+        # Holocron runs on a Raspberry Pi on the LAN over plain HTTP, so ATS
+        # has to allow local networking. This does NOT open up arbitrary
+        # insecure loads to the internet.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: >-
+          Holocron se conecta a tu Raspberry Pi en la red local para mostrar
+          el estado del HTPC y administrar las descargas.
+
+  HolocronTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: HolocronTests
+    dependencies:
+      - target: Holocron
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ar.com.criscardozo.holocron.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Holocron:
+    build:
+      targets:
+        Holocron: all
+        HolocronTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - HolocronTests

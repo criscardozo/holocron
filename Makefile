@@ -5,7 +5,12 @@ DIST    := dist
 # templ is pinned as a module tool (see go.mod), so no global install is needed.
 TEMPL := go tool templ
 
-.PHONY: generate build build-pi run test lint vet vulncheck tidy check clean deploy release
+.PHONY: generate build build-pi run test lint vet vulncheck tidy check clean deploy release \
+	ios-project ios-build ios-test
+
+IOS_DIR         := ios
+IOS_SCHEME      := Holocron
+IOS_DESTINATION := platform=iOS Simulator,name=iPhone 17
 
 ## generate: regenerate *_templ.go from .templ files
 generate:
@@ -55,6 +60,21 @@ deploy: build-pi
 	@test -n "$(PI)" || (echo "set PI=user@host" && exit 1)
 	scp $(DIST)/$(BINARY)-arm64 $(PI):/tmp/holocron
 	@echo "Copied. On the Pi: sudo mv /tmp/holocron /usr/local/bin/holocron && sudo systemctl restart holocron"
+
+## ios-project: regenerate the Xcode project from ios/project.yml
+ios-project:
+	@command -v xcodegen >/dev/null || (echo "missing xcodegen (brew install xcodegen)" && exit 1)
+	cd $(IOS_DIR) && xcodegen generate
+
+## ios-build: build the iOS app for the simulator
+ios-build: ios-project
+	cd $(IOS_DIR) && xcodebuild -project $(IOS_SCHEME).xcodeproj -scheme $(IOS_SCHEME) \
+		-destination '$(IOS_DESTINATION)' build
+
+## ios-test: run the iOS unit tests (API contract + helpers) on the simulator
+ios-test: ios-project
+	cd $(IOS_DIR) && xcodebuild -project $(IOS_SCHEME).xcodeproj -scheme $(IOS_SCHEME) \
+		-destination '$(IOS_DESTINATION)' test
 
 ## release: cross-compile arm64, checksum it and publish a GitHub release (usage: make release VERSION=v0.1.0)
 release: build-pi

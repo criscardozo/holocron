@@ -20,6 +20,9 @@ const (
 	KeyQbitURL           = "qbittorrent.url"
 	KeyQbitUser          = "qbittorrent.username"
 	KeyQbitPass          = "qbittorrent.password"
+	// KeyAPITokenHash holds the SHA-256 digest of the JSON API bearer token
+	// (never the token itself). See internal/apitoken.
+	KeyAPITokenHash = "api.token_hash"
 )
 
 // Store reads and writes settings.

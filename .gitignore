@@ -16,3 +16,9 @@
 
 # Agent instructions (local only)
 CLAUDE.md
+
+# iOS: el proyecto Xcode se genera con xcodegen desde ios/project.yml
+/ios/*.xcodeproj
+/ios/*.xcworkspace
+/ios/DerivedData/
+/ios/Holocron/Info.plist
