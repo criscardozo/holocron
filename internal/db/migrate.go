@@ -79,14 +79,12 @@ func applyMigration(ctx context.Context, database *sql.DB, name string) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Statements are separated by ";". Full-line "--" comments are stripped
-	// first so a semicolon inside a comment does not split a statement.
-	for _, stmt := range strings.Split(stripSQLComments(string(body)), ";") {
-		if strings.TrimSpace(stmt) == "" {
-			continue
-		}
-		if _, err := tx.ExecContext(ctx, stmt); err != nil {
-			return fmt.Errorf("exec statement: %w", err)
+	// The whole file is executed in one call: modernc.org/sqlite accepts
+	// multiple statements, so there is no need to split on ";" — a fragile
+	// rule that would break on a trigger body or a semicolon inside a literal.
+	if strings.TrimSpace(string(body)) != "" {
+		if _, err := tx.ExecContext(ctx, string(body)); err != nil {
+			return fmt.Errorf("exec migration body: %w", err)
 		}
 	}
 	if _, err := tx.ExecContext(ctx,
@@ -94,18 +92,4 @@ func applyMigration(ctx context.Context, database *sql.DB, name string) error {
 		return fmt.Errorf("record migration: %w", err)
 	}
 	return tx.Commit()
-}
-
-// stripSQLComments removes full-line SQL comments (lines whose first
-// non-whitespace characters are "--"). Migrations use only full-line comments.
-func stripSQLComments(s string) string {
-	var b strings.Builder
-	for _, line := range strings.Split(s, "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), "--") {
-			continue
-		}
-		b.WriteString(line)
-		b.WriteByte('\n')
-	}
-	return b.String()
 }

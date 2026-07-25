@@ -198,15 +198,23 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 }
 
 // Browse lists the direct children of path with recursive sizes. path must live
-// under one of the configured Paths; containment is enforced with os.Root.
+// under one of the configured Paths.
+//
+// Containment is enforced with os.Root for the whole operation, not just an
+// upfront check: the root handle stays open and every stat, open, readdir and
+// recursive walk goes through it, so the kernel rejects a symlink or ".."
+// escape even if the tree changes mid-operation (no TOCTOU window).
 func (s *Scanner) Browse(ctx context.Context, path string, limit int) (BrowseResult, error) {
 	startedAt := time.Now()
-	cleanPath, err := s.resolveBrowsePath(path)
+	root, rel, rootAbs, err := s.openBrowseRoot(path)
 	if err != nil {
 		return BrowseResult{}, err
 	}
+	defer func() { _ = root.Close() }()
 
-	info, err := os.Lstat(cleanPath)
+	cleanPath := displayPath(rootAbs, rel)
+
+	info, err := root.Lstat(rel)
 	if err != nil {
 		return BrowseResult{}, err
 	}
@@ -219,7 +227,7 @@ func (s *Scanner) Browse(ctx context.Context, path string, limit int) (BrowseRes
 
 	scanErrors := errorCollector{limit: s.options.MaxReportedErrors, items: []ScanError{}}
 
-	dir, err := os.Open(cleanPath)
+	dir, err := root.Open(rel)
 	if err != nil {
 		return BrowseResult{}, err
 	}
@@ -230,6 +238,7 @@ func (s *Scanner) Browse(ctx context.Context, path string, limit int) (BrowseRes
 	}
 
 	rootDevice, hasRootDevice := deviceID(info)
+	rootFS := root.FS()
 	entries := make([]FolderEntry, 0, len(dirEntries))
 	var totalBytes uint64
 
@@ -237,7 +246,8 @@ func (s *Scanner) Browse(ctx context.Context, path string, limit int) (BrowseRes
 		if err := ctx.Err(); err != nil {
 			return BrowseResult{}, err
 		}
-		entryPath := filepath.Join(cleanPath, entry.Name())
+		entryRel := joinRel(rel, entry.Name())
+		entryPath := displayPath(rootAbs, entryRel)
 		if entry.Type()&os.ModeSymlink != 0 {
 			continue
 		}
@@ -247,7 +257,7 @@ func (s *Scanner) Browse(ctx context.Context, path string, limit int) (BrowseRes
 
 		var bytes uint64
 		if entry.IsDir() {
-			size, walkErr := s.directorySize(ctx, entryPath, rootDevice, hasRootDevice, &scanErrors)
+			size, walkErr := s.directorySizeFS(ctx, rootFS, entryRel, rootAbs, rootDevice, hasRootDevice, &scanErrors)
 			if walkErr != nil {
 				return BrowseResult{}, walkErr
 			}
@@ -290,24 +300,29 @@ func (s *Scanner) Browse(ctx context.Context, path string, limit int) (BrowseRes
 	}, nil
 }
 
-// resolveBrowsePath cleans the requested path and verifies it lives under one
-// of the configured Paths, using os.Root to reject symlink/".." escapes. The
-// lexical clean path is returned so reported paths stay stable for the UI.
-func (s *Scanner) resolveBrowsePath(requested string) (string, error) {
+// openBrowseRoot resolves the requested path against the configured Paths and
+// returns an open os.Root, the target's root-relative path, and the root's
+// absolute path (for building display paths). The caller must close the root.
+//
+// A path that is lexically inside a root but unreadable there does not abort
+// the search: the next configured root is tried, and only when all are
+// exhausted is the request rejected.
+func (s *Scanner) openBrowseRoot(requested string) (*os.Root, string, string, error) {
 	if requested == "" {
-		return "", errors.New("path is required")
+		return nil, "", "", errors.New("path is required")
 	}
 	abs, err := filepath.Abs(requested)
 	if err != nil {
-		return "", err
+		return nil, "", "", err
 	}
 	clean := filepath.Clean(abs)
 
-	for _, root := range s.options.Paths {
-		rootAbs, err := filepath.Abs(root)
+	for _, configured := range s.options.Paths {
+		rootAbs, err := filepath.Abs(configured)
 		if err != nil {
 			continue
 		}
+		rootAbs = filepath.Clean(rootAbs)
 		rel, err := filepath.Rel(rootAbs, clean)
 		if err != nil {
 			continue
@@ -316,20 +331,85 @@ func (s *Scanner) resolveBrowsePath(requested string) (string, error) {
 			continue // lexically outside this root
 		}
 
-		// os.Root confines the lookup to rootAbs at the kernel level: a
-		// symlink or ".." that escapes the root fails here.
-		r, err := os.OpenRoot(rootAbs)
+		root, err := os.OpenRoot(rootAbs)
 		if err != nil {
 			continue
 		}
-		_, statErr := r.Stat(rel)
-		_ = r.Close()
-		if statErr != nil {
-			return "", statErr
+		relSlash := filepath.ToSlash(rel)
+		// The kernel resolves this inside the root: a symlink or ".." that
+		// escapes fails here rather than silently reading outside.
+		if _, err := root.Lstat(relSlash); err != nil {
+			_ = root.Close()
+			continue
 		}
-		return clean, nil
+		return root, relSlash, rootAbs, nil
 	}
-	return "", errors.New("path is outside configured scan paths")
+	return nil, "", "", errors.New("path is outside configured scan paths")
+}
+
+// joinRel joins an os.Root-relative path with a child name. Root paths are
+// slash-separated and never absolute; "." denotes the root itself.
+func joinRel(rel, name string) string {
+	if rel == "." || rel == "" {
+		return name
+	}
+	return rel + "/" + name
+}
+
+// displayPath turns an os.Root-relative path back into the absolute path shown
+// in the UI and stored in results.
+func displayPath(rootAbs, rel string) string {
+	if rel == "." || rel == "" {
+		return rootAbs
+	}
+	return filepath.Join(rootAbs, filepath.FromSlash(rel))
+}
+
+// directorySizeFS sums allocated bytes under rel, walking through the os.Root
+// filesystem so every access stays confined to the root.
+func (s *Scanner) directorySizeFS(ctx context.Context, rootFS fs.FS, rel, rootAbs string, rootDevice uint64, hasRootDevice bool, errCol *errorCollector) (uint64, error) {
+	var total uint64
+
+	err := fs.WalkDir(rootFS, rel, func(p string, entry fs.DirEntry, walkErr error) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		display := displayPath(rootAbs, p)
+		if walkErr != nil {
+			errCol.add(display, walkErr)
+			return nil
+		}
+		if entry == nil {
+			return nil
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			return nil
+		}
+		if p != rel && entry.IsDir() && s.shouldSkip(display) {
+			return fs.SkipDir
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			errCol.add(display, err)
+			if entry.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if p != rel && entry.IsDir() && s.options.OneFileSystem && hasRootDevice {
+			if childDevice, ok := deviceID(info); ok && childDevice != rootDevice {
+				return fs.SkipDir
+			}
+		}
+
+		total += allocatedBytes(info)
+		return nil
+	})
+	if err != nil {
+		return total, err
+	}
+	return total, nil
 }
 
 func (s *Scanner) isAtScanRoot(path string) bool {

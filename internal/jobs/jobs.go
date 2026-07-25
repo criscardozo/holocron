@@ -93,23 +93,59 @@ func (s *jobState) snapshot() Job {
 // running.
 var ErrKindBusy = fmt.Errorf("a job of this kind is already running")
 
+// maxHistory caps how many finished jobs are kept per kind (besides the most
+// recent one, which is always retained). Without a cap the id map would grow
+// for the lifetime of the process.
+const maxHistory = 20
+
 // Manager tracks jobs and enforces one-per-kind concurrency.
 type Manager struct {
 	mu         sync.Mutex
 	byID       map[string]*jobState
 	running    map[string]*jobState // kind -> running job
 	lastByKind map[string]string    // kind -> most recent job id
+	history    map[string][]string  // kind -> finished job ids, oldest first
 	now        func() time.Time
 	seq        int
+
+	// baseCtx is the parent of every job context, so Shutdown can cancel all
+	// running work. wg tracks running jobs so Shutdown can wait for them.
+	baseCtx context.Context
+	cancel  context.CancelFunc
+	wg      sync.WaitGroup
 }
 
 // NewManager creates an empty job manager.
 func NewManager() *Manager {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
 		byID:       make(map[string]*jobState),
 		running:    make(map[string]*jobState),
 		lastByKind: make(map[string]string),
+		history:    make(map[string][]string),
 		now:        time.Now,
+		baseCtx:    ctx,
+		cancel:     cancel,
+	}
+}
+
+// Shutdown cancels every running job and waits for them to return, or until
+// ctx is done. Jobs are deliberately detached from the request that started
+// them, so this is the only thing that stops them.
+func (m *Manager) Shutdown(ctx context.Context) error {
+	m.cancel()
+
+	done := make(chan struct{})
+	go func() {
+		m.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
@@ -132,6 +168,7 @@ func (m *Manager) Start(kind string, fn Func) (Job, error) {
 	m.byID[st.id] = st
 	m.running[kind] = st
 	m.lastByKind[kind] = st.id
+	m.wg.Add(1)
 	m.mu.Unlock()
 
 	go m.run(st, fn)
@@ -150,10 +187,14 @@ func (m *Manager) run(st *jobState, fn Func) {
 		}
 		m.mu.Lock()
 		delete(m.running, st.kind)
+		m.retire(st)
 		m.mu.Unlock()
+		m.wg.Done()
 	}()
 
-	result, err := fn(context.Background(), &Progress{job: st})
+	// Jobs outlive the request that started them, so they hang off the
+	// manager's context instead: cancelled only by Shutdown.
+	result, err := fn(m.baseCtx, &Progress{job: st})
 
 	st.mu.Lock()
 	st.finishedAt = m.now()
@@ -166,6 +207,21 @@ func (m *Manager) run(st *jobState, fn Func) {
 		st.result = result
 	}
 	st.mu.Unlock()
+}
+
+// retire records a finished job in its kind's history and drops the oldest
+// entries beyond maxHistory. The most recent job of a kind is never dropped:
+// Latest must keep working. Callers must hold m.mu.
+func (m *Manager) retire(st *jobState) {
+	hist := append(m.history[st.kind], st.id)
+	for len(hist) > maxHistory {
+		oldest := hist[0]
+		hist = hist[1:]
+		if oldest != m.lastByKind[st.kind] {
+			delete(m.byID, oldest)
+		}
+	}
+	m.history[st.kind] = hist
 }
 
 // Get returns a snapshot of the job with the given id, or false if unknown.

@@ -84,3 +84,48 @@ func TestBrowseRejectsSymlinkEscape(t *testing.T) {
 		t.Fatal("expected error browsing through an escaping symlink, got nil")
 	}
 }
+
+// A symlink in the middle of the path (not the final element) must also be
+// rejected: every lookup goes through os.Root, not just the last component.
+func TestBrowseRejectsSymlinkEscapeInPathPrefix(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	secret := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(secret, "inner"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(secret, filepath.Join(root, "escape")); err != nil {
+		t.Skipf("symlinks unsupported: %v", err)
+	}
+
+	sc := New(Options{Paths: []string{root}})
+	target := filepath.Join(root, "escape", "inner")
+	if _, err := sc.Browse(context.Background(), target, 0); err == nil {
+		t.Fatal("expected error browsing through a symlinked path component, got nil")
+	}
+}
+
+// With several configured roots, a path living in a later root must resolve
+// instead of being rejected because an earlier root did not contain it.
+func TestBrowseFindsPathInSecondRoot(t *testing.T) {
+	t.Parallel()
+	first := t.TempDir()
+	second := t.TempDir()
+	child := filepath.Join(second, "movies")
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(child, "a.mkv"), 2048)
+
+	sc := New(Options{Paths: []string{first, second}})
+	res, err := sc.Browse(context.Background(), child, 0)
+	if err != nil {
+		t.Fatalf("browse in second root: %v", err)
+	}
+	if len(res.Entries) != 1 || res.Entries[0].Name != "a.mkv" {
+		t.Fatalf("unexpected entries: %+v", res.Entries)
+	}
+	if res.Entries[0].Bytes == 0 {
+		t.Error("expected a non-zero allocated size through os.Root")
+	}
+}
