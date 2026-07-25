@@ -104,6 +104,12 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
 		return err
 	}
+	// Background jobs are detached from their originating request, so they must
+	// be cancelled explicitly; a job still running after the grace period is
+	// abandoned rather than blocking the exit.
+	if err := jobManager.Shutdown(shutdownCtx); err != nil {
+		logger.Warn("background jobs did not finish before shutdown", "error", err)
+	}
 	return nil
 }
 

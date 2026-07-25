@@ -80,3 +80,81 @@ func TestManagerRejectsConcurrentSameKind(t *testing.T) {
 	close(release)
 	waitFor(t, m, first.ID, StatusDone)
 }
+
+func TestShutdownCancelsRunningJobs(t *testing.T) {
+	t.Parallel()
+	m := NewManager()
+
+	started := make(chan struct{})
+	job, err := m.Start("long", func(ctx context.Context, _ *Progress) (string, error) {
+		close(started)
+		<-ctx.Done() // only Shutdown can cancel a detached job
+		return "", ctx.Err()
+	})
+	if err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+	<-started
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := m.Shutdown(ctx); err != nil {
+		t.Fatalf("Shutdown returned error: %v", err)
+	}
+
+	got, ok := m.Get(job.ID)
+	if !ok {
+		t.Fatal("job not found after shutdown")
+	}
+	if got.Status != StatusError {
+		t.Errorf("status = %q, want %q (cancelled)", got.Status, StatusError)
+	}
+}
+
+func TestShutdownTimesOutOnStuckJob(t *testing.T) {
+	t.Parallel()
+	m := NewManager()
+
+	release := make(chan struct{})
+	defer close(release)
+	if _, err := m.Start("stuck", func(_ context.Context, _ *Progress) (string, error) {
+		<-release // ignores cancellation on purpose
+		return "", nil
+	}); err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	if err := m.Shutdown(ctx); err == nil {
+		t.Error("expected Shutdown to report a timeout for a stuck job")
+	}
+}
+
+func TestFinishedJobsArePrunedButLatestSurvives(t *testing.T) {
+	t.Parallel()
+	m := NewManager()
+
+	var ids []string
+	for i := 0; i < maxHistory+5; i++ {
+		job, err := m.Start("churn", func(_ context.Context, _ *Progress) (string, error) {
+			return "ok", nil
+		})
+		if err != nil {
+			t.Fatalf("Start %d returned error: %v", i, err)
+		}
+		waitFor(t, m, job.ID, StatusDone)
+		ids = append(ids, job.ID)
+	}
+
+	if _, ok := m.Get(ids[0]); ok {
+		t.Error("oldest job should have been pruned from the id map")
+	}
+	latest, ok := m.Latest("churn")
+	if !ok {
+		t.Fatal("Latest lost the most recent job")
+	}
+	if latest.ID != ids[len(ids)-1] {
+		t.Errorf("Latest = %q, want %q", latest.ID, ids[len(ids)-1])
+	}
+}

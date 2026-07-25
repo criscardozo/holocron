@@ -97,7 +97,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /settings/opensubtitles", s.handleSaveOpenSubtitles)
 	mux.HandleFunc("POST /settings/qbittorrent", s.handleSaveQbit)
 
-	return chain(mux, s.recoverer, s.logRequests, securityHeaders, gzipMW)
+	return chain(mux, s.recoverer, s.logRequests, securityHeaders, limitBody, gzipMW)
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {

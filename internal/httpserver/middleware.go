@@ -46,6 +46,21 @@ func (s *Server) logRequests(next http.Handler) http.Handler {
 	})
 }
 
+// maxRequestBody caps how much of a request body a handler will read. Every
+// form this app posts is a few hundred bytes at most; the limit keeps a large
+// upload from being buffered into memory on a small device.
+const maxRequestBody = 1 << 20 // 1 MiB
+
+// limitBody caps the size of request bodies before any handler parses a form.
+func limitBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Body != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // securityHeaders sets a strict, same-origin security policy. Everything the
 // page needs (HTMX, CSS) is served from this origin, so 'self' suffices.
 func securityHeaders(next http.Handler) http.Handler {
