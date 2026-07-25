@@ -8,7 +8,8 @@ type MediaCardView struct {
 	WithoutSubs int
 }
 
-// MediaPageView drives the media detail page.
+// MediaPageView drives the media detail page. Truncated reports that the
+// inventory table shows only the first page of a larger library.
 type MediaPageView struct {
 	Configured    bool
 	Syncing       bool
@@ -16,6 +17,7 @@ type MediaPageView struct {
 	Total         int
 	WithNFO       int
 	WithoutSubs   int
+	Truncated     bool
 	Items         []MediaItemRow
 }
 
@@ -24,6 +26,7 @@ type MediaItemRow struct {
 	Title     string
 	Year      int
 	Type      string
+	Path      string
 	HasNFO    bool
 	HasSubsES bool
 }

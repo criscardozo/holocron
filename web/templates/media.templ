@@ -86,7 +86,14 @@ templ MediaDetailSection(v MediaPageView) {
 				<tbody>
 					for _, it := range v.Items {
 						<tr>
-							<td>{ it.Title }</td>
+							<td>
+								<div class="title-cell">
+									<span class="t">{ it.Title }</span>
+									if it.Path != "" {
+										<span class="p">{ it.Path }</span>
+									}
+								</div>
+							</td>
 							<td><span class="badge badge-neutral">{ it.Type }</span></td>
 							<td class="num">{ yearStr(it.Year) }</td>
 							<td>@yesNoBadge(it.HasNFO)</td>
@@ -95,6 +102,9 @@ templ MediaDetailSection(v MediaPageView) {
 					}
 				</tbody>
 			</table>
+			if v.Truncated {
+				<p class="muted">Se muestran { fmt.Sprintf("%d", len(v.Items)) } de { fmt.Sprintf("%d", v.Total) } ítems.</p>
+			}
 		} else {
 			<p class="muted">Sin inventario. Tocá «Sincronizar desde Plex».</p>
 		}

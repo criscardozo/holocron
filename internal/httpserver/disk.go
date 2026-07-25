@@ -3,9 +3,11 @@ package httpserver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/jobs"
@@ -73,7 +75,7 @@ func (s *Server) buildDiskDetail(ctx context.Context, f folders.Folder) template
 
 	if res, scannedAt, ok, err := s.deps.Disk.CachedResult(ctx, f.ID); err == nil && ok {
 		d.HasResult = true
-		d.ScannedAt = scannedAt
+		d.ScannedAt = humanScannedAt(scannedAt)
 		var maxTop uint64
 		for _, t := range res.TopFolders {
 			if t.Bytes > maxTop {
@@ -183,6 +185,30 @@ func (s *Server) handleDiskBrowse(w http.ResponseWriter, r *http.Request) {
 		view.Entries = append(view.Entries, row)
 	}
 	s.render(w, r, templates.BrowseFragment(view))
+}
+
+// humanScannedAt turns the stored scan timestamp into a relative phrase
+// ("hace 3 min"). SQLite writes datetime('now') in UTC, so showing the raw
+// value would be hours off from the user's clock.
+func humanScannedAt(stored string) string {
+	t, err := time.Parse(time.DateTime, stored)
+	if err != nil {
+		return stored
+	}
+	switch d := time.Since(t.UTC()); {
+	case d < 0:
+		return "recién"
+	case d < time.Minute:
+		return "hace instantes"
+	case d < time.Hour:
+		return fmt.Sprintf("hace %d min", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("hace %d h", int(d.Hours()))
+	case d < 7*24*time.Hour:
+		return fmt.Sprintf("hace %d días", int(d.Hours()/24))
+	default:
+		return t.UTC().Local().Format("2006-01-02 15:04")
+	}
 }
 
 func browseHref(folderID int64, path string) string {

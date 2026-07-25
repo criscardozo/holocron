@@ -6,9 +6,13 @@ type SubtitlesCardView struct {
 	Missing    int
 }
 
-// SubtitlesPageView drives the subtitles page.
+// SubtitlesPageView drives the subtitles page. Missing is the true number of
+// items lacking a Spanish subtitle, which can exceed the rows listed (the list
+// is capped); Truncated says whether that is the case.
 type SubtitlesPageView struct {
 	Configured bool
+	Missing    int
+	Truncated  bool
 	Rows       []SubtitleMissingRow
 }
 
@@ -17,6 +21,7 @@ type SubtitleMissingRow struct {
 	Title      string
 	Year       int
 	Type       string
+	Path       string
 	ResultsID  string // DOM id of this row's results container
 	SearchHref string // GET endpoint that returns search results for this item
 }

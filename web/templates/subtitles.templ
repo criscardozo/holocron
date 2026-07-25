@@ -32,9 +32,9 @@ templ SubtitlesPage(v SubtitlesPageView) {
 				<h1>Subtítulos</h1>
 				<p class="sub">Medios sin subtítulo en español · buscá y descargá desde OpenSubtitles</p>
 			</div>
-			if len(v.Rows) > 0 {
+			if v.Missing > 0 {
 				<div class="head-actions">
-					<span class="badge badge-warn">{ fmt.Sprintf("%d pendientes", len(v.Rows)) }</span>
+					<span class="badge badge-warn">{ fmt.Sprintf("%d pendientes", v.Missing) }</span>
 				</div>
 			}
 		</div>
@@ -46,6 +46,12 @@ templ SubtitlesPage(v SubtitlesPageView) {
 				<span>Todos tus medios tienen subtítulos en español.</span>
 			</div>
 		} else {
+			if v.Truncated {
+				<div class="notice mb-6">
+					@IconSm("alert")
+					<span>Se muestran los primeros { fmt.Sprintf("%d", len(v.Rows)) } de { fmt.Sprintf("%d", v.Missing) }. Descargá algunos y volvé a entrar para ver el resto.</span>
+				</div>
+			}
 			<div class="stack">
 				for _, row := range v.Rows {
 					@subtitleItem(row)
@@ -60,6 +66,9 @@ templ subtitleItem(row SubtitleMissingRow) {
 		<div class="sub-top">
 			<div class="meta">
 				<span class="t">{ row.Title } <span class="muted">{ yearStr(row.Year) } · { row.Type }</span></span>
+				if row.Path != "" {
+					<span class="p">{ row.Path }</span>
+				}
 			</div>
 			<div class="act">
 				<button class="btn btn-primary" hx-get={ row.SearchHref } hx-target={ "#" + row.ResultsID } hx-swap="innerHTML" hx-indicator={ "#" + row.ResultsID }>

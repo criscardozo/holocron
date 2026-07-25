@@ -16,11 +16,21 @@ func (s *Server) handleSubtitlesPage(w http.ResponseWriter, r *http.Request) {
 		s.render(w, r, templates.SubtitlesPage(view))
 		return
 	}
-	items, err := s.deps.Subtitles.MissingItems(ctx, 200)
+	const listLimit = 200
+	items, err := s.deps.Subtitles.MissingItems(ctx, listLimit)
 	if err != nil {
 		s.serverError(w, r, err)
 		return
 	}
+	// The badge must report the real total, not the capped page length, so it
+	// agrees with the dashboard widget.
+	if total, err := s.deps.Subtitles.MissingCount(ctx); err == nil {
+		view.Missing = total
+	} else {
+		view.Missing = len(items)
+	}
+	view.Truncated = len(items) >= listLimit && view.Missing > len(items)
+
 	for i, it := range items {
 		rid := fmt.Sprintf("subres-%d", i)
 		q := url.Values{}
@@ -31,6 +41,7 @@ func (s *Server) handleSubtitlesPage(w http.ResponseWriter, r *http.Request) {
 			Title:      it.Title,
 			Year:       it.Year,
 			Type:       it.Type,
+			Path:       it.Path,
 			ResultsID:  rid,
 			SearchHref: "/subtitles/search?" + q.Encode(),
 		})
@@ -41,8 +52,15 @@ func (s *Server) handleSubtitlesPage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSubtitlesSearch(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	title := q.Get("title")
-	year, _ := strconv.Atoi(q.Get("year"))
 	path := q.Get("path")
+	// An unparsable or absent year is not an error: the search simply runs
+	// without that filter.
+	year := 0
+	if raw := q.Get("year"); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			year = parsed
+		}
+	}
 
 	results, err := s.deps.Subtitles.Search(r.Context(), title, year)
 	if err != nil {
