@@ -1,8 +1,10 @@
 package httpserver
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/cristian/holocron/internal/folders"
@@ -52,9 +54,14 @@ func (s *Server) handleAddFolder(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err := s.deps.Folders.Add(r.Context(),
 		r.PostFormValue("label"), r.PostFormValue("path"), r.PostFormValue("purpose"))
-	if err != nil {
+	switch {
+	case errors.Is(err, folders.ErrNotADirectory):
 		s.log.Warn("add folder", "error", err)
-		s.redirect(w, r, "/settings?notice=No+se+pudo+agregar+la+carpeta")
+		s.redirect(w, r, "/settings?notice="+url.QueryEscape("Esa ruta no existe o no es una carpeta."))
+		return
+	case err != nil:
+		s.log.Warn("add folder", "error", err)
+		s.redirect(w, r, "/settings?notice="+url.QueryEscape("No se pudo agregar la carpeta."))
 		return
 	}
 	s.redirect(w, r, "/settings")
