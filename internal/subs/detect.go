@@ -31,14 +31,23 @@ type Result struct {
 	SpanishSubtitle bool
 }
 
-// DetectDir walks folder (bounded, skipping symlinks) looking for external
-// subtitle files and reports whether any subtitle and a Spanish subtitle exist.
+// maxEntries bounds how many filesystem entries DetectDir will look at, so a
+// pathological directory cannot stall a sync of the whole library.
+const maxEntries = 5000
+
+// DetectDir walks folder (skipping symlinks, stopping after maxEntries entries)
+// looking for external subtitle files and reports whether any subtitle and a
+// Spanish subtitle exist. It stops early once a Spanish subtitle is found.
 // A folder that cannot be read yields a zero Result and no error.
 func DetectDir(folder string) Result {
 	var res Result
+	seen := 0
 	_ = filepath.WalkDir(folder, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil || d == nil {
 			return nil //nolint:nilerr // best-effort scan
+		}
+		if seen++; seen > maxEntries {
+			return filepath.SkipAll
 		}
 		if d.Type()&os.ModeSymlink != 0 {
 			if d.IsDir() {
@@ -55,6 +64,7 @@ func DetectDir(folder string) Result {
 		res.AnySubtitle = true
 		if isSpanish(filepath.Base(path)) {
 			res.SpanishSubtitle = true
+			return filepath.SkipAll // nothing left to learn
 		}
 		return nil
 	})

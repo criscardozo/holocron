@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cristian/holocron/internal/opensubtitles"
 	"github.com/cristian/holocron/internal/settings"
@@ -74,6 +75,42 @@ func (s *Service) MissingItems(ctx context.Context, limit int) ([]MissingItem, e
 	return out, rows.Err()
 }
 
+// videoExts are the container extensions a subtitle can accompany.
+var videoExts = map[string]bool{
+	".mkv": true, ".mp4": true, ".avi": true, ".m4v": true,
+	".mov": true, ".wmv": true, ".mpg": true, ".mpeg": true, ".ts": true,
+}
+
+// subtitleBaseName picks the name a downloaded subtitle should take so players
+// pair it with the video. Players match a subtitle to a video by filename, so
+// "<video>.es.srt" beats naming it after the folder. The largest video file in
+// the folder wins (extras and samples are smaller); with no video present it
+// falls back to the folder name.
+func subtitleBaseName(folder string) string {
+	entries, err := os.ReadDir(folder)
+	if err != nil {
+		return filepath.Base(folder)
+	}
+	var best string
+	var bestSize int64 = -1
+	for _, e := range entries {
+		if e.IsDir() || !videoExts[strings.ToLower(filepath.Ext(e.Name()))] {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if info.Size() > bestSize {
+			bestSize, best = info.Size(), e.Name()
+		}
+	}
+	if best == "" {
+		return filepath.Base(folder)
+	}
+	return strings.TrimSuffix(best, filepath.Ext(best))
+}
+
 // isKnownMediaFolder reports whether folder is a path Holocron recorded in the
 // media inventory. Client-supplied paths are only trusted if they match.
 func (s *Service) isKnownMediaFolder(ctx context.Context, folder string) bool {
@@ -131,7 +168,7 @@ func (s *Service) Download(ctx context.Context, fileID int, folder string) (stri
 	if info, err := os.Stat(folder); err != nil || !info.IsDir() {
 		return "", fmt.Errorf("media folder not accessible: %s", folder)
 	}
-	dest := filepath.Join(folder, filepath.Base(folder)+".es.srt")
+	dest := filepath.Join(folder, subtitleBaseName(folder)+".es.srt")
 	if err := os.WriteFile(dest, content, 0o644); err != nil {
 		return "", fmt.Errorf("write subtitle: %w", err)
 	}

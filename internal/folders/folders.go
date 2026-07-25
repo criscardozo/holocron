@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 )
 
@@ -79,8 +80,13 @@ func (s *Store) Get(ctx context.Context, id int64) (Folder, error) {
 	return f, nil
 }
 
+// ErrNotADirectory is returned when the path to watch does not exist or is not
+// a directory.
+var ErrNotADirectory = errors.New("path is not an existing directory")
+
 // Add inserts a watched folder. The path is normalised to an absolute, cleaned
-// form. Purpose defaults to disk when empty.
+// form and must already exist as a directory, so a typo surfaces here instead
+// of as an unexplained "no se pudo leer" later. Purpose defaults to disk.
 func (s *Store) Add(ctx context.Context, label, path, purpose string) (int64, error) {
 	if label == "" || path == "" {
 		return 0, errors.New("label and path are required")
@@ -93,6 +99,11 @@ func (s *Store) Add(ctx context.Context, label, path, purpose string) (int64, er
 		return 0, fmt.Errorf("normalise path: %w", err)
 	}
 	abs = filepath.Clean(abs)
+
+	info, err := os.Stat(abs)
+	if err != nil || !info.IsDir() {
+		return 0, fmt.Errorf("%w: %s", ErrNotADirectory, abs)
+	}
 
 	res, err := s.db.ExecContext(ctx,
 		`INSERT INTO watched_folders (label, path, purpose) VALUES (?, ?, ?)`,

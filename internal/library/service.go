@@ -107,16 +107,24 @@ func (s *Service) sync(ctx context.Context, c *plex.Client, p *jobs.Progress) (s
 		return "", fmt.Errorf("list libraries: %w", err)
 	}
 
-	var count int
+	relevant := make([]plex.Library, 0, len(libs))
 	for _, lib := range libs {
-		if lib.Type != "movie" && lib.Type != "show" {
-			continue
+		if lib.Type == "movie" || lib.Type == "show" {
+			relevant = append(relevant, lib)
 		}
+	}
+
+	var count int
+	for i, lib := range relevant {
+		p.Set(i * 100 / max(len(relevant), 1))
 		items, err := c.AllLibraryItems(ctx, lib.ID)
 		if err != nil {
 			return "", fmt.Errorf("list items of %q: %w", lib.Title, err)
 		}
 		for _, it := range items {
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
 			folder := resolveFolder(it)
 			if folder == "" {
 				continue
@@ -147,7 +155,7 @@ func (s *Service) StartGenerateNFO(ctx context.Context) (jobs.Job, error) {
 	})
 }
 
-func (s *Service) generateNFO(ctx context.Context, _ *jobs.Progress) (string, error) {
+func (s *Service) generateNFO(ctx context.Context, p *jobs.Progress) (string, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT path, type, title, year, plex_guid, has_subs_es, plex_alt_ids FROM media_items`)
 	if err != nil {
@@ -166,14 +174,26 @@ func (s *Service) generateNFO(ctx context.Context, _ *jobs.Progress) (string, er
 		}
 		items = append(items, r)
 	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return "", fmt.Errorf("iterate media: %w", err)
+	}
 	if err := rows.Close(); err != nil {
-		return "", err
+		return "", fmt.Errorf("close media rows: %w", err)
 	}
 
-	var written int
-	for _, r := range items {
+	var written, failed int
+	var firstErr error
+	for i, r := range items {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		p.Set(i * 100 / max(len(items), 1))
+
 		ids := map[string]string{}
-		_ = json.Unmarshal([]byte(r.altIDs), &ids)
+		if err := json.Unmarshal([]byte(r.altIDs), &ids); err != nil {
+			ids = map[string]string{} // a malformed cache must not stop the job
+		}
 		it := nfo.Item{
 			Title:          r.title,
 			Year:           r.year,
@@ -191,13 +211,28 @@ func (s *Service) generateNFO(ctx context.Context, _ *jobs.Progress) (string, er
 			continue
 		}
 		if werr != nil {
-			continue // folder not accessible on this host; skip
+			// The folder may be unreachable from this host, or the service may
+			// lack write access (systemd ProtectSystem=strict without the media
+			// paths in ReadWritePaths). Keep going, but do not stay silent:
+			// a run where everything fails must say so.
+			failed++
+			if firstErr == nil {
+				firstErr = werr
+			}
+			continue
 		}
 		if _, err := s.db.ExecContext(ctx,
 			`UPDATE media_items SET nfo_written_at = datetime('now') WHERE path = ?`, r.path); err != nil {
 			return "", fmt.Errorf("mark nfo written: %w", err)
 		}
 		written++
+	}
+
+	if written == 0 && failed > 0 {
+		return "", fmt.Errorf("no se pudo escribir ningún .nfo (%d intentos): %w", failed, firstErr)
+	}
+	if failed > 0 {
+		return fmt.Sprintf("%d .nfo escritos, %d fallaron", written, failed), nil
 	}
 	return fmt.Sprintf("%d .nfo escritos", written), nil
 }
