@@ -1,4 +1,8 @@
 [Unit]
+# Reference unit for a manual install. The recommended path is
+# scripts/install.sh, which writes an equivalent unit (filling in the listen
+# address and the media paths) and keeps it up to date. Keep both in sync when
+# changing the hardening below.
 Description=Holocron HTPC manager
 After=network-online.target
 Wants=network-online.target
@@ -10,7 +14,8 @@ Restart=on-failure
 RestartSec=3
 
 # Run as an unprivileged user. Create it once on the Pi:
-#   sudo useradd --system --home /var/lib/holocron --create-home holocron
+#   sudo useradd --system --home /var/lib/holocron --create-home \
+#     --shell /usr/sbin/nologin holocron
 User=holocron
 Group=holocron
 
@@ -18,12 +23,16 @@ Group=holocron
 Environment=HOLOCRON_DB=/var/lib/holocron/holocron.db
 StateDirectory=holocron
 
-# Hardening. Note: the media/library paths Holocron scans must remain readable
-# by this user; add ReadWritePaths / ReadOnlyPaths as needed once configured.
+# Hardening.
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
+
+# ProtectSystem=strict makes the whole filesystem read-only except the state
+# directory, so writing .nfo files and subtitles into the library REQUIRES
+# listing the media paths here. Without this, those jobs fail and report it.
+#   ReadWritePaths=/mnt/media /srv/downloads
 
 [Install]
 WantedBy=multi-user.target
