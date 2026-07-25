@@ -67,6 +67,28 @@ jobs:
       - name: Run golangci-lint
         run: golangci-lint run ./...
 
+  ios:
+    name: iOS app
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate the Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      # The contract tests decode payloads captured from a real server, so a
+      # breaking change to the Go API fails here instead of on the phone.
+      - name: Build and test
+        working-directory: ios
+        run: |
+          xcodebuild -project Holocron.xcodeproj -scheme Holocron \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            test
+
   vulncheck:
     name: Govulncheck
     runs-on: ubuntu-latest

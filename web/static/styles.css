@@ -357,6 +357,7 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .add-row .input { flex: 1; min-width: 200px; }
 .add-row select.input { flex: 0 0 auto; width: auto; }
 .block-foot { display: flex; justify-content: flex-end; margin-top: var(--space-2); }
+.token-box { padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-2); border: 1px solid var(--color-divider); user-select: all; }
 /* flex-direction row for the same reason as .stat-band; the input needs
    width:auto so .input's width:100% does not fight the flex sizing. */
 .magnet-form { display: flex; flex-direction: row; gap: var(--space-3); padding: var(--space-4) var(--space-6); margin-bottom: var(--space-6); align-items: center; flex-wrap: wrap; }

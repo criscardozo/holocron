@@ -13,6 +13,9 @@ type SettingsView struct {
 	QbitURL      string
 	QbitUser     string
 	QbitSet      bool
+	// APITokenSet reports whether a JSON API token exists. The token itself is
+	// never shown again: only its digest is stored.
+	APITokenSet bool
 }
 
 // SettingsFolderRow is one configured watched folder.

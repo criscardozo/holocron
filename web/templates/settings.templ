@@ -116,6 +116,38 @@ templ settingsContent(v SettingsView) {
 			</form>
 		</div>
 
+		<div class="card elev-sm block">
+			<h2>
+				@Icon("key")
+				App iOS
+			</h2>
+			<p class="desc">Token para la API JSON que usa la app. La interfaz web no lo necesita.</p>
+			<div id="api-token">
+				if v.APITokenSet {
+					<p class="muted">
+						<span class="badge badge-yes">Token activo</span>
+						Se guarda sólo su huella, así que no se puede volver a ver. Si lo perdiste, generá uno nuevo (el anterior deja de servir).
+					</p>
+					<div class="actions">
+						<form hx-post="/settings/api-token" hx-target="#api-token" hx-swap="innerHTML">
+							<button type="submit" class="btn btn-secondary">Generar uno nuevo</button>
+						</form>
+						<form method="post" action="/settings/api-token/revoke" hx-post="/settings/api-token/revoke" hx-target="body" hx-confirm="¿Revocar el token? La app va a dejar de conectarse.">
+							<button type="submit" class="btn btn-danger">Revocar</button>
+						</form>
+					</div>
+				} else {
+					<p class="muted">Todavía no hay token: la API está cerrada.</p>
+					<form hx-post="/settings/api-token" hx-target="#api-token" hx-swap="innerHTML">
+						<button type="submit" class="btn btn-primary">
+							@IconSm("plus")
+							Generar token
+						</button>
+					</form>
+				}
+			</div>
+		</div>
+
 		<div class="card elev-sm block span-2">
 			<h2>
 				@Icon("down-cloud")
@@ -163,6 +195,22 @@ templ folderRow(f SettingsFolderRow) {
 			<button type="submit" class="btn btn-icon btn-danger" aria-label="Quitar">
 				@IconSm("trash")
 			</button>
+		</form>
+	</div>
+}
+
+// APITokenIssued shows a freshly generated token. It is the only time the
+// plaintext is available, so the copy is emphasised.
+templ APITokenIssued(token string) {
+	<div class="notice mb-6">
+		@IconSm("alert")
+		<span>Copialo ahora: no se vuelve a mostrar.</span>
+	</div>
+	<p class="mono token-box">{ token }</p>
+	<p class="muted">Cargalo en la app junto con la URL del server.</p>
+	<div class="actions">
+		<form method="post" action="/settings/api-token/revoke" hx-post="/settings/api-token/revoke" hx-target="body" hx-confirm="¿Revocar el token? La app va a dejar de conectarse.">
+			<button type="submit" class="btn btn-danger">Revocar</button>
 		</form>
 	</div>
 }

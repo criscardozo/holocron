@@ -10,6 +10,7 @@ import (
 
 	"github.com/a-h/templ"
 
+	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/library"
@@ -34,6 +35,7 @@ type Deps struct {
 	Library   *library.Service
 	Subtitles *subtitles.Service
 	Torrents  *torrents.Service
+	APIToken  *apitoken.Store
 }
 
 // Server serves the Holocron web UI.
@@ -96,6 +98,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /settings/plex/test", s.handlePlexTest)
 	mux.HandleFunc("POST /settings/opensubtitles", s.handleSaveOpenSubtitles)
 	mux.HandleFunc("POST /settings/qbittorrent", s.handleSaveQbit)
+	mux.HandleFunc("POST /settings/api-token", s.handleGenerateAPIToken)
+	mux.HandleFunc("POST /settings/api-token/revoke", s.handleRevokeAPIToken)
+
+	// JSON API for the iOS app (authenticated; see api.go).
+	s.apiRoutes(mux)
 
 	return chain(mux, s.recoverer, s.logRequests, securityHeaders, limitBody, gzipMW)
 }

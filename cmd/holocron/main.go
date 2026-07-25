@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/config"
 	"github.com/cristian/holocron/internal/db"
 	"github.com/cristian/holocron/internal/diskusage"
@@ -53,6 +54,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	libraryService := library.NewService(database, settingsStore, jobManager)
 	subtitlesService := subtitles.NewService(database, settingsStore)
 	torrentsService := torrents.NewService(settingsStore)
+	apiTokenStore := apitoken.NewStore(settingsStore)
 
 	registry := widgets.NewRegistry(
 		widgets.SystemWidget{},
@@ -73,6 +75,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Library:   libraryService,
 		Subtitles: subtitlesService,
 		Torrents:  torrentsService,
+		APIToken:  apiTokenStore,
 	})
 
 	httpSrv := &http.Server{
