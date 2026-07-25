@@ -65,8 +65,9 @@ templ TorrentsTable(v TorrentsPageView) {
 		} else if len(v.Rows) == 0 {
 			<p class="muted">No hay torrents.</p>
 		} else {
-			<table class="table">
-				<thead><tr><th>Nombre</th><th class="w-120">Estado</th><th class="w-190">Progreso</th><th class="num">Tamaño</th><th class="num">↓</th><th class="num">↑</th><th class="num">S/L</th><th class="w-90"></th></tr></thead>
+			<div class="table-scroll">
+				<table class="table">
+					<thead><tr><th>Nombre</th><th class="w-120">Estado</th><th class="w-190">Progreso</th><th class="num">Tamaño</th><th class="num">↓</th><th class="num">↑</th><th class="num">S/L</th><th class="w-90"></th></tr></thead>
 				<tbody>
 					for _, t := range v.Rows {
 						<tr>
@@ -85,14 +86,14 @@ templ TorrentsTable(v TorrentsPageView) {
 							<td>
 								<div class="row-act">
 									if t.Paused {
-										@torrentAction(t.Hash, "resume", "play", "Reanudar")
+										@torrentAction(t.Hash, "resume", "play", "Reanudar "+t.Name)
 									} else {
-										@torrentAction(t.Hash, "pause", "pause", "Pausar")
+										@torrentAction(t.Hash, "pause", "pause", "Pausar "+t.Name)
 									}
 									<form hx-post="/torrents/action" hx-target="#torrents-table" hx-swap="outerHTML" hx-confirm="¿Borrar este torrent?">
 										<input type="hidden" name="hash" value={ t.Hash }/>
 										<input type="hidden" name="action" value="delete"/>
-										<button class="btn btn-icon btn-danger" type="submit" aria-label="Borrar">
+										<button class="btn btn-icon btn-danger" type="submit" aria-label={ "Borrar " + t.Name }>
 											@IconSm("trash")
 										</button>
 									</form>
@@ -100,8 +101,9 @@ templ TorrentsTable(v TorrentsPageView) {
 							</td>
 						</tr>
 					}
-				</tbody>
-			</table>
+					</tbody>
+				</table>
+			</div>
 		}
 	</div>
 }

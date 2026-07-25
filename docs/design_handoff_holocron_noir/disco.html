@@ -23,6 +23,8 @@
   .fs-row + .fs-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
   .fs-row:hover { background: var(--color-surface-2); }
   .fs-row.dir { cursor: pointer; }
+  /* drill-down rows are real buttons so the explorer is keyboard-navigable */
+  button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; color: inherit; text-align: left; }
   .fs-row .ic { color: color-mix(in srgb, var(--color-text) 45%, transparent); }
   .fs-row.dir .ic { color: var(--color-accent); }
   .fs-row .nm { font-family: var(--mono); font-size: 12.5px; }
@@ -63,10 +65,10 @@
     </div>
   </div>
 
-  <div class="tabs">
-    <button class="tab active">Películas</button>
-    <button class="tab">Series</button>
-    <button class="tab">Descargas</button>
+  <div class="tabs" role="tablist" aria-label="Carpetas vigiladas">
+    <button class="tab active" role="tab" aria-selected="true">Películas</button>
+    <button class="tab" role="tab" aria-selected="false">Series</button>
+    <button class="tab" role="tab" aria-selected="false">Descargas</button>
   </div>
 
   <div class="disk-hero">
@@ -98,7 +100,7 @@
       <span class="mono">/media/peliculas / El Señor de los Anillos (2001)</span>
     </div>
     <div class="explorer">
-      <div class="fs-row dir"><svg class="ic ic-sm"><use href="#folder"/></svg><span class="nm">extras/</span><div class="bar mini"><div class="bar-fill" style="width:20%"></div></div><span class="num">18 GB</span></div>
+      <button type="button" class="fs-row dir"><svg class="ic ic-sm"><use href="#folder"/></svg><span class="nm">extras/</span><div class="bar mini"><div class="bar-fill" style="width:20%"></div></div><span class="num">18 GB</span></button>
       <div class="fs-row"><svg class="ic ic-sm"><use href="#file"/></svg><span class="nm">LOTR.2001.2160p.mkv</span><div class="bar mini"><div class="bar-fill" style="width:100%"></div></div><span class="num">62 GB</span></div>
       <div class="fs-row"><svg class="ic ic-sm"><use href="#file"/></svg><span class="nm">LOTR.2001.1080p.mkv</span><div class="bar mini"><div class="bar-fill" style="width:18%"></div></div><span class="num">11 GB</span></div>
       <div class="fs-row"><svg class="ic ic-sm"><use href="#file"/></svg><span class="nm">movie.nfo</span><div class="bar mini"><div class="bar-fill" style="width:1%"></div></div><span class="num">4 KB</span></div>
