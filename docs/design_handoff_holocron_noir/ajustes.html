@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="noir.css">
 <style>
   .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); align-items: start; }
+  @media (max-width: 860px) { .settings-grid { grid-template-columns: 1fr; } }
   .settings-grid .span-2 { grid-column: 1 / -1; }
   .block { padding: var(--space-6); }
   .block h2 { font-size: 16px; margin: 0 0 4px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
@@ -99,7 +100,7 @@
       <div class="settings-grid">
         <div class="field"><label>URL de la WebUI</label><input class="input" type="text" value="http://192.168.1.20:8080"></div>
         <div class="field"><label>Usuario</label><input class="input" type="text" value="admin"></div>
-        <div class="field span-2" style="max-width:calc(50% - var(--space-3))"><label>Contraseña <span class="saved"><svg class="ic ic-sm"><use href="#check"/></svg> guardado</span></label><input class="input" type="password" value="············"></div>
+        <div class="field"><label>Contraseña <span class="saved"><svg class="ic ic-sm"><use href="#check"/></svg> guardado</span></label><input class="input" type="password" value="············"></div>
       </div>
       <div class="block-foot"><button class="btn btn-secondary">Guardá</button></div>
     </div>

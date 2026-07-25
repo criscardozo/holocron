@@ -66,9 +66,13 @@ templ diskContent(v DiskPageView) {
 	if v.Empty {
 		<p class="muted">No hay carpetas de disco configuradas. Agregá una en <a href="/settings">Ajustes</a>.</p>
 	} else {
-		<nav class="tabs">
+		<nav class="tabs" aria-label="Carpetas vigiladas">
 			for _, item := range v.Nav {
-				<a class={ "tab", templ.KV("active", item.Active) } href={ templ.SafeURL(item.Href) }>{ item.Label }</a>
+				if item.Active {
+					<a class="tab active" href={ templ.SafeURL(item.Href) } aria-current="page">{ item.Label }</a>
+				} else {
+					<a class="tab" href={ templ.SafeURL(item.Href) }>{ item.Label }</a>
+				}
 			}
 		</nav>
 		if v.Selected != nil {
@@ -134,7 +138,7 @@ templ DiskDetailSection(d DiskDetail) {
 
 templ diskTopRow(t DiskTopRow) {
 	<li>
-		<a href="#" hx-get={ t.BrowseHref } hx-target="#browse" hx-swap="innerHTML">
+		<button type="button" hx-get={ t.BrowseHref } hx-target="#browse" hx-swap="innerHTML" aria-label={ "Explorar " + t.Name }>
 			<div class="row-head">
 				<span class="name">
 					@IconSm("folder")
@@ -143,7 +147,7 @@ templ diskTopRow(t DiskTopRow) {
 				<span class="sz">{ t.BytesHuman }</span>
 			</div>
 			@bar(t.Percent, false)
-		</a>
+		</button>
 	</li>
 }
 
@@ -182,7 +186,7 @@ templ BrowseFragment(v BrowseView) {
 	<div class="browse">
 		<div class="crumbs">
 			if v.HasParent {
-				<button class="btn btn-secondary btn-icon" aria-label="Subir un nivel" hx-get={ v.ParentHref } hx-target="#browse" hx-swap="innerHTML">
+				<button type="button" class="btn btn-secondary btn-icon" aria-label="Subir un nivel" hx-get={ v.ParentHref } hx-target="#browse" hx-swap="innerHTML">
 					@IconSm("up")
 				</button>
 			}
@@ -199,12 +203,12 @@ templ BrowseFragment(v BrowseView) {
 
 templ browseRow(e BrowseRow) {
 	if e.IsDir {
-		<a class="fs-row dir" href="#" hx-get={ e.BrowseHref } hx-target="#browse" hx-swap="innerHTML">
+		<button type="button" class="fs-row dir" hx-get={ e.BrowseHref } hx-target="#browse" hx-swap="innerHTML" aria-label={ "Abrir " + e.Name }>
 			@IconSm("folder")
 			<span class="nm">{ e.Name }</span>
 			<div class="bar mini"><div class={ "bar-fill", pwClass(e.Percent) }></div></div>
 			<span class="num">{ e.BytesHuman }</span>
-		</a>
+		</button>
 	} else {
 		<div class="fs-row">
 			@IconSm("file")

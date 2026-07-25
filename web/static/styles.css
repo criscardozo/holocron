@@ -147,6 +147,9 @@ select.input { cursor: pointer; }
 .table thead tr { border-bottom: 1px solid var(--color-divider); }
 .table tbody tr { border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); }
 .table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+/* Wide tables scroll inside their own box instead of widening the page. */
+.table-scroll { overflow-x: auto; }
+.table-scroll .table { min-width: 720px; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .mono { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
 .muted { color: color-mix(in srgb, var(--color-text) 52%, transparent); }
@@ -192,6 +195,7 @@ select.input { cursor: pointer; }
 .stack { display: grid; gap: var(--space-6); }
 .mb-6 { margin-bottom: var(--space-6); }
 .ml-auto { margin-left: auto; }
+.list-foot { margin-top: var(--space-6); font-size: 12.5px; }
 .section-title { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 55%, transparent); margin: 0 0 var(--space-4); }
 .big-num { font-size: 56px; line-height: .9; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.03em; color: var(--color-accent); }
 
@@ -288,6 +292,8 @@ select.input { cursor: pointer; }
 .disk-gauge .free { font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent); }
 .hero-actions { margin-left: auto; display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 .largest { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+/* Same reasoning as button.fs-row: these drill into the explorer. */
+.largest button { display: block; width: 100%; background: transparent; border: 0; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .largest .row-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin-bottom: 6px; }
 .largest .name { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: inherit; }
 .largest .name .ic { color: var(--color-accent); }
@@ -299,6 +305,8 @@ select.input { cursor: pointer; }
 .fs-row + .fs-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
 .fs-row:hover { background: var(--color-surface-2); }
 .fs-row.dir { cursor: pointer; }
+/* Drill-down rows are real buttons so the explorer is keyboard-navigable. */
+button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; color: inherit; text-align: left; }
 .fs-row .ic { color: color-mix(in srgb, var(--color-text) 45%, transparent); }
 .fs-row.dir .ic { color: var(--color-accent); }
 .fs-row .nm { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
@@ -316,7 +324,9 @@ select.input { cursor: pointer; }
 .why { margin-top: 3px; font-size: 11.5px; color: color-mix(in srgb, var(--color-text) 50%, transparent); }
 
 /* ── media page ────────────────────────────────────────────────────── */
-.stat-band { display: flex; gap: var(--space-8); padding: var(--space-6); margin-bottom: var(--space-6); flex-wrap: wrap; align-items: center; }
+/* flex-direction is explicit: .card sets column, and this row layout shares the
+   same element, so without it the stats and actions would stack. */
+.stat-band { display: flex; flex-direction: row; gap: var(--space-8); padding: var(--space-6); margin-bottom: var(--space-6); flex-wrap: wrap; align-items: center; }
 .stat-band .actions { margin-left: auto; margin-top: 0; }
 .title-cell { display: flex; flex-direction: column; gap: 2px; }
 .title-cell .t { font-size: 14px; }
@@ -347,23 +357,28 @@ select.input { cursor: pointer; }
 .add-row .input { flex: 1; min-width: 200px; }
 .add-row select.input { flex: 0 0 auto; width: auto; }
 .block-foot { display: flex; justify-content: flex-end; margin-top: var(--space-2); }
-.magnet-form { display: flex; gap: var(--space-3); padding: var(--space-4) var(--space-6); margin-bottom: var(--space-6); align-items: center; flex-wrap: wrap; }
-.magnet-form .input { flex: 1; min-width: 260px; }
+/* flex-direction row for the same reason as .stat-band; the input needs
+   width:auto so .input's width:100% does not fight the flex sizing. */
+.magnet-form { display: flex; flex-direction: row; gap: var(--space-3); padding: var(--space-4) var(--space-6); margin-bottom: var(--space-6); align-items: center; flex-wrap: wrap; }
+.magnet-form .input { flex: 1; width: auto; min-width: 260px; }
 .magnet-form > .ic { color: var(--color-accent); }
 .notice.error { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
 .error { color: var(--danger); }
 .ok-badge { color: var(--ok); }
 
 /* ── responsive ────────────────────────────────────────────────────── */
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
 	.grid { grid-template-columns: repeat(2, 1fr); }
-	.span-2, .span-4 { grid-column: 1 / -1; }
-	.settings-grid { grid-template-columns: 1fr; }
-	.settings-grid .span-2 { grid-column: auto; }
+	.span-4 { grid-column: 1 / -1; }
 	.cols2 { grid-template-columns: 1fr; }
 }
-@media (max-width: 560px) {
+@media (max-width: 860px) {
+	.settings-grid { grid-template-columns: 1fr; }
+	.settings-grid .span-2 { grid-column: auto; }
+}
+@media (max-width: 680px) {
 	.grid { grid-template-columns: 1fr; }
+	.span-2, .span-4 { grid-column: auto; }
 	.page { padding: var(--space-4); }
 	.fs-row { grid-template-columns: 20px 1fr 70px; }
 	.fs-row .bar.mini { display: none; }

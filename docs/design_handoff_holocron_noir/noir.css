@@ -90,6 +90,8 @@ a:hover { color: var(--color-accent-200); }
 .tab.active { color: var(--color-text); border-bottom-color: var(--color-accent); }
 
 /* mono paths */
+.table-scroll { overflow-x: auto; }
+.table-scroll .table { min-width: 720px; }
 .mono { font-family: var(--mono); font-size: 12.5px; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .muted { color: color-mix(in srgb, var(--color-text) 52%, transparent); }

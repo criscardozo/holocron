@@ -81,7 +81,8 @@ templ MediaDetailSection(v MediaPageView) {
 		</div>
 		<div id="media-status"></div>
 		if len(v.Items) > 0 {
-			<table class="table">
+			<div class="table-scroll">
+				<table class="table">
 				<thead><tr><th>Título</th><th class="w-80">Tipo</th><th class="num w-70">Año</th><th class="w-90">.nfo</th><th class="w-110">Subs ES</th></tr></thead>
 				<tbody>
 					for _, it := range v.Items {
@@ -101,7 +102,8 @@ templ MediaDetailSection(v MediaPageView) {
 						</tr>
 					}
 				</tbody>
-			</table>
+				</table>
+			</div>
 			if v.Truncated {
 				<p class="muted">Se muestran { fmt.Sprintf("%d", len(v.Items)) } de { fmt.Sprintf("%d", v.Total) } ítems.</p>
 			}
