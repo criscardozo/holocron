@@ -24,16 +24,19 @@ func (s *Server) mediaView(ctx context.Context) templates.MediaPageView {
 	if st, err := s.deps.Library.Stats(ctx); err == nil {
 		v.Total, v.WithNFO, v.WithoutSubs = st.Total, st.WithNFO, st.WithoutSubs
 	}
-	if items, err := s.deps.Library.Items(ctx, 500); err == nil {
+	const listLimit = 500
+	if items, err := s.deps.Library.Items(ctx, listLimit); err == nil {
 		for _, it := range items {
 			v.Items = append(v.Items, templates.MediaItemRow{
 				Title:     it.Title,
 				Year:      it.Year,
 				Type:      it.Type,
+				Path:      it.Path,
 				HasNFO:    it.HasNFO,
 				HasSubsES: it.HasSubsES,
 			})
 		}
+		v.Truncated = len(items) >= listLimit && v.Total > len(items)
 	}
 	return v
 }
