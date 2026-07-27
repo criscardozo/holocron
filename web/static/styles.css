@@ -378,6 +378,8 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .magnet-form { display: flex; flex-direction: row; gap: var(--space-3); padding: var(--space-4) var(--space-6); margin-bottom: var(--space-6); align-items: center; flex-wrap: wrap; }
 .magnet-form .input { flex: 1; width: auto; min-width: 260px; }
 .magnet-form > .ic { color: var(--color-accent); }
+/* The category picker sizes to its content instead of competing with the input. */
+.magnet-form .cat-select { flex: 0 0 auto; min-width: 0; width: auto; }
 .notice.error { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
 .error { color: var(--danger); }
 .ok-badge { color: var(--ok); }

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -135,35 +136,68 @@ func (c *Client) post(ctx context.Context, path string, form url.Values) error {
 	return nil
 }
 
-// Torrents lists all torrents.
-func (c *Client) Torrents(ctx context.Context) ([]Torrent, error) {
+// getJSON performs an authenticated GET and decodes the JSON body into out.
+func (c *Client) getJSON(ctx context.Context, path, what string, out any) error {
 	if err := c.ensureLogin(ctx); err != nil {
-		return nil, err
+		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		c.base+"/api/v2/torrents/info", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	req.Header.Set("Referer", c.base)
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("list torrents: %w", err)
+		return fmt.Errorf("%s: %w", what, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
+
 	if resp.StatusCode == http.StatusForbidden {
 		c.mu.Lock()
 		c.loggedIn = false
 		c.mu.Unlock()
-		return nil, errors.New("qbittorrent session expired")
+		return errors.New("qbittorrent session expired")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("list torrents returned %d", resp.StatusCode)
+		return fmt.Errorf("%s returned %d", what, resp.StatusCode)
 	}
+	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		return fmt.Errorf("decode %s: %w", what, err)
+	}
+	return nil
+}
+
+// Torrents lists all torrents.
+func (c *Client) Torrents(ctx context.Context) ([]Torrent, error) {
 	var out []Torrent
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, fmt.Errorf("decode torrents: %w", err)
+	if err := c.getJSON(ctx, "/api/v2/torrents/info", "list torrents", &out); err != nil {
+		return nil, err
 	}
+	return out, nil
+}
+
+// Category is a category configured in qBittorrent.
+type Category struct {
+	Name     string `json:"name"`
+	SavePath string `json:"savePath"`
+}
+
+// Categories lists the categories configured in qBittorrent, sorted by name so
+// the UI order is stable (the API returns an unordered object).
+func (c *Client) Categories(ctx context.Context) ([]Category, error) {
+	var byName map[string]Category
+	if err := c.getJSON(ctx, "/api/v2/torrents/categories", "list categories", &byName); err != nil {
+		return nil, err
+	}
+	out := make([]Category, 0, len(byName))
+	for key, cat := range byName {
+		// Older builds leave "name" empty and only use the object key.
+		if cat.Name == "" {
+			cat.Name = key
+		}
+		out = append(out, cat)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
 }
 

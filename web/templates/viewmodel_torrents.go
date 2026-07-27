@@ -10,10 +10,12 @@ type TorrentsCardView struct {
 	UpHuman    string
 }
 
-// TorrentsPageView drives the torrents page.
+// TorrentsPageView drives the torrents page. Categories are the ones defined in
+// qBittorrent, offered when adding a magnet.
 type TorrentsPageView struct {
 	Configured bool
 	Err        string
+	Categories []string
 	Rows       []TorrentRow
 }
 
@@ -22,6 +24,7 @@ type TorrentRow struct {
 	Hash      string
 	Name      string
 	State     string
+	Category  string
 	Percent   int
 	SizeHuman string
 	DlHuman   string

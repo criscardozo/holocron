@@ -35,12 +35,23 @@ func (s *Server) torrentsView(ctx context.Context) templates.TorrentsPageView {
 		view.Err = "No se pudo conectar con qBittorrent."
 		return view
 	}
+	// Categories are a convenience for the add form: failing to read them must
+	// not hide the torrent list.
+	if cats, err := s.deps.Torrents.Categories(ctx); err == nil {
+		for _, c := range cats {
+			view.Categories = append(view.Categories, c.Name)
+		}
+	} else {
+		s.log.Warn("list torrent categories", "error", err)
+	}
+
 	for _, t := range list {
 		state := strings.ToLower(t.State)
 		view.Rows = append(view.Rows, templates.TorrentRow{
 			Hash:      t.Hash,
 			Name:      t.Name,
 			State:     t.State,
+			Category:  t.Category,
 			Percent:   int(t.Progress * 100),
 			SizeHuman: system.HumanBytes(uint64(t.Size)),
 			DlHuman:   system.HumanBytes(uint64(t.DlSpeed)) + "/s",

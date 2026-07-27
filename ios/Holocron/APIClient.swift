@@ -134,9 +134,12 @@ struct APIClient: Sendable {
         try await get("torrents")
     }
 
-    func addMagnet(_ magnet: String) async throws {
-        struct Body: Encodable { let magnet: String }
-        try await send("torrents", method: "POST", body: Body(magnet: magnet))
+    func addMagnet(_ magnet: String, category: String = "") async throws {
+        struct Body: Encodable {
+            let magnet: String
+            let category: String
+        }
+        try await send("torrents", method: "POST", body: Body(magnet: magnet, category: category))
     }
 
     func torrentAction(hash: String, action: String) async throws {

@@ -27,7 +27,8 @@ HTMX) va embebida en el ejecutable. Corre como servicio de systemd en la Pi.
 - **Subtítulos** — lista los medios sin subtítulo en español y permite buscarlos y
   descargarlos desde OpenSubtitles.
 - **Torrents** — administra qBittorrent (estado, progreso, velocidades, pausar/reanudar/
-  borrar) y agrega descargas pegando un magnet-link.
+  borrar) y agrega descargas pegando un magnet-link, eligiendo entre las
+  **categorías** que ya tenés configuradas en qBittorrent.
 
 Los escaneos y trabajos pesados son **bajo demanda**: el usuario los dispara y los
 resultados se cachean; nada corre en loop consumiendo la Pi de fondo.

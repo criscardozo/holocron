@@ -7,6 +7,7 @@ struct TorrentsView: View {
 
     @State private var state: Loadable<TorrentList> = .idle
     @State private var magnet = ""
+    @State private var category = ""
     @State private var banner: String?
     @State private var working = false
 
@@ -28,6 +29,14 @@ struct TorrentsView: View {
         List {
             Section {
                 addMagnetRow
+                if let categories = list.categories, !categories.isEmpty {
+                    Picker("Categoría", selection: $category) {
+                        Text("Sin categoría").tag("")
+                        ForEach(categories, id: \.self) { name in
+                            Text(name).tag(name)
+                        }
+                    }
+                }
             }
             .listRowBackground(Noir.surface)
 
@@ -98,6 +107,9 @@ struct TorrentsView: View {
 
             HStack(spacing: 8) {
                 Pill(text: torrent.status.label, kind: pillKind(torrent.status))
+                if !torrent.category.isEmpty {
+                    Pill(text: torrent.category, kind: .neutral)
+                }
                 Spacer()
                 Text(Format.bytes(torrent.sizeBytes))
                     .font(.caption2).monospacedDigit().foregroundStyle(Noir.muted)
@@ -173,9 +185,9 @@ struct TorrentsView: View {
         working = true
         defer { working = false }
         do {
-            try await client.addMagnet(magnet)
+            try await client.addMagnet(magnet, category: category)
             magnet = ""
-            banner = "Magnet agregado."
+            banner = category.isEmpty ? "Magnet agregado." : "Magnet agregado en \(category)."
             await load()
         } catch {
             banner = message(for: error)
