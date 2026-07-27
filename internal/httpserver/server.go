@@ -15,6 +15,7 @@ import (
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
+	"github.com/cristian/holocron/internal/plexauth"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
@@ -36,6 +37,7 @@ type Deps struct {
 	Subtitles *subtitles.Service
 	Torrents  *torrents.Service
 	APIToken  *apitoken.Store
+	PlexAuth  *plexauth.Service
 }
 
 // Server serves the Holocron web UI.
@@ -96,6 +98,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /settings/folders/delete", s.handleDeleteFolder)
 	mux.HandleFunc("POST /settings/plex", s.handleSavePlex)
 	mux.HandleFunc("GET /settings/plex/test", s.handlePlexTest)
+	mux.HandleFunc("POST /settings/plex/link", s.handlePlexLinkStart)
+	mux.HandleFunc("GET /settings/plex/link/status", s.handlePlexLinkStatus)
+	mux.HandleFunc("POST /settings/plex/link/server", s.handlePlexLinkServer)
+	mux.HandleFunc("POST /settings/plex/link/cancel", s.handlePlexLinkCancel)
 	mux.HandleFunc("POST /settings/opensubtitles", s.handleSaveOpenSubtitles)
 	mux.HandleFunc("POST /settings/qbittorrent", s.handleSaveQbit)
 	mux.HandleFunc("POST /settings/api-token", s.handleGenerateAPIToken)

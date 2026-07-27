@@ -6,8 +6,9 @@ pasar a la siguiente. Los números de feature refieren a los pedidos originales.
 ## Estado
 
 Fases 0 a 5 implementadas, con tests (incluido `-race`) y binario `arm64`
-cross-compilado. El login por PIN de Plex (`plexauth`) quedó como mejora futura: la
-conexión a Plex se configura con URL + token en Ajustes.
+cross-compilado. Ver «Ya sumado después de las fases» al final para lo que
+llegó más tarde (rediseño Noir, CI, releases, API JSON, app iOS y device-link
+de Plex).
 
 ## Fase 0 — Fundaciones
 
@@ -82,11 +83,13 @@ dashboard vacío que arranca en la Pi.
   y chequeos de `go mod tidy`/`templ generate` en cada push y PR.
 - **Releases automáticas** por tag `v*` (binario `arm64` + checksum) e
   **instalador/actualizador** para la Pi headless (`scripts/install.sh`).
+- **API JSON + app iOS** nativa (ver [api.md](api.md) y `ios/`).
+- **Login por PIN de Plex** (`plexauth`, portado del proyecto hermano): el token
+  se obtiene vinculando la cuenta en plex.tv, y los servidores se autodetectan.
 
 ## Ideas para más adelante (fuera de alcance inicial)
 
 - Renombrado asistido de carpetas mal nombradas (Fase 2).
-- Login por PIN de Plex (portar `plexauth`); hoy se configura URL + token.
 - Control del servicio de Plex (reiniciar, refrescar bibliotecas).
 - Notificaciones (descargas terminadas, disco casi lleno).
 - Basic Auth opcional (con comparación constant-time).

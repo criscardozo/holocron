@@ -58,6 +58,20 @@ struct SettingsView: View {
             .listRowBackground(Noir.surface)
 
             Section {
+                NavigationLink {
+                    PlexLinkView()
+                } label: {
+                    Label("Conectar con Plex", systemImage: "powerplug")
+                }
+                .disabled(!settings.isConfigured)
+            } header: {
+                Text("Plex")
+            } footer: {
+                Text("Vincula tu cuenta por plex.tv y guarda el token en el servidor, sin buscarlo a mano.")
+            }
+            .listRowBackground(Noir.surface)
+
+            Section {
                 Text("Holocron \(appVersion)")
                     .font(.footnote)
                     .foregroundStyle(Noir.muted)

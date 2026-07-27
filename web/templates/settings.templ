@@ -58,6 +58,9 @@ templ settingsContent(v SettingsView) {
 				Plex
 			</h2>
 			<p class="desc">Para sincronizar el inventario y generar los <span class="mono">.nfo</span>.</p>
+			@PlexLink(v.PlexLink)
+			<hr class="sep"/>
+			<p class="desc">O cargalo a mano:</p>
 			<form method="post" action="/settings/plex" hx-post="/settings/plex" hx-target="body">
 				<div class="field">
 					<label>URL del servidor</label>

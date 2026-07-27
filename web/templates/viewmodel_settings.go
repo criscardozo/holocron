@@ -16,6 +16,8 @@ type SettingsView struct {
 	// APITokenSet reports whether a JSON API token exists. The token itself is
 	// never shown again: only its digest is stored.
 	APITokenSet bool
+	// PlexLink drives the plex.tv device-link fragment.
+	PlexLink PlexLinkView
 }
 
 // SettingsFolderRow is one configured watched folder.

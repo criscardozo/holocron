@@ -54,6 +54,7 @@ holocron/
     naming/                 # validador de convención "Título (Año)" + service
     settings/               # store key/value de credenciales de servicios
     plex/                   # cliente de Plex Media Server (portado de plexmatch-generator)
+    plexauth/               # device-link con plex.tv: token sin copiarlo a mano + autodescubrimiento
     library/                # sync de inventario Plex→media_items + generación de .nfo
     nfo/                    # generación de archivos .nfo desde metadata de Plex
     subs/                   # detección de subtítulos presentes junto al medio
@@ -75,9 +76,6 @@ holocron/
   Makefile
   go.mod
 ```
-
-El login por PIN de Plex (`plexauth` en el proyecto hermano) todavía no se portó:
-la conexión se configura con URL + token desde Ajustes.
 
 Los paquetes `scanner`, `plex`, `plexauth` se **portan** desde los proyectos
 hermanos, no se reescriben de cero. Se adaptan a la interfaz de `jobs` y a las
