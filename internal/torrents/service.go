@@ -56,6 +56,16 @@ func (s *Service) List(ctx context.Context) ([]qbittorrent.Torrent, error) {
 	return c.Torrents(ctx)
 }
 
+// Categories lists the categories configured in qBittorrent, so a magnet can be
+// filed into one instead of landing in the default save path.
+func (s *Service) Categories(ctx context.Context) ([]qbittorrent.Category, error) {
+	c, err := s.client(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.Categories(ctx)
+}
+
 // Summary aggregates torrent activity for the dashboard widget.
 func (s *Service) Summary(ctx context.Context) (Summary, error) {
 	list, err := s.List(ctx)

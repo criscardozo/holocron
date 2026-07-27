@@ -48,6 +48,14 @@ templ TorrentsPage(v TorrentsPageView) {
 			<form class="card elev-sm magnet-form" hx-post="/torrents/add" hx-target="#add-status" hx-swap="innerHTML">
 				@Icon("plus")
 				<input class="input" type="text" name="magnet" required placeholder="Pegá un magnet: aquí…"/>
+				if len(v.Categories) > 0 {
+					<select class="input cat-select" name="category" aria-label="Categoría">
+						<option value="">Sin categoría</option>
+						for _, cat := range v.Categories {
+							<option value={ cat }>{ cat }</option>
+						}
+					</select>
+				}
 				<button class="btn btn-primary" type="submit">Agregar</button>
 				<span id="add-status"></span>
 			</form>
@@ -67,12 +75,19 @@ templ TorrentsTable(v TorrentsPageView) {
 		} else {
 			<div class="table-scroll">
 				<table class="table">
-					<thead><tr><th>Nombre</th><th class="w-120">Estado</th><th class="w-190">Progreso</th><th class="num">Tamaño</th><th class="num">↓</th><th class="num">↑</th><th class="num">S/L</th><th class="w-90"></th></tr></thead>
+					<thead><tr><th>Nombre</th><th class="w-120">Estado</th><th class="w-130">Categoría</th><th class="w-190">Progreso</th><th class="num">Tamaño</th><th class="num">↓</th><th class="num">↑</th><th class="num">S/L</th><th class="w-90"></th></tr></thead>
 				<tbody>
 					for _, t := range v.Rows {
 						<tr>
 							<td class="tname">{ t.Name }</td>
 							<td><span class={ "st", torrentClass(t.State, t.Paused) }>{ torrentLabel(t.State, t.Paused) }</span></td>
+							<td>
+								if t.Category != "" {
+									<span class="badge badge-neutral">{ t.Category }</span>
+								} else {
+									<span class="muted">—</span>
+								}
+							</td>
 							<td>
 								<div class="prog-cell">
 									<div class="bar"><div class={ "bar-fill", pwClass(t.Percent), templ.KV("done", t.Percent >= 100) }></div></div>

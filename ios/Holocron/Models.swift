@@ -132,6 +132,7 @@ struct Torrent: Codable, Identifiable, Hashable {
     var hash: String
     var name: String
     var state: String
+    var category: String
     var progress: Double
     var sizeBytes: Int64
     var dlSpeed: Int64
@@ -172,6 +173,8 @@ struct TorrentList: Codable {
     var active: Int?
     var dlSpeed: Int64?
     var upSpeed: Int64?
+    /// Categories defined in qBittorrent, offered when adding a magnet.
+    var categories: [String]?
     var torrents: [Torrent]
 }
 

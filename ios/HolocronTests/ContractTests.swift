@@ -98,6 +98,13 @@ struct ContractTests {
         #expect(list.configured)
         #expect(list.active == 1)
 
+        // Categories come from qBittorrent and drive the add-magnet picker.
+        #expect(list.categories == ["Peliculas", "Series"])
+        let filed = try #require(list.torrents.first { $0.hash == "a1" })
+        #expect(filed.category == "Series")
+        let uncategorised = try #require(list.torrents.first { $0.hash == "c3" })
+        #expect(uncategorised.category.isEmpty)
+
         let downloading = try #require(list.torrents.first { !$0.paused })
         #expect(downloading.status == .downloading)
         #expect(downloading.status.label == "Descargando")

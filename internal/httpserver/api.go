@@ -513,6 +513,7 @@ type apiTorrent struct {
 	Hash      string  `json:"hash"`
 	Name      string  `json:"name"`
 	State     string  `json:"state"`
+	Category  string  `json:"category"`
 	Progress  float64 `json:"progress"`
 	SizeBytes int64   `json:"sizeBytes"`
 	DlSpeed   int64   `json:"dlSpeed"`
@@ -545,18 +546,30 @@ func (s *Server) apiTorrents(w http.ResponseWriter, r *http.Request) {
 			active++
 		}
 		out = append(out, apiTorrent{
-			Hash: t.Hash, Name: t.Name, State: t.State, Progress: t.Progress,
-			SizeBytes: t.Size, DlSpeed: t.DlSpeed, UpSpeed: t.UpSpeed,
+			Hash: t.Hash, Name: t.Name, State: t.State, Category: t.Category,
+			Progress: t.Progress, SizeBytes: t.Size, DlSpeed: t.DlSpeed, UpSpeed: t.UpSpeed,
 			Seeds: t.NumSeeds, Leechs: t.NumLeechs,
 			Paused: strings.Contains(state, "paused") || strings.Contains(state, "stopped"),
 		})
 	}
+
+	// The categories let the app offer the same picker as the web form.
+	categories := []string{}
+	if cats, err := s.deps.Torrents.Categories(ctx); err == nil {
+		for _, c := range cats {
+			categories = append(categories, c.Name)
+		}
+	} else {
+		s.log.Warn("api list torrent categories", "error", err)
+	}
+
 	s.writeJSON(w, http.StatusOK, map[string]any{
 		"configured": true,
 		"total":      len(out),
 		"active":     active,
 		"dlSpeed":    dl,
 		"upSpeed":    up,
+		"categories": categories,
 		"torrents":   out,
 	})
 }

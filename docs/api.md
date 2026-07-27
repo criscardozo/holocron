@@ -179,14 +179,21 @@ registró desde Plex; cualquier otra cosa es `400`.
 {
   "configured": true, "total": 4, "active": 1,
   "dlSpeed": 4300000, "upSpeed": 655360,
+  "categories": ["Docs", "Peliculas", "Series"],
   "torrents": [{
     "hash": "a1b2…", "name": "Cosmos.S01E03.1080p.WEB", "state": "downloading",
-    "progress": 0.63, "sizeBytes": 2576980377,
+    "category": "Series", "progress": 0.63, "sizeBytes": 2576980377,
     "dlSpeed": 4300000, "upSpeed": 215040,
     "seeds": 38, "leechs": 5, "paused": false
   }]
 }
 ```
+
+`categories` son las definidas en qBittorrent, ordenadas alfabéticamente, para
+ofrecerlas al agregar un magnet: `POST /api/v1/torrents` acepta
+`{"magnet": "…", "category": "Series"}`. Una `category` vacía (o ausente) deja
+el torrent sin categoría, en la carpeta por defecto. Si no se pudieron leer las
+categorías, el campo viene vacío y el resto de la respuesta sigue sirviendo.
 
 `state` es el estado crudo de qBittorrent; `paused` ya viene resuelto. El
 cliente deriva la etiqueta visible del par (`state`, `paused`) — ver
