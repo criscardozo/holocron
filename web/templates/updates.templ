@@ -1,0 +1,93 @@
+package templates
+
+// Updates is the update panel: the running version, whether GitHub has a newer
+// release, and the button that asks the privileged helper to install it.
+templ Updates(v UpdatesView) {
+	<div id="updates">
+		if v.Requested != "" {
+			<div class="job">
+				<span class="spinner"></span>
+				<span>{ v.Requested }</span>
+			</div>
+			<p class="muted link-step">
+				El servicio se reinicia solo cuando termina. Recargá la página en un minuto.
+			</p>
+		} else {
+			<ul class="stat-list mb-6">
+				<li>
+					<span class="stat-key">Versión instalada</span>
+					<span class="stat-val mono">{ v.Current }</span>
+				</li>
+				if v.Latest != "" {
+					<li>
+						<span class="stat-key">Última publicada</span>
+						<span class="stat-val mono">{ v.Latest }</span>
+					</li>
+				}
+			</ul>
+			if v.Error != "" {
+				<div class="notice error mb-6">
+					@IconSm("alert")
+					<span>{ v.Error }</span>
+				</div>
+			}
+			if !v.Checkable {
+				<p class="muted">
+					Esta build no viene de una release publicada, así que no hay contra qué compararla.
+				</p>
+			} else if v.Available {
+				<div class="notice mb-6">
+					@IconSm("alert")
+					<span>Hay una versión nueva: <strong>{ v.Latest }</strong></span>
+				</div>
+				if v.Notes != "" {
+					<details class="errors">
+						<summary>Ver cambios</summary>
+						<pre class="release-notes">{ v.Notes }</pre>
+					</details>
+				}
+				if v.Installable {
+					<div class="actions">
+						<form hx-post="/settings/updates/install" hx-target="#updates" hx-swap="outerHTML" hx-confirm="Se va a descargar e instalar la versión nueva, y el servicio se reinicia. ¿Seguimos?">
+							<button type="submit" class="btn btn-primary">
+								@IconSm("download")
+								Actualizar ahora
+							</button>
+						</form>
+						if v.URL != "" {
+							<a class="w-link" href={ templ.SafeURL(v.URL) } target="_blank" rel="noopener noreferrer">
+								Ver en GitHub
+								@IconSm("chev")
+							</a>
+						}
+					</div>
+				} else {
+					@manualUpdate()
+				}
+			} else {
+				<span class="w-ok">
+					@IconSm("check")
+					Estás al día
+				</span>
+			}
+			<div class="actions">
+				<form hx-post="/settings/updates/check" hx-target="#updates" hx-swap="outerHTML">
+					<button type="submit" class="btn btn-secondary">
+						@IconSm("refresh")
+						Buscar actualizaciones
+					</button>
+				</form>
+				if v.CheckedAt != "" {
+					<span class="muted">Chequeado { v.CheckedAt }</span>
+				}
+			</div>
+		}
+	</div>
+}
+
+// manualUpdate is shown when the privileged helper is absent: the update has to
+// be run by hand over SSH.
+templ manualUpdate() {
+	<p class="muted link-step">Actualizá desde una terminal en la Pi:</p>
+	<p class="mono token-box">curl -fsSL https://raw.githubusercontent.com/criscardozo/holocron/main/scripts/install.sh | sudo bash</p>
+}

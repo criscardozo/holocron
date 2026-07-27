@@ -121,6 +121,15 @@ templ settingsContent(v SettingsView) {
 
 		<div class="card elev-sm block">
 			<h2>
+				@Icon("download")
+				Actualizaciones
+			</h2>
+			<p class="desc">Holocron se compara con la última release publicada en GitHub.</p>
+			@Updates(v.Updates)
+		</div>
+
+		<div class="card elev-sm block">
+			<h2>
 				@Icon("key")
 				App iOS
 			</h2>

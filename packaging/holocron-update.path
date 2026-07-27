@@ -1,0 +1,14 @@
+[Unit]
+# Watches for the trigger file the (unprivileged) Holocron service drops when
+# the user presses "Actualizar ahora". Holocron cannot update itself: it runs
+# with ProtectSystem=strict and NoNewPrivileges, so /usr/local/bin is read-only
+# to it. This path unit is the only privileged part, and all it can do is run
+# the installer.
+Description=Watch for a Holocron update request
+
+[Path]
+PathExists=/var/lib/holocron/.update-requested
+Unit=holocron-update.service
+
+[Install]
+WantedBy=multi-user.target

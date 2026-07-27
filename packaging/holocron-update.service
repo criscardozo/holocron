@@ -1,0 +1,21 @@
+[Unit]
+# Started by holocron-update.path. Runs as root because it replaces the binary
+# in /usr/local/bin and restarts the service — the two things the Holocron
+# process is deliberately not allowed to do itself.
+Description=Install the latest Holocron release
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+
+# Remove the trigger first: the path unit re-arms only once the file is gone,
+# and clearing it up front means a failed run cannot loop.
+ExecStartPre=/bin/rm -f /var/lib/holocron/.update-requested
+
+# The installer verifies the published SHA-256 before replacing anything, and
+# restarts holocron.service when it is done.
+ExecStart=/usr/local/bin/holocron-update
+
+# Nothing should linger if the download hangs.
+TimeoutStartSec=600

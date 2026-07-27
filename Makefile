@@ -2,6 +2,10 @@ BINARY := holocron
 PKG     := ./cmd/holocron
 DIST    := dist
 
+# Stamped into the binary so the app can tell whether a newer release exists.
+VERSION  ?= $(shell git describe --tags --exact-match 2>/dev/null)
+LDFLAGS  = -X github.com/cristian/holocron/internal/version.Version=$(VERSION)
+
 # templ is pinned as a module tool (see go.mod), so no global install is needed.
 TEMPL := go tool templ
 
@@ -22,7 +26,8 @@ build: generate
 
 ## build-pi: cross-compile a static arm64 binary for the Raspberry Pi
 build-pi: generate
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o $(DIST)/$(BINARY)-arm64 $(PKG)
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
+		-ldflags="-s -w $(if $(VERSION),$(LDFLAGS),)" -o $(DIST)/$(BINARY)-arm64 $(PKG)
 
 ## run: run locally
 run: generate
