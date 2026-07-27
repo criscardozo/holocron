@@ -52,9 +52,15 @@ publicado, crea el usuario de servicio, instala la unit de systemd y arranca tod
 curl -fsSL https://raw.githubusercontent.com/criscardozo/holocron/main/scripts/install.sh | sudo bash
 ```
 
-Cuando termina, imprime la URL de acceso (por defecto `http://<ip-de-la-pi>:8080`).
+Cuando termina, imprime la URL de acceso (por defecto `http://<ip-de-la-pi>:8090`).
 Abrila desde otra máquina de la LAN y configurá las carpetas de medios y las
 credenciales de Plex/OpenSubtitles/qBittorrent desde **Ajustes**.
+
+> **El puerto por defecto es 8090**, no 8080: ese último suele estar tomado por la
+> WebUI de qBittorrent en el mismo equipo. Si venías de una versión anterior,
+> reinstalar cambia el puerto: actualizá el marcador del navegador y la dirección
+> cargada en la app iOS. Para conservar el puerto viejo, instalá con
+> `HOLOCRON_ADDR=:8080`.
 
 Opciones (variables de entorno antes del `sudo bash`, o `sudo bash -s -- <flags>`):
 
@@ -62,7 +68,7 @@ Opciones (variables de entorno antes del `sudo bash`, o `sudo bash -s -- <flags>
 # Instalar una versión puntual en lugar de la última
 curl -fsSL …/install.sh | sudo HOLOCRON_VERSION=v0.1.0 bash
 
-# Cambiar el puerto de escucha (default :8080)
+# Cambiar el puerto de escucha (default :8090)
 curl -fsSL …/install.sh | sudo HOLOCRON_ADDR=:9000 bash
 
 # Dar acceso de lectura/escritura a las carpetas de medios (hardening de systemd).
@@ -94,7 +100,7 @@ curl -fsSL …/install.sh | sudo bash -s -- --uninstall
 
 Dos niveles:
 
-- **Arranque** (flags o variables de entorno del servicio): `--addr` (default `:8080`),
+- **Arranque** (flags o variables de entorno del servicio): `--addr` (default `:8090`),
   `--db` (default `/var/lib/holocron/holocron.db` bajo systemd), `--log-level`. Los
   flags pisan a las variables `HOLOCRON_ADDR` / `HOLOCRON_DB` / `HOLOCRON_LOG_LEVEL`.
 - **Aplicación** (desde la UI, persistido en SQLite): carpetas de medios, URL y token de
@@ -110,7 +116,7 @@ el toolchain (Go, `templ`) vive en la Mac.
 make build       # binario para la Mac (chequeo rápido)
 make build-pi    # cross-compila el binario arm64 para la Pi → dist/holocron-arm64
 make check       # vet + lint + tests con -race + govulncheck
-make run         # corre local en :8080
+make run         # corre local en :8090
 ```
 
 ### Publicar una release

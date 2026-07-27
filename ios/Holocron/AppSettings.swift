@@ -32,7 +32,7 @@ final class AppSettings {
 
     var isConfigured: Bool { client != nil }
 
-    /// Accepts "192.168.1.10:8080" as readily as a full URL, since that is what
+    /// Accepts "192.168.1.10:8090" as readily as a full URL, since that is what
     /// someone reads off their router. Pure parsing, so it is not tied to the
     /// main actor.
     nonisolated static func normalisedURL(_ raw: String) -> URL? {

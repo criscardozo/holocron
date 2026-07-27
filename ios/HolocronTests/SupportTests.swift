@@ -7,7 +7,7 @@ struct URLNormalisationTests {
     @Test func acceptsWhatSomeoneActuallyTypes() {
         // A host:port read off a router is the common case, so it must work
         // without the user knowing to type a scheme.
-        #expect(AppSettings.normalisedURL("192.168.1.10:8080")?.absoluteString == "http://192.168.1.10:8080")
+        #expect(AppSettings.normalisedURL("192.168.1.10:8090")?.absoluteString == "http://192.168.1.10:8090")
         #expect(AppSettings.normalisedURL("raspberrypi.local")?.absoluteString == "http://raspberrypi.local")
         #expect(AppSettings.normalisedURL("  10.0.0.5:8080  ")?.absoluteString == "http://10.0.0.5:8080")
     }

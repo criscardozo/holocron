@@ -39,7 +39,7 @@ carpeta, así que alcanza con volver a generar.
 1. En la web de Holocron: **Ajustes → App iOS → Generar token**. Se muestra una
    sola vez (el servidor guarda sólo su digest).
 2. En la app, pestaña **Ajustes**: cargá la dirección del servidor
-   (`192.168.1.10:8080` alcanza, el `http://` se asume) y pegá el token.
+   (`192.168.1.10:8090` alcanza, el `http://` se asume) y pegá el token.
 3. **Probar conexión** confirma que llega y devuelve el nombre del host.
 
 El token queda en el **Keychain**, no en `UserDefaults`.
