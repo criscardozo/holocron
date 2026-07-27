@@ -150,7 +150,7 @@ Patrones de HTMX a usar (fragmentos mínimos, sin JS propio):
 Dos niveles, igual criterio que `diskusage-pi`:
 
 - **Arranque** (flags + variables de entorno; los flags pisan al entorno):
-  `--addr` (default `:8080`), `--db`, `--log-level`. Sin TLS por ahora (LAN de
+  `--addr` (default `:8090`), `--db`, `--log-level`. Sin TLS por ahora (LAN de
   confianza, sin auth — decisión tomada).
 - **Aplicación** (editable desde la UI, persistida en `settings`): rutas de medios,
   credenciales de Plex/qBittorrent, API key de OpenSubtitles.
@@ -183,7 +183,7 @@ Dos niveles, igual criterio que `diskusage-pi`:
 - **Secretos** (tokens de Plex, API key de OpenSubtitles, credenciales de
   qBittorrent): en SQLite con permisos owner-only sobre el archivo; nunca en logs ni
   en el binario. Client IDs/tokens que haya que generar usan `crypto/rand`.
-- **Bind**: `--addr` por defecto escucha en todas las interfaces (`:8080`) porque el
+- **Bind**: `--addr` por defecto escucha en todas las interfaces (`:8090`) porque el
   dashboard se accede desde otras máquinas de la LAN. Es una decisión consciente
   (LAN de confianza); se puede acotar a una IP específica vía el flag.
 - CSP estricta en headers, HTMX y CSS servidos desde el mismo origen (embebidos).

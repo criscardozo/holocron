@@ -13,8 +13,9 @@ import (
 // (media paths, external service credentials, API keys) live in the database
 // and are edited from the UI, not here.
 type Config struct {
-	// Addr is the listen address, e.g. ":8080". Binds all interfaces by
+	// Addr is the listen address, e.g. ":8090". Binds all interfaces by
 	// default because the dashboard is reached from other LAN machines.
+	// Port 8090 rather than 8080: qBittorrent's WebUI owns 8080 on this host.
 	Addr string
 	// DBPath is the path to the SQLite database file.
 	DBPath string
@@ -26,7 +27,7 @@ type Config struct {
 // called once at startup.
 func Load() Config {
 	c := Config{
-		Addr:     envOr("HOLOCRON_ADDR", ":8080"),
+		Addr:     envOr("HOLOCRON_ADDR", ":8090"),
 		DBPath:   envOr("HOLOCRON_DB", defaultDBPath()),
 		LogLevel: envOr("HOLOCRON_LOG_LEVEL", "info"),
 	}

@@ -14,7 +14,7 @@ struct SettingsView: View {
 
         Form {
             Section {
-                TextField("192.168.1.10:8080", text: $settings.serverURL)
+                TextField("192.168.1.10:8090", text: $settings.serverURL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)

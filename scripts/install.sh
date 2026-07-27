@@ -11,7 +11,7 @@
 #
 # Options (environment variables):
 #   HOLOCRON_VERSION       release tag to install (default: latest)
-#   HOLOCRON_ADDR          listen address (default: :8080)
+#   HOLOCRON_ADDR          listen address (default: :8090)
 #   HOLOCRON_MEDIA_PATHS   space-separated dirs to grant the service RW access to
 #                          (systemd ReadWritePaths; needed to write .nfo/subtitles)
 #   HOLOCRON_BINARY_URL    override the download URL (skips release resolution)
@@ -29,8 +29,19 @@ STATE_DIR="/var/lib/holocron"
 ASSET="holocron-linux-arm64"
 
 VERSION="${HOLOCRON_VERSION:-latest}"
-ADDR="${HOLOCRON_ADDR:-:8080}"
+ADDR="${HOLOCRON_ADDR:-:8090}"
 MEDIA_PATHS="${HOLOCRON_MEDIA_PATHS:-}"
+
+# Scratch directory for the download. It is global on purpose: the EXIT trap
+# runs after do_install has returned, so a function-local would already be out
+# of scope and `set -u` would abort the cleanup.
+WORK_DIR=""
+cleanup() {
+	if [ -n "${WORK_DIR:-}" ]; then
+		rm -rf "$WORK_DIR"
+	fi
+}
+trap cleanup EXIT
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
@@ -160,7 +171,7 @@ access_url() {
 	ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
 	[ -n "$ip" ] || ip="<ip-de-la-pi>"
 	local port="${ADDR##*:}"
-	[ -n "$port" ] || port="8080"
+	[ -n "$port" ] || port="8090"
 	printf 'http://%s:%s' "$ip" "$port"
 }
 
@@ -174,13 +185,11 @@ do_install() {
 	local existed="no"
 	[ -x "$INSTALL_PATH" ] && existed="yes"
 
-	local tmp
-	tmp="$(mktemp -d)"
-	trap 'rm -rf "$tmp"' EXIT
+	WORK_DIR="$(mktemp -d)"
 
-	fetch_binary "$tmp/$BINARY_NAME"
+	fetch_binary "$WORK_DIR/$BINARY_NAME"
 	ensure_user
-	install_binary "$tmp/$BINARY_NAME"
+	install_binary "$WORK_DIR/$BINARY_NAME"
 	write_service
 	start_service
 

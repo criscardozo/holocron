@@ -127,11 +127,11 @@ Breakpoints de la grilla del dashboard y de Ajustes:
 
 ```sh
 go tool templ generate   # tras editar cualquier .templ
-make run                 # local en :8080
+make run                 # local en :8090
 ```
 
 Y antes de commitear, la verificación que más veces salvó esto:
 
 ```sh
-curl -s localhost:8080/ | grep -o 'style="[^"]*"'   # no debe imprimir nada
+curl -s localhost:8090/ | grep -o 'style="[^"]*"'   # no debe imprimir nada
 ```

@@ -8,7 +8,7 @@ Para regenerarlas, con el server corriendo y un token generado:
 
 ```sh
 TOKEN=...            # Ajustes → App iOS → Generar token
-B=localhost:8080
+B=localhost:8090
 A="Authorization: Bearer $TOKEN"
 
 for ep in system disk naming media subtitles torrents; do
