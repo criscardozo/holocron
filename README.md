@@ -85,12 +85,27 @@ curl -fsSL …/install.sh | sudo HOLOCRON_MEDIA_PATHS="/mnt/media /srv/downloads
 
 ## Actualización
 
-Volvé a correr el mismo comando: el instalador es idempotente, detecta la instalación
-existente, reemplaza el binario y reinicia el servicio.
+Desde **Ajustes → Actualizaciones**: Holocron se compara con la última release
+publicada y, si hay una nueva, muestra los cambios y un botón para instalarla.
+
+También podés volver a correr el instalador; es idempotente y **conserva** el puerto
+y las carpetas de medios que ya tenías configuradas:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/criscardozo/holocron/main/scripts/install.sh | sudo bash
 ```
+
+> **Cómo funciona el botón.** El servicio corre sin privilegios y con
+> `ProtectSystem=strict`, así que **no puede** reemplazar su propio binario — a
+> propósito. Lo que hace es dejar un archivo en su directorio de estado; una unit
+> `holocron-update.path` (root) lo detecta y lanza un oneshot que corre el
+> instalador, verifica el checksum y reinicia el servicio. El instalador arma todo
+> eso solo; si no lo querés, instalá con `HOLOCRON_NO_UPDATER=1` y el panel te
+> muestra el comando manual en vez del botón.
+>
+> Tené en cuenta que la web no tiene autenticación: cualquiera en tu LAN puede
+> apretar ese botón y provocar un reinicio. El binario viene de tus releases y se
+> verifica por SHA-256, así que el riesgo es la interrupción, no el contenido.
 
 Para desinstalar (borra el binario, la unit y el usuario; **conserva** la base de datos
 en `/var/lib/holocron`):

@@ -64,6 +64,8 @@ holocron/
     torrents/               # service sobre qbittorrent (config desde settings)
     widgets/                # registro de widgets del dashboard
     apitoken/               # token de la API JSON (genera, revoca, verifica)
+    version/                # versión estampada en el build (ldflags)
+    updates/                # chequeo de releases en GitHub + pedido de instalación
     httpserver/             # rutas, middleware, handlers por feature, API JSON
   ios/                      # app iOS en SwiftUI (proyecto generado con xcodegen)
   web/

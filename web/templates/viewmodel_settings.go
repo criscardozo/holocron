@@ -18,6 +18,8 @@ type SettingsView struct {
 	APITokenSet bool
 	// PlexLink drives the plex.tv device-link fragment.
 	PlexLink PlexLinkView
+	// Updates drives the update panel.
+	Updates UpdatesView
 }
 
 // SettingsFolderRow is one configured watched folder.

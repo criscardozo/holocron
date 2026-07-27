@@ -37,6 +37,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		view.QbitSet = true
 	}
 	view.APITokenSet = s.deps.APIToken.Configured(ctx)
+	view.Updates = s.updatesView(ctx, false)
 	// A reload mid-flow should keep showing the code rather than restart it.
 	if s.deps.PlexAuth.Pending() {
 		if status, err := s.deps.PlexAuth.Check(ctx); err == nil {

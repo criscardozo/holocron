@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
+	"github.com/cristian/holocron/internal/updates"
 	"github.com/cristian/holocron/internal/widgets"
 )
 
@@ -57,6 +59,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	torrentsService := torrents.NewService(settingsStore)
 	apiTokenStore := apitoken.NewStore(settingsStore)
 	plexAuthService := plexauth.NewService(settingsStore)
+	updatesService := updates.NewService(filepath.Dir(cfg.DBPath))
 
 	registry := widgets.NewRegistry(
 		widgets.SystemWidget{},
@@ -79,6 +82,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Torrents:  torrentsService,
 		APIToken:  apiTokenStore,
 		PlexAuth:  plexAuthService,
+		Updates:   updatesService,
 	})
 
 	httpSrv := &http.Server{

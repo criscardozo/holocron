@@ -28,9 +28,18 @@ SERVICE_USER="holocron"
 STATE_DIR="/var/lib/holocron"
 ASSET="holocron-linux-arm64"
 
+UPDATER_PATH="/usr/local/bin/holocron-update"
+UPDATER_UNIT="/etc/systemd/system/holocron-update.path"
+UPDATER_SERVICE="/etc/systemd/system/holocron-update.service"
+RAW_URL="https://raw.githubusercontent.com/$REPO/main/scripts/install.sh"
+
 VERSION="${HOLOCRON_VERSION:-latest}"
-ADDR="${HOLOCRON_ADDR:-:8090}"
+# Left empty on purpose: an existing install's settings are reused when these
+# are not given, so re-running (or the in-app updater) never silently changes
+# the port or drops access to the media folders.
+ADDR="${HOLOCRON_ADDR:-}"
 MEDIA_PATHS="${HOLOCRON_MEDIA_PATHS:-}"
+DEFAULT_ADDR=":8090"
 
 # Scratch directory for the download. It is global on purpose: the EXIT trap
 # runs after do_install has returned, so a function-local would already be out
@@ -115,6 +124,21 @@ ensure_user() {
 	fi
 }
 
+# carry_over_settings reuses the running configuration for anything the caller
+# did not specify, so an update preserves the port and the media paths.
+carry_over_settings() {
+	[ -f "$SERVICE_PATH" ] || return 0
+
+	if [ -z "$ADDR" ]; then
+		ADDR="$(sed -n 's/^ExecStart=.*--addr[ =]\([^ ]*\).*/\1/p' "$SERVICE_PATH" | head -n1)"
+		[ -n "$ADDR" ] && log "Keeping the configured listen address ($ADDR)"
+	fi
+	if [ -z "$MEDIA_PATHS" ]; then
+		MEDIA_PATHS="$(sed -n 's/^ReadWritePaths=\(.*\)/\1/p' "$SERVICE_PATH" | head -n1)"
+		[ -n "$MEDIA_PATHS" ] && log "Keeping the configured media paths ($MEDIA_PATHS)"
+	fi
+}
+
 write_service() {
 	log "Writing systemd unit $SERVICE_PATH"
 
@@ -159,10 +183,67 @@ install_binary() {
 	install -m 0755 "$1" "$INSTALL_PATH"
 }
 
+# install_updater sets up the privileged helper behind the "Actualizar ahora"
+# button. Holocron runs unprivileged and read-only, so it cannot replace its own
+# binary; it drops a trigger file that this path unit watches, and the oneshot
+# service re-runs this installer as root. Skip it with HOLOCRON_NO_UPDATER=1.
+install_updater() {
+	if [ -n "${HOLOCRON_NO_UPDATER:-}" ]; then
+		log "Skipping the update helper (HOLOCRON_NO_UPDATER is set)"
+		rm -f "$UPDATER_UNIT" "$UPDATER_SERVICE" "$UPDATER_PATH"
+		return
+	fi
+
+	log "Installing the update helper"
+	cat >"$UPDATER_PATH" <<EOF
+#!/usr/bin/env bash
+# Installed by Holocron. Re-runs the installer to fetch the latest release;
+# settings are carried over from the existing unit.
+set -euo pipefail
+script="\$(mktemp)"
+trap 'rm -f "\$script"' EXIT
+curl -fsSL "$RAW_URL" -o "\$script"
+bash "\$script"
+EOF
+	chmod 0755 "$UPDATER_PATH"
+
+	cat >"$UPDATER_SERVICE" <<EOF
+[Unit]
+Description=Install the latest Holocron release
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Clear the trigger first: the path unit re-arms only once the file is gone, so
+# doing this up front means a failed run cannot loop.
+ExecStartPre=/bin/rm -f $STATE_DIR/.update-requested
+ExecStart=$UPDATER_PATH
+TimeoutStartSec=600
+EOF
+
+	cat >"$UPDATER_UNIT" <<EOF
+[Unit]
+Description=Watch for a Holocron update request
+
+[Path]
+PathExists=$STATE_DIR/.update-requested
+Unit=holocron-update.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
 start_service() {
 	log "Enabling and starting the service"
 	systemctl daemon-reload
 	systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
+	if [ -f "$UPDATER_UNIT" ]; then
+		systemctl enable --now holocron-update.path >/dev/null 2>&1 || true
+	fi
+	# When run by the updater this restarts the very service that asked for it,
+	# which is fine: systemd owns both, and the updater runs independently.
 	systemctl restart "$SERVICE_NAME"
 }
 
@@ -190,7 +271,10 @@ do_install() {
 	fetch_binary "$WORK_DIR/$BINARY_NAME"
 	ensure_user
 	install_binary "$WORK_DIR/$BINARY_NAME"
+	carry_over_settings
+	[ -n "$ADDR" ] || ADDR="$DEFAULT_ADDR"
 	write_service
+	install_updater
 	start_service
 
 	echo
@@ -217,8 +301,9 @@ do_uninstall() {
 	log "Stopping and disabling the service"
 	systemctl disable --now "$SERVICE_NAME" >/dev/null 2>&1 || true
 
-	log "Removing unit and binary"
-	rm -f "$SERVICE_PATH" "$INSTALL_PATH"
+	log "Removing units and binaries"
+	systemctl disable --now holocron-update.path >/dev/null 2>&1 || true
+	rm -f "$SERVICE_PATH" "$INSTALL_PATH" "$UPDATER_UNIT" "$UPDATER_SERVICE" "$UPDATER_PATH"
 	systemctl daemon-reload
 
 	if id "$SERVICE_USER" >/dev/null 2>&1; then

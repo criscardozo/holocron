@@ -86,6 +86,10 @@ dashboard vacío que arranca en la Pi.
 - **API JSON + app iOS** nativa (ver [api.md](api.md) y `ios/`).
 - **Login por PIN de Plex** (`plexauth`, portado del proyecto hermano): el token
   se obtiene vinculando la cuenta en plex.tv, y los servidores se autodetectan.
+- **Categorías de qBittorrent** al agregar un magnet, y visibles por torrent.
+- **Actualización desde la UI**: chequeo contra las releases de GitHub y botón de
+  instalar, vía un helper de systemd con privilegios (el servicio no puede
+  reemplazarse a sí mismo).
 
 ## Ideas para más adelante (fuera de alcance inicial)
 
