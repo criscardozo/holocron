@@ -12,8 +12,11 @@ import (
 
 // Well-known setting keys.
 const (
-	KeyPlexURL           = "plex.url"
-	KeyPlexToken         = "plex.token"
+	KeyPlexURL   = "plex.url"
+	KeyPlexToken = "plex.token"
+	// KeyPlexClientID identifies this device to plex.tv across restarts, so the
+	// account's "authorised devices" list keeps one Holocron entry.
+	KeyPlexClientID      = "plex.client_id"
 	KeyOpenSubtitlesKey  = "opensubtitles.api_key"
 	KeyOpenSubtitlesUser = "opensubtitles.username"
 	KeyOpenSubtitlesPass = "opensubtitles.password"

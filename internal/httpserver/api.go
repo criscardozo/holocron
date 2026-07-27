@@ -13,6 +13,7 @@ import (
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
+	"github.com/cristian/holocron/internal/plexauth"
 	"github.com/cristian/holocron/internal/scanner"
 	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/internal/torrents"
@@ -35,6 +36,10 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 
 	api.HandleFunc("GET /v1/naming", s.apiNaming)
 	api.HandleFunc("POST /v1/naming/scan", s.apiNamingScan)
+
+	api.HandleFunc("POST /v1/plex/link", s.apiPlexLinkStart)
+	api.HandleFunc("GET /v1/plex/link", s.apiPlexLinkStatus)
+	api.HandleFunc("POST /v1/plex/link/server", s.apiPlexLinkServer)
 
 	api.HandleFunc("GET /v1/media", s.apiMedia)
 	api.HandleFunc("POST /v1/media/sync", s.apiMediaSync)
@@ -347,6 +352,60 @@ func (s *Server) apiStartJob(w http.ResponseWriter, r *http.Request, start func(
 		s.apiError(w, http.StatusPreconditionFailed, "Plex is not configured")
 	default:
 		s.apiFailure(w, r, err)
+	}
+}
+
+// ── plex device link ────────────────────────────────────────────────────
+
+// The app drives the same flow as the web UI: start, poll, pick a server.
+func (s *Server) apiPlexLinkStart(w http.ResponseWriter, r *http.Request) {
+	status, err := s.deps.PlexAuth.Start(r.Context())
+	if err != nil {
+		s.log.Warn("api plex link start", "error", err)
+		s.apiError(w, http.StatusBadGateway, "could not reach plex.tv")
+		return
+	}
+	s.writeJSON(w, http.StatusOK, plexLinkPayload(status))
+}
+
+func (s *Server) apiPlexLinkStatus(w http.ResponseWriter, r *http.Request) {
+	status, err := s.deps.PlexAuth.Check(r.Context())
+	switch {
+	case errors.Is(err, plexauth.ErrNoLinkInProgress):
+		s.writeJSON(w, http.StatusOK, map[string]any{"state": string(plexauth.StateIdle)})
+	case err != nil:
+		s.log.Warn("api plex link check", "error", err)
+		s.apiError(w, http.StatusBadGateway, "could not reach plex.tv")
+	default:
+		s.writeJSON(w, http.StatusOK, plexLinkPayload(status))
+	}
+}
+
+func (s *Server) apiPlexLinkServer(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		BaseURL string `json:"baseUrl"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		s.apiError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if err := s.deps.PlexAuth.SelectServer(r.Context(), body.BaseURL); err != nil {
+		s.apiError(w, http.StatusBadRequest, "baseUrl is required")
+		return
+	}
+	s.writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func plexLinkPayload(status plexauth.Status) map[string]any {
+	servers := status.Servers
+	if servers == nil {
+		servers = []plexauth.Server{}
+	}
+	return map[string]any{
+		"state":   string(status.State),
+		"code":    status.Code,
+		"authUrl": status.AuthURL,
+		"servers": servers,
 	}
 }
 

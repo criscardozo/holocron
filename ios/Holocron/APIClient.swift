@@ -75,6 +75,21 @@ struct APIClient: Sendable {
         try await request("naming/scan", method: "POST")
     }
 
+    // MARK: - Plex device link
+
+    func startPlexLink() async throws -> PlexLinkStatus {
+        try await request("plex/link", method: "POST")
+    }
+
+    func plexLinkStatus() async throws -> PlexLinkStatus {
+        try await get("plex/link")
+    }
+
+    func selectPlexServer(baseURL: String) async throws {
+        struct Body: Encodable { let baseUrl: String }
+        try await send("plex/link/server", method: "POST", body: Body(baseUrl: baseURL))
+    }
+
     // MARK: - Media
 
     func media() async throws -> MediaLibrary {

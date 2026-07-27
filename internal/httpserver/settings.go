@@ -37,6 +37,12 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		view.QbitSet = true
 	}
 	view.APITokenSet = s.deps.APIToken.Configured(ctx)
+	// A reload mid-flow should keep showing the code rather than restart it.
+	if s.deps.PlexAuth.Pending() {
+		if status, err := s.deps.PlexAuth.Check(ctx); err == nil {
+			view.PlexLink = linkView(status)
+		}
+	}
 	for _, f := range list {
 		view.Folders = append(view.Folders, templates.SettingsFolderRow{
 			ID:      f.ID,

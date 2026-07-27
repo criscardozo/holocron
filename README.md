@@ -21,7 +21,9 @@ HTMX) va embebida en el ejecutable. Corre como servicio de systemd en la Pi.
   la convención «Título (Año)», con lo esperado vs. lo encontrado.
 - **Medios y archivos `.nfo`** — inventaría la biblioteca desde Plex y genera un `.nfo`
   por película/serie con la metadata que Plex ya resolvió (título, año, identificadores)
-  e indica si hay subtítulos en español.
+  e indica si hay subtítulos en español. La conexión a Plex se hace **vinculando la
+  cuenta** (código en plex.tv): el token se obtiene solo y los servidores se detectan,
+  sin tener que sacar el `X-Plex-Token` del navegador.
 - **Subtítulos** — lista los medios sin subtítulo en español y permite buscarlos y
   descargarlos desde OpenSubtitles.
 - **Torrents** — administra qBittorrent (estado, progreso, velocidades, pausar/reanudar/

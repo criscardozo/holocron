@@ -112,6 +112,22 @@ struct ContractTests {
         let failed = try #require(list.torrents.first { $0.state.contains("error") })
         #expect(failed.status == .failed)
     }
+
+    @Test func plexLinkPending() throws {
+        let status = try decode(PlexLinkStatus.self, "plex_link_pending")
+        #expect(status.isPending)
+        #expect(!status.isLinked)
+        #expect(status.code == "QWER")
+        #expect(status.authUrl?.contains("app.plex.tv") == true)
+    }
+
+    @Test func plexLinkLinked() throws {
+        let status = try decode(PlexLinkStatus.self, "plex_link_linked")
+        #expect(status.isLinked)
+        let server = try #require(status.servers?.first)
+        #expect(server.name == "Pi de casa")
+        #expect(server.baseUrl == "http://192.168.1.20:32400")
+    }
 }
 
 /// Anchors Bundle(for:) to the test bundle.

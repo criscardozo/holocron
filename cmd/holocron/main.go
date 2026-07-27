@@ -20,6 +20,7 @@ import (
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
+	"github.com/cristian/holocron/internal/plexauth"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
@@ -55,6 +56,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	subtitlesService := subtitles.NewService(database, settingsStore)
 	torrentsService := torrents.NewService(settingsStore)
 	apiTokenStore := apitoken.NewStore(settingsStore)
+	plexAuthService := plexauth.NewService(settingsStore)
 
 	registry := widgets.NewRegistry(
 		widgets.SystemWidget{},
@@ -76,6 +78,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Subtitles: subtitlesService,
 		Torrents:  torrentsService,
 		APIToken:  apiTokenStore,
+		PlexAuth:  plexAuthService,
 	})
 
 	httpSrv := &http.Server{

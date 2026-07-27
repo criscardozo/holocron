@@ -95,6 +95,38 @@ con `os.Root`**: cualquier intento de salir del root configurado da `400`.
 
 `type` es `movies` o `tv`.
 
+### Vincular Plex (device link)
+
+Obtiene el token de Plex sin que el usuario lo busque a mano en el navegador.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `POST` | `/api/v1/plex/link` | Pide un código a plex.tv y arranca el flujo |
+| `GET` | `/api/v1/plex/link` | Estado actual (se consulta en loop) |
+| `POST` | `/api/v1/plex/link/server` | Guarda el servidor elegido: `{"baseUrl": "…"}` |
+
+```json
+{
+  "state": "pending",
+  "code": "QWER",
+  "authUrl": "https://app.plex.tv/auth#?clientID=…&code=QWER",
+  "servers": []
+}
+```
+
+`state` es `idle`, `pending`, `linked` o `expired`. El flujo es:
+
+1. `POST` → devuelve `code` y `authUrl`. Se le muestra el código al usuario.
+2. El usuario abre `authUrl` (o plex.tv/link) y autoriza.
+3. `GET` cada ~2 s hasta que `state` pase a `linked`. **En ese momento el
+   servidor ya guardó el token**, aunque el usuario abandone el paso siguiente.
+4. `servers` trae los servidores de la cuenta con su mejor URL (se prefiere una
+   conexión local y no-relay, ideal para la LAN). `POST …/server` guarda la elegida.
+
+El código vence a los 10 minutos (`expired`); en ese caso se arranca de nuevo.
+Si la detección de servidores falla, el link igual queda hecho y `servers` viene
+vacío: se carga la URL a mano.
+
 ### Medios
 
 | Método | Ruta | Qué hace |

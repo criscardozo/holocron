@@ -174,3 +174,24 @@ struct TorrentList: Codable {
     var upSpeed: Int64?
     var torrents: [Torrent]
 }
+
+// MARK: - Plex device link
+
+struct PlexServer: Codable, Identifiable, Hashable {
+    var name: String
+    var baseUrl: String
+
+    var id: String { baseUrl }
+}
+
+/// Where the plex.tv device-link flow stands. Mirrors `plexauth.State`.
+struct PlexLinkStatus: Codable {
+    var state: String
+    var code: String?
+    var authUrl: String?
+    var servers: [PlexServer]?
+
+    var isPending: Bool { state == "pending" }
+    var isLinked: Bool { state == "linked" }
+    var isExpired: Bool { state == "expired" }
+}

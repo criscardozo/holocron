@@ -11,7 +11,16 @@ struct MediaView: View {
     var body: some View {
         LoadableView(state: state, reload: load) { library in
             if !library.configured {
-                NotConfiguredState(service: "Plex")
+                // Plex is the one service the app can configure by itself, via
+                // the device-link flow.
+                ContentUnavailableView {
+                    Label("Plex no configurado", systemImage: "gearshape")
+                } description: {
+                    Text("Vinculá tu cuenta para que Holocron obtenga el token solo.")
+                } actions: {
+                    NavigationLink("Conectar con Plex") { PlexLinkView() }
+                        .buttonStyle(.borderedProminent)
+                }
             } else {
                 content(library)
             }
