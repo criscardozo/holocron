@@ -21,6 +21,9 @@ const (
 	userAgent      = "Holocron/0.1"
 )
 
+// maxJSONBody caps how much of a JSON response is read into memory.
+const maxJSONBody = 16 << 20
+
 // Client talks to the OpenSubtitles API.
 type Client struct {
 	apiKey  string
@@ -179,7 +182,9 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, ou
 	if out == nil {
 		return nil
 	}
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+	// Bounded like every other read here: a broken or hostile endpoint must
+	// not be able to stream unbounded JSON into a Raspberry Pi's memory.
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxJSONBody)).Decode(out); err != nil {
 		return fmt.Errorf("decode %s: %w", path, err)
 	}
 	return nil
