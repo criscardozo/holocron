@@ -169,3 +169,85 @@ func TestAddMagnetSendsTheCategory(t *testing.T) {
 		t.Errorf("category = %q, want it absent", gotCategory)
 	}
 }
+
+// The session cookie must be reused: the torrents page polls every few seconds,
+// and logging in on every call hammered qBittorrent with pointless auth traffic.
+func TestSessionIsReusedAcrossCalls(t *testing.T) {
+	t.Parallel()
+	logins := 0
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, _ *http.Request) {
+		logins++
+		http.SetCookie(w, &http.Cookie{Name: "SID", Value: "abc", Path: "/"})
+		_, _ = w.Write([]byte("Ok."))
+	})
+	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`[]`))
+	})
+	mux.HandleFunc("/api/v2/torrents/categories", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/api/v2/torrents/pause", func(http.ResponseWriter, *http.Request) {})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c, err := New(srv.URL, "admin", "pass")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	for range 5 {
+		if _, err := c.Torrents(ctx); err != nil {
+			t.Fatalf("Torrents: %v", err)
+		}
+		if _, err := c.Categories(ctx); err != nil {
+			t.Fatalf("Categories: %v", err)
+		}
+	}
+	if err := c.Pause(ctx, "h1"); err != nil {
+		t.Fatalf("Pause: %v", err)
+	}
+	if logins != 1 {
+		t.Errorf("logged in %d times across 11 calls, want 1", logins)
+	}
+}
+
+// A long-lived client outlives qBittorrent's session, so an expired one must be
+// refreshed transparently instead of surfacing as an error.
+func TestExpiredSessionIsRetriedOnGet(t *testing.T) {
+	t.Parallel()
+	logins, infoCalls := 0, 0
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, _ *http.Request) {
+		logins++
+		http.SetCookie(w, &http.Cookie{Name: "SID", Value: "fresh", Path: "/"})
+		_, _ = w.Write([]byte("Ok."))
+	})
+	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, _ *http.Request) {
+		infoCalls++
+		if infoCalls == 1 {
+			// First call: qBittorrent has forgotten the session.
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		_, _ = w.Write([]byte(`[{"hash":"h1","name":"A","state":"downloading",
+			"progress":0.1,"size":1,"dlspeed":0,"upspeed":0,"num_seeds":0,"num_leechs":0}]`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c, err := New(srv.URL, "admin", "pass")
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := c.Torrents(context.Background())
+	if err != nil {
+		t.Fatalf("Torrents should recover from an expired session: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("got %d torrents after the retry, want 1", len(list))
+	}
+	if logins != 2 {
+		t.Errorf("logged in %d times, want 2 (initial + refresh)", logins)
+	}
+}

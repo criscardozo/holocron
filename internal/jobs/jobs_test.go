@@ -158,3 +158,24 @@ func TestFinishedJobsArePrunedButLatestSurvives(t *testing.T) {
 		t.Errorf("Latest = %q, want %q", latest.ID, ids[len(ids)-1])
 	}
 }
+
+// A finished job must free its kind atomically: reporting "done" while Start
+// still says busy made the UI button do nothing right after a scan finished.
+func TestKindIsFreeAsSoonAsTheJobReportsDone(t *testing.T) {
+	t.Parallel()
+	m := NewManager()
+
+	for i := range 50 {
+		job, err := m.Start("tight", func(_ context.Context, _ *Progress) (string, error) {
+			return "ok", nil
+		})
+		if err != nil {
+			t.Fatalf("iteration %d: Start returned %v", i, err)
+		}
+		waitFor(t, m, job.ID, StatusDone)
+		// The moment the job reads as done, the kind must be startable again.
+		if m.IsRunning("tight") {
+			t.Fatalf("iteration %d: kind still busy after the job reported done", i)
+		}
+	}
+}

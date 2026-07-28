@@ -15,19 +15,23 @@ func (s *Server) handleTorrentsPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	view := templates.TorrentsPageView{Configured: s.deps.Torrents.Configured(ctx)}
 	if view.Configured {
-		view = s.torrentsView(ctx)
+		view = s.torrentsView(ctx, true)
 		view.Configured = true
 	}
 	s.render(w, r, templates.TorrentsPage(view))
 }
 
 func (s *Server) handleTorrentsList(w http.ResponseWriter, r *http.Request) {
-	view := s.torrentsView(r.Context())
+	view := s.torrentsView(r.Context(), false)
 	view.Configured = true
 	s.render(w, r, templates.TorrentsTable(view))
 }
 
-func (s *Server) torrentsView(ctx context.Context) templates.TorrentsPageView {
+// torrentsView builds the page state. withCategories is only set for the full
+// page: the table fragment that polls every few seconds renders no picker, and
+// each row's category already comes from /torrents/info, so asking qBittorrent
+// for the category list on every refresh would be a wasted round trip.
+func (s *Server) torrentsView(ctx context.Context, withCategories bool) templates.TorrentsPageView {
 	view := templates.TorrentsPageView{}
 	list, err := s.deps.Torrents.List(ctx)
 	if err != nil {
@@ -35,14 +39,16 @@ func (s *Server) torrentsView(ctx context.Context) templates.TorrentsPageView {
 		view.Err = "No se pudo conectar con qBittorrent."
 		return view
 	}
-	// Categories are a convenience for the add form: failing to read them must
-	// not hide the torrent list.
-	if cats, err := s.deps.Torrents.Categories(ctx); err == nil {
-		for _, c := range cats {
-			view.Categories = append(view.Categories, c.Name)
+	if withCategories {
+		// A convenience for the add form: failing to read them must not hide
+		// the torrent list.
+		if cats, err := s.deps.Torrents.Categories(ctx); err == nil {
+			for _, c := range cats {
+				view.Categories = append(view.Categories, c.Name)
+			}
+		} else {
+			s.log.Warn("list torrent categories", "error", err)
 		}
-	} else {
-		s.log.Warn("list torrent categories", "error", err)
 	}
 
 	for _, t := range list {
@@ -87,7 +93,7 @@ func (s *Server) handleTorrentsAction(w http.ResponseWriter, r *http.Request) {
 		s.log.Warn("torrent action", "hash", hash, "error", err)
 	}
 
-	view := s.torrentsView(ctx)
+	view := s.torrentsView(ctx, false)
 	view.Configured = true
 	s.render(w, r, templates.TorrentsTable(view))
 }
