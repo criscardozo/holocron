@@ -131,12 +131,21 @@ carry_over_settings() {
 
 	if [ -z "$ADDR" ]; then
 		ADDR="$(sed -n 's/^ExecStart=.*--addr[ =]\([^ ]*\).*/\1/p' "$SERVICE_PATH" | head -n1)"
-		[ -n "$ADDR" ] && log "Keeping the configured listen address ($ADDR)"
+		if [ -n "$ADDR" ]; then
+			log "Keeping the configured listen address ($ADDR)"
+		fi
 	fi
 	if [ -z "$MEDIA_PATHS" ]; then
 		MEDIA_PATHS="$(sed -n 's/^ReadWritePaths=\(.*\)/\1/p' "$SERVICE_PATH" | head -n1)"
-		[ -n "$MEDIA_PATHS" ] && log "Keeping the configured media paths ($MEDIA_PATHS)"
+		if [ -n "$MEDIA_PATHS" ]; then
+			log "Keeping the configured media paths ($MEDIA_PATHS)"
+		fi
 	fi
+
+	# Explicit: under `set -e`, ending on a false test would abort the whole
+	# install — which is exactly what happened when the unit had no
+	# ReadWritePaths line, i.e. every default installation.
+	return 0
 }
 
 write_service() {

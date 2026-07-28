@@ -109,18 +109,20 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		logger.Info("shutting down")
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
-		return err
-	}
-	// Background jobs are detached from their originating request, so they must
-	// be cancelled explicitly; a job still running after the grace period is
-	// abandoned rather than blocking the exit.
-	if err := jobManager.Shutdown(shutdownCtx); err != nil {
+	httpCtx, cancelHTTP := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelHTTP()
+	httpErr := httpSrv.Shutdown(httpCtx)
+
+	// Background jobs are detached from the request that started them, so they
+	// must be cancelled explicitly. This runs even when the HTTP shutdown timed
+	// out — otherwise a slow client would leave the jobs unsignalled — and gets
+	// its own budget rather than whatever the HTTP wait left over.
+	jobsCtx, cancelJobs := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelJobs()
+	if err := jobManager.Shutdown(jobsCtx); err != nil {
 		logger.Warn("background jobs did not finish before shutdown", "error", err)
 	}
-	return nil
+	return httpErr
 }
 
 func newLogger(level string) *slog.Logger {

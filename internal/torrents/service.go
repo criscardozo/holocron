@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cristian/holocron/internal/qbittorrent"
 	"github.com/cristian/holocron/internal/settings"
@@ -28,6 +29,8 @@ type Service struct {
 	mu     sync.Mutex
 	cached *qbittorrent.Client
 	key    string
+	cats   []qbittorrent.Category
+	catsAt time.Time
 }
 
 // NewService creates a Service.
@@ -64,7 +67,9 @@ func (s *Service) client(ctx context.Context) (*qbittorrent.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.cached, s.key = c, key
+	// Pointing at a different server invalidates whatever was cached from the
+	// old one.
+	s.cached, s.key, s.cats, s.catsAt = c, key, nil, time.Time{}
 	return c, nil
 }
 
@@ -77,14 +82,35 @@ func (s *Service) List(ctx context.Context) ([]qbittorrent.Torrent, error) {
 	return c.Torrents(ctx)
 }
 
+// categoriesTTL caches the category list. They change only when the user edits
+// them in qBittorrent, while the torrents view is polled every few seconds —
+// by the web page and by the iOS app.
+const categoriesTTL = time.Minute
+
 // Categories lists the categories configured in qBittorrent, so a magnet can be
 // filed into one instead of landing in the default save path.
 func (s *Service) Categories(ctx context.Context) ([]qbittorrent.Category, error) {
+	s.mu.Lock()
+	if s.cats != nil && time.Since(s.catsAt) < categoriesTTL {
+		cached := s.cats
+		s.mu.Unlock()
+		return cached, nil
+	}
+	s.mu.Unlock()
+
 	c, err := s.client(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return c.Categories(ctx)
+	cats, err := c.Categories(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	s.cats, s.catsAt = cats, time.Now()
+	s.mu.Unlock()
+	return cats, nil
 }
 
 // Summary aggregates torrent activity for the dashboard widget.

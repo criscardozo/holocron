@@ -20,6 +20,9 @@ const (
 	pageSize    = 50
 )
 
+// maxJSONBody caps how much of a JSON response is read into memory.
+const maxJSONBody = 16 << 20
+
 // Client talks to a single Plex Media Server.
 type Client struct {
 	baseURL   string // always ends with "/"
@@ -89,7 +92,9 @@ func (c *Client) getOnce(ctx context.Context, path string, headers map[string]st
 			fmt.Errorf("plex API %q returned %s: %s", path, resp.Status, strings.TrimSpace(string(body)))
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+	// Bounded read: library listings are paginated, so a single response has
+	// no business being larger than this.
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxJSONBody)).Decode(out); err != nil {
 		return false, fmt.Errorf("decoding response from %q: %w", path, err)
 	}
 	return false, nil
