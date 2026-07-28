@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 
 	"github.com/cristian/holocron/internal/qbittorrent"
 	"github.com/cristian/holocron/internal/settings"
@@ -19,6 +20,14 @@ var ErrInvalidMagnet = errors.New("not a magnet link")
 // Service wraps a qBittorrent client configured from settings.
 type Service struct {
 	settings *settings.Store
+
+	// The client is cached because it owns the session cookie. Building a new
+	// one per call meant logging in again on every request, and the torrents
+	// page refreshes every few seconds. It is rebuilt when the credentials
+	// change.
+	mu     sync.Mutex
+	cached *qbittorrent.Client
+	key    string
 }
 
 // NewService creates a Service.
@@ -42,9 +51,21 @@ func (s *Service) client(ctx context.Context) (*qbittorrent.Client, error) {
 	if base == "" {
 		return nil, ErrNotConfigured
 	}
-	return qbittorrent.New(base,
-		s.settings.GetDefault(ctx, settings.KeyQbitUser, ""),
-		s.settings.GetDefault(ctx, settings.KeyQbitPass, ""))
+	user := s.settings.GetDefault(ctx, settings.KeyQbitUser, "")
+	pass := s.settings.GetDefault(ctx, settings.KeyQbitPass, "")
+	key := base + "\x00" + user + "\x00" + pass
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cached != nil && s.key == key {
+		return s.cached, nil
+	}
+	c, err := qbittorrent.New(base, user, pass)
+	if err != nil {
+		return nil, err
+	}
+	s.cached, s.key = c, key
+	return c, nil
 }
 
 // List returns all torrents.

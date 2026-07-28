@@ -19,6 +19,10 @@ import (
 	"time"
 )
 
+// maxResponse caps how much of a qBittorrent response is read into memory.
+// A large library still fits comfortably; a runaway one cannot exhaust the Pi.
+const maxResponse = 8 << 20
+
 // Torrent is one entry from /torrents/info.
 type Torrent struct {
 	Hash      string  `json:"hash"`
@@ -137,34 +141,57 @@ func (c *Client) post(ctx context.Context, path string, form url.Values) error {
 }
 
 // getJSON performs an authenticated GET and decodes the JSON body into out.
+// The session cookie is reused across calls, so an expired one is refreshed and
+// the request retried once rather than surfacing as an error.
 func (c *Client) getJSON(ctx context.Context, path, what string, out any) error {
 	if err := c.ensureLogin(ctx); err != nil {
 		return err
 	}
+
+	body, status, err := c.doGet(ctx, path)
+	if err != nil {
+		return fmt.Errorf("%s: %w", what, err)
+	}
+	if status == http.StatusForbidden {
+		c.mu.Lock()
+		c.loggedIn = false
+		c.mu.Unlock()
+		if err := c.ensureLogin(ctx); err != nil {
+			return err
+		}
+		if body, status, err = c.doGet(ctx, path); err != nil {
+			return fmt.Errorf("%s: %w", what, err)
+		}
+		if status == http.StatusForbidden {
+			return errors.New("qbittorrent rejected the session after re-login")
+		}
+	}
+	if status < 200 || status >= 300 {
+		return fmt.Errorf("%s returned %d", what, status)
+	}
+	if err := json.Unmarshal(body, out); err != nil {
+		return fmt.Errorf("decode %s: %w", what, err)
+	}
+	return nil
+}
+
+// doGet performs one GET and returns the body and status.
+func (c *Client) doGet(ctx context.Context, path string) ([]byte, int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
 	req.Header.Set("Referer", c.base)
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return fmt.Errorf("%s: %w", what, err)
+		return nil, 0, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode == http.StatusForbidden {
-		c.mu.Lock()
-		c.loggedIn = false
-		c.mu.Unlock()
-		return errors.New("qbittorrent session expired")
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponse))
+	if err != nil {
+		return nil, resp.StatusCode, err
 	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("%s returned %d", what, resp.StatusCode)
-	}
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
-		return fmt.Errorf("decode %s: %w", what, err)
-	}
-	return nil
+	return body, resp.StatusCode, nil
 }
 
 // Torrents lists all torrents.

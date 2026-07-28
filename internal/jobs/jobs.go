@@ -177,24 +177,29 @@ func (m *Manager) Start(kind string, fn Func) (Job, error) {
 }
 
 func (m *Manager) run(st *jobState, fn Func) {
+	var result string
+	var err error
+
 	defer func() {
 		if r := recover(); r != nil {
-			st.mu.Lock()
-			st.status = StatusError
-			st.err = fmt.Sprintf("panic: %v", r)
-			st.finishedAt = m.now()
-			st.mu.Unlock()
+			err = fmt.Errorf("panic: %v", r)
 		}
-		m.mu.Lock()
-		delete(m.running, st.kind)
-		m.retire(st)
-		m.mu.Unlock()
+		m.finish(st, result, err)
 		m.wg.Done()
 	}()
 
 	// Jobs outlive the request that started them, so they hang off the
 	// manager's context instead: cancelled only by Shutdown.
-	result, err := fn(m.baseCtx, &Progress{job: st})
+	result, err = fn(m.baseCtx, &Progress{job: st})
+}
+
+// finish records the outcome and frees the kind in a single critical section.
+// Doing it in two steps left a window where a job already reported "done" while
+// Start still rejected the next one as busy — so pressing the button again the
+// moment a scan finished did nothing.
+func (m *Manager) finish(st *jobState, result string, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	st.mu.Lock()
 	st.finishedAt = m.now()
@@ -207,6 +212,9 @@ func (m *Manager) run(st *jobState, fn Func) {
 		st.result = result
 	}
 	st.mu.Unlock()
+
+	delete(m.running, st.kind)
+	m.retire(st)
 }
 
 // retire records a finished job in its kind's history and drops the oldest
