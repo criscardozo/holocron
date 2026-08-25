@@ -8,9 +8,9 @@ import (
 )
 
 // The media disk is exFAT written to from a Mac, so it carries .Spotlight-V100
-// and .Trashes at the top level. Those are neither interesting to look at nor
-// cheap to walk: .Spotlight-V100 holds many small entries, which is what makes
-// a du-style scan slow.
+// and .Trashes at the top level. Nobody asking what fills a media drive wants
+// to see those. They are cheap to walk, so skipping them buys tidiness rather
+// than speed.
 func TestChildDirsSkipsHiddenDirectories(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()

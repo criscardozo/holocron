@@ -132,9 +132,11 @@ func (s *Service) CachedResult(ctx context.Context, folderID int64) (scanner.Res
 //
 // Hidden directories are skipped because they are not what anyone is looking at
 // when they ask what is filling a media drive. On this HTPC the media disk is
-// exFAT written to from a Mac, so it carries .Spotlight-V100 and .Trashes —
-// noise in the listing, and .Spotlight-V100 in particular holds many small
-// entries, which is exactly what makes a du-style walk slow.
+// exFAT written to from a Mac, so it carries .Spotlight-V100 and .Trashes.
+//
+// This is a cleanliness fix, not a speed one: measured on the real library those
+// directories hold 111 of 12,740 entries and cost 0.14s of a ~12s cold scan.
+// The cost lives in the library itself, where there is nothing to skip.
 func childDirs(root string) []string {
 	entries, err := os.ReadDir(root)
 	if err != nil {
