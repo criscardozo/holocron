@@ -34,7 +34,7 @@ templ TorrentsPage(v TorrentsPageView) {
 		<div class="page-head">
 			<div>
 				<h1>Torrents</h1>
-				<p class="sub">Descargas de qBittorrent · se refresca sola cada 3 s</p>
+				<p class="sub">Descargas de qBittorrent · la tabla se refresca sola</p>
 			</div>
 			if v.Configured {
 				<div class="head-actions">
@@ -67,7 +67,7 @@ templ TorrentsPage(v TorrentsPageView) {
 // TorrentsTable is the torrent list fragment; it refreshes itself every few
 // seconds.
 templ TorrentsTable(v TorrentsPageView) {
-	<div id="torrents-table" hx-get="/torrents/list" hx-trigger="every 3s" hx-swap="outerHTML">
+	<div id="torrents-table" hx-get="/torrents/list" hx-trigger={ "every " + v.RefreshEvery } hx-swap="outerHTML">
 		if v.Err != "" {
 			<p class="error">{ v.Err }</p>
 		} else if len(v.Rows) == 0 {

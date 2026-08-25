@@ -11,9 +11,19 @@ import (
 	"github.com/cristian/holocron/web/templates"
 )
 
+// Polling intervals for the torrents table: quick while transfers are running,
+// relaxed when the list cannot be changing on its own.
+const (
+	activeRefresh = "3s"
+	idleRefresh   = "15s"
+)
+
 func (s *Server) handleTorrentsPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	view := templates.TorrentsPageView{Configured: s.deps.Torrents.Configured(ctx)}
+	view := templates.TorrentsPageView{
+		Configured:   s.deps.Torrents.Configured(ctx),
+		RefreshEvery: idleRefresh,
+	}
 	if view.Configured {
 		view = s.torrentsView(ctx, true)
 		view.Configured = true
@@ -32,7 +42,10 @@ func (s *Server) handleTorrentsList(w http.ResponseWriter, r *http.Request) {
 // each row's category already comes from /torrents/info, so asking qBittorrent
 // for the category list on every refresh would be a wasted round trip.
 func (s *Server) torrentsView(ctx context.Context, withCategories bool) templates.TorrentsPageView {
-	view := templates.TorrentsPageView{}
+	// Default the interval up front: the error path below returns early, and an
+	// empty value would emit `hx-trigger="every "` — invalid, so the table
+	// would stop polling and never recover from a transient failure.
+	view := templates.TorrentsPageView{RefreshEvery: idleRefresh}
 	list, err := s.deps.Torrents.List(ctx)
 	if err != nil {
 		s.log.Warn("list torrents", "error", err)
@@ -48,6 +61,14 @@ func (s *Server) torrentsView(ctx context.Context, withCategories bool) template
 			}
 		} else {
 			s.log.Warn("list torrent categories", "error", err)
+		}
+	}
+
+	// Poll briskly only while something is actually moving.
+	for _, t := range list {
+		if t.DlSpeed > 0 || t.UpSpeed > 0 {
+			view.RefreshEvery = activeRefresh
+			break
 		}
 	}
 

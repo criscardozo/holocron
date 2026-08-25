@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -29,9 +30,41 @@ type Stats struct {
 	HasLoad    bool          // whether Load1 could be read
 }
 
-// Read collects a health snapshot. Failures in individual metrics are silently
-// left as zero values with their Has* flag unset; Read never returns an error.
+// snapshotTTL is how long a reading is reused. Sampling CPU means sleeping
+// between two /proc/stat reads, and that sleep sat in the request path: the
+// dashboard, its widget refresh and the JSON API each paid it. These numbers
+// move slowly, so a shared reading is both cheaper and no less truthful.
+const snapshotTTL = 2 * time.Second
+
+var (
+	cacheMu   sync.Mutex
+	cached    Stats
+	cachedAt  time.Time
+	cacheOnce bool
+)
+
+// Read collects a health snapshot, reusing one taken within the last
+// snapshotTTL. Failures in individual metrics are silently left as zero values
+// with their Has* flag unset; Read never returns an error.
 func Read() Stats {
+	cacheMu.Lock()
+	if cacheOnce && time.Since(cachedAt) < snapshotTTL {
+		s := cached
+		cacheMu.Unlock()
+		return s
+	}
+	cacheMu.Unlock()
+
+	s := sample()
+
+	cacheMu.Lock()
+	cached, cachedAt, cacheOnce = s, time.Now(), true
+	cacheMu.Unlock()
+	return s
+}
+
+// sample takes a fresh reading, sleeping briefly to measure CPU.
+func sample() Stats {
 	var s Stats
 
 	if pct, err := cpuPercent(200 * time.Millisecond); err == nil {

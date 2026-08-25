@@ -16,7 +16,13 @@ type TorrentsPageView struct {
 	Configured bool
 	Err        string
 	Categories []string
-	Rows       []TorrentRow
+	// RefreshEvery is the HTMX polling interval for the table. It stretches
+	// when nothing is transferring: a Pi with a busy disk should not be asked
+	// for an unchanged list every few seconds. Deciding it here keeps the page
+	// free of JavaScript, which a visibility-based filter would need (and the
+	// strict CSP forbids eval).
+	RefreshEvery string
+	Rows         []TorrentRow
 }
 
 // TorrentRow is one torrent in the table.

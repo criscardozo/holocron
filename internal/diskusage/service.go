@@ -22,7 +22,9 @@ const (
 	topLimit     = 50
 	browseLimit  = 200
 	maxScanError = 50
-	concurrency  = 2
+	// One reader at a time: the Pi's media disk is a 5400 rpm USB drive, and
+	// two concurrent walks make it thrash instead of going faster.
+	concurrency = 1
 )
 
 // Service coordinates scans, caching and browsing.
@@ -65,6 +67,12 @@ func (s *Service) StartScan(ctx context.Context, folderID int64) (jobs.Job, erro
 	})
 
 	return s.jobs.Start(JobKind(folderID), func(jobCtx context.Context, _ *jobs.Progress) (string, error) {
+		// Yield disk and CPU to playback: this walks the whole tree, and
+		// Jellyfin streaming from the same USB drive must win. Only this
+		// thread is affected — the interactive drill-down keeps its priority.
+		restore := jobs.Deprioritise()
+		defer restore()
+
 		result, err := sc.Scan(jobCtx)
 		if err != nil {
 			return "", fmt.Errorf("scan %s: %w", folder.Path, err)

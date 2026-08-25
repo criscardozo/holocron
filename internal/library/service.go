@@ -114,9 +114,20 @@ func (s *Service) sync(ctx context.Context, c *plex.Client, p *jobs.Progress) (s
 		}
 	}
 
-	var count int
+	// Collect first, write second. The upserts belong in one transaction (one
+	// commit instead of one fsync per item on the microSD), but the collection
+	// phase makes HTTP calls to Plex and walks each media folder — and with
+	// SetMaxOpenConns(1) a transaction held across all that would block every
+	// other query in the app for the length of the sync.
+	type row struct {
+		path, typ, title, guid, altIDs string
+		year                           int
+		hasSubs                        bool
+	}
+	var pending []row
+
 	for i, lib := range relevant {
-		p.Set(i * 100 / max(len(relevant), 1))
+		p.Set(i * 90 / max(len(relevant), 1))
 		items, err := c.AllLibraryItems(ctx, lib.ID)
 		if err != nil {
 			return "", fmt.Errorf("list items of %q: %w", lib.Title, err)
@@ -130,19 +141,46 @@ func (s *Service) sync(ctx context.Context, c *plex.Client, p *jobs.Progress) (s
 				continue
 			}
 			detected := subs.DetectDir(folder)
-			altIDs, _ := json.Marshal(parseAltIDs(it))
-			if _, err := s.db.ExecContext(ctx,
-				`INSERT INTO media_items (path, type, title, year, plex_guid, has_subs_es, plex_alt_ids)
-				 VALUES (?, ?, ?, ?, ?, ?, ?)
-				 ON CONFLICT(path) DO UPDATE SET
-				   type = excluded.type, title = excluded.title, year = excluded.year,
-				   plex_guid = excluded.plex_guid, has_subs_es = excluded.has_subs_es,
-				   plex_alt_ids = excluded.plex_alt_ids`,
-				folder, it.Type, it.Title, it.Year, it.Guid, boolToInt(detected.SpanishSubtitle), string(altIDs)); err != nil {
-				return "", fmt.Errorf("upsert media item: %w", err)
+			altIDs, err := json.Marshal(parseAltIDs(it))
+			if err != nil {
+				altIDs = []byte("{}")
 			}
-			count++
+			pending = append(pending, row{
+				path: folder, typ: it.Type, title: it.Title, guid: it.Guid,
+				altIDs: string(altIDs), year: it.Year, hasSubs: detected.SpanishSubtitle,
+			})
 		}
+	}
+
+	p.Set(95)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	stmt, err := tx.PrepareContext(ctx,
+		`INSERT INTO media_items (path, type, title, year, plex_guid, has_subs_es, plex_alt_ids)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(path) DO UPDATE SET
+		   type = excluded.type, title = excluded.title, year = excluded.year,
+		   plex_guid = excluded.plex_guid, has_subs_es = excluded.has_subs_es,
+		   plex_alt_ids = excluded.plex_alt_ids`)
+	if err != nil {
+		return "", fmt.Errorf("prepare upsert: %w", err)
+	}
+	defer func() { _ = stmt.Close() }()
+
+	count := 0
+	for _, r := range pending {
+		if _, err := stmt.ExecContext(ctx,
+			r.path, r.typ, r.title, r.year, r.guid, boolToInt(r.hasSubs), r.altIDs); err != nil {
+			return "", fmt.Errorf("upsert media item: %w", err)
+		}
+		count++
+	}
+	if err := tx.Commit(); err != nil {
+		return "", fmt.Errorf("commit sync: %w", err)
 	}
 	return fmt.Sprintf("%d ítems", count), nil
 }
