@@ -274,3 +274,25 @@ manual; si se cambia el hardening, hay que tocar los dos lugares.
 > y ahora lo informan explícitamente en la UI en vez de quedarse en silencio.
 
 > **Target confirmado:** Raspberry Pi 4/5 con SO de 64 bits → `GOARCH=arm64`.
+
+## Convención de commits
+
+El historial está en [Conventional Commits](https://www.conventionalcommits.org):
+`tipo(scope): asunto`, en **inglés (australiano)**, imperativo y minúscula, sin
+punto final. Se reescribió el historial entero para que sea así, así que un
+mensaje que se salga del patrón queda como el raro.
+
+- **Tipos**: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`,
+  `chore`.
+- **Scopes en uso**: `disk`, `naming`, `media`, `jellyfin`, `subtitles`,
+  `torrents`, `updates`, `api`, `ui`, `install`. Se omite si el cambio es
+  transversal (`fix: harden filesystem confinement…`).
+- **Incompatibles**: `!` antes de los dos puntos (`feat(media)!: …`) más un
+  footer `BREAKING CHANGE:` que diga qué hay que hacer al actualizar. El único
+  hasta ahora es la migración a Jellyfin (renombra columnas y borra la config de
+  Plex).
+- El cuerpo explica **por qué** y qué se verificó, no qué líneas cambiaron: eso
+  ya lo dice el diff.
+
+No hay linter de commits en CI: sumar uno implicaría Node en el pipeline, y el
+único que escribe acá es una persona.
