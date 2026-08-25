@@ -84,8 +84,9 @@ make ios-test
 ```
 
 Los tests de contrato decodifican JSON **capturado de un servidor real**, de
-modo que si la API en Go cambia un campo, el build de iOS falla en CI en vez de
-romperse en el teléfono. Para regenerar los fixtures, ver
+modo que si la API en Go cambia un campo, lo agarrás acá en vez de en el
+teléfono. **No corren en CI**: la app se compila y testea a mano, así que
+acordate de `make ios-test` después de tocar la API. Para regenerar los fixtures, ver
 [`HolocronTests/Fixtures/README.md`](HolocronTests/Fixtures/README.md).
 
 ## Instalarla en el teléfono

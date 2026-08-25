@@ -159,6 +159,7 @@ make release VERSION=v0.1.0
 > Cada push y PR a `main` pasa además por el workflow de CI
 > ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): `vet`, tests con `-race`,
 > `golangci-lint`, `govulncheck` y chequeos de `go mod tidy` y de plantillas al día.
+> La app iOS no se compila en CI; se testea a mano con `make ios-test`.
 
 ### Deploy directo (sin release)
 

@@ -1,0 +1,792 @@
+{
+  "pelicula_con_subtitulo_externo": {
+    "Id": "a0734d57685f91fa093dfcfd381b81dc",
+    "Name": "Aladdín",
+    "OriginalTitle": "Aladdin",
+    "Type": "Movie",
+    "Path": "/mnt/grande/Museum/Aladin/Aladin.mp4",
+    "ProductionYear": 1992,
+    "ProviderIds": {
+      "Imdb": "tt0103639",
+      "Tmdb": "812",
+      "TmdbCollection": "86027",
+      "Tvdb": "285",
+      "eidr": "10.5240/95A6-039F-1D3C-9EEC-7359-A",
+      "official website": "http://movies.disney.com/aladdin",
+      "wikipedia": "Aladdin_(1992_Disney_film)"
+    },
+    "MediaSources": [
+      {
+        "Path": "/mnt/grande/Museum/Aladin/Aladin.mp4",
+        "Container": "mp4",
+        "Size": 1103634900,
+        "MediaStreams": [
+          {
+            "Index": 0,
+            "Type": "Subtitle",
+            "Codec": "subrip",
+            "Language": "spa",
+            "IsExternal": true,
+            "IsDefault": false,
+            "IsForced": false,
+            "Path": "/mnt/grande/Museum/Aladin/Aladin.es.srt",
+            "DisplayTitle": "Spanish - SUBRIP - External"
+          },
+          {
+            "Index": 1,
+            "Type": "Video",
+            "Codec": "mpeg4",
+            "Language": "eng",
+            "IsExternal": false,
+            "IsDefault": true,
+            "IsForced": false,
+            "DisplayTitle": "360p MPEG4 SDR"
+          },
+          {
+            "Index": 2,
+            "Type": "Audio",
+            "Codec": "aac",
+            "Language": "eng",
+            "IsExternal": false,
+            "IsDefault": true,
+            "IsForced": false,
+            "DisplayTitle": "\fSoundHandler - English - AAC - Stereo - Default",
+            "Title": "\fSoundHandler"
+          }
+        ]
+      }
+    ]
+  },
+  "pelicula_con_subtitulos_internos": {
+    "Id": "2dda35689af0490cf8bbef3daf761615",
+    "Name": "Video",
+    "OriginalTitle": "Buffy the Vampire Slayer",
+    "Type": "Movie",
+    "Path": "/mnt/grande/Museum/Buffy.the.Vampire.Slayer.1992.x264/Buffy.the.Vampire.Slayer.1992.x264.mkv",
+    "ProductionYear": 1992,
+    "ProviderIds": {
+      "Imdb": "tt0103893",
+      "Tmdb": "10206",
+      "TmdbCollection": "10206",
+      "Tvdb": "3033"
+    },
+    "MediaSources": [
+      {
+        "Path": "/mnt/grande/Museum/Buffy.the.Vampire.Slayer.1992.x264/Buffy.the.Vampire.Slayer.1992.x264.mkv",
+        "Container": "mkv",
+        "Size": 917652508,
+        "MediaStreams": [
+          {
+            "Index": 0,
+            "Type": "Subtitle",
+            "Codec": "subrip",
+            "Language": "spa",
+            "IsExternal": true,
+            "IsDefault": false,
+            "IsForced": false,
+            "Path": "/mnt/grande/Museum/Buffy.the.Vampire.Slayer.1992.x264/Buffy.the.Vampire.Slayer.1992.x264.es.srt",
+            "DisplayTitle": "Spanish - SUBRIP - External"
+          },
+          {
+            "Index": 1,
+            "Type": "Video",
+            "Codec": "h264",
+            "IsExternal": false,
+            "IsDefault": true,
+            "IsForced": false,
+            "DisplayTitle": "Video - 540p - H264 - SDR",
+            "Title": "Video"
+          },
+          {
+            "Index": 2,
+            "Type": "Audio",
+            "Codec": "aac",
+            "Language": "eng",
+            "IsExternal": false,
+            "IsDefault": true,
+            "IsForced": false,
+            "DisplayTitle": "English - HE-AAC - Stereo - Default",
+            "Title": "English"
+          },
+          {
+            "Index": 3,
+            "Type": "Subtitle",
+            "Codec": "DVDSUB",
+            "Language": "dan",
+            "IsExternal": false,
+            "IsDefault": true,
+            "IsForced": false,
+            "DisplayTitle": "Danish - Default - DVDSUB"
+          },
+          {
+            "Index": 4,
+            "Type": "Subtitle",
+            "Codec": "DVDSUB",
+            "Language": "eng",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "English - DVDSUB"
+          },
+          {
+            "Index": 5,
+            "Type": "Subtitle",
+            "Codec": "DVDSUB",
+            "Language": "fin",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Finnish - DVDSUB"
+          },
+          {
+            "Index": 6,
+            "Type": "Subtitle",
+            "Codec": "DVDSUB",
+            "Language": "nor",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Norwegian - DVDSUB"
+          },
+          {
+            "Index": 7,
+            "Type": "Subtitle",
+            "Codec": "DVDSUB",
+            "Language": "swe",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Swedish - DVDSUB"
+          }
+        ]
+      }
+    ]
+  },
+  "pelicula_multi_version": {
+    "Id": "bdc30ada12a87795d9a4c9a6ecdde782",
+    "Name": "El mago de Oz",
+    "OriginalTitle": "The Wizard of Oz",
+    "Type": "Movie",
+    "Path": "/mnt/grande/Museum/The Wizard of Oz (1939)/The Wizard of Oz (1939).mkv",
+    "ProductionYear": 1939,
+    "ProviderIds": {
+      "Imdb": "tt0032138",
+      "Tmdb": "630",
+      "TmdbCollection": "630"
+    },
+    "MediaSources": [
+      {
+        "Path": "/mnt/grande/Museum/The Wizard of Oz (1939)/The Wizard of Oz (1939).mkv",
+        "Container": "mkv",
+        "Size": 20677413444,
+        "MediaStreams": [
+          {
+            "Index": 0,
+            "Type": "Video",
+            "Codec": "hevc",
+            "IsExternal": false,
+            "IsDefault": true,
+            "IsForced": false,
+            "DisplayTitle": "4K HEVC Dolby Vision Profile 8.1 (HDR10)"
+          },
+          {
+            "Index": 1,
+            "Type": "Audio",
+            "Codec": "dts",
+            "Language": "eng",
+            "IsExternal": false,
+            "IsDefault": true,
+            "IsForced": false,
+            "DisplayTitle": "DTS-HD MA 5.1 - English - Default",
+            "Title": "DTS-HD MA 5.1"
+          },
+          {
+            "Index": 2,
+            "Type": "Audio",
+            "Codec": "ac3",
+            "Language": "eng",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Commentary by Oz historian John Fricke with Barbara Freed-Saltzman and the film's cast and crew - English - Dolby Digital - Stereo",
+            "Title": "Commentary by Oz historian John Fricke with Barbara Freed-Saltzman and the film's cast and crew"
+          },
+          {
+            "Index": 3,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "eng",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "English (SDH) - Hearing Impaired - PGSSUB",
+            "Title": "English (SDH)"
+          },
+          {
+            "Index": 4,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "ara",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Arabic - PGSSUB",
+            "Title": "Arabic"
+          },
+          {
+            "Index": 5,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "bul",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Bulgarian - PGSSUB",
+            "Title": "Bulgarian"
+          },
+          {
+            "Index": 6,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "zho",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Chinese (Simplified) - PGSSUB",
+            "Title": "Chinese (Simplified)"
+          },
+          {
+            "Index": 7,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "zho",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Chinese (Traditional) - PGSSUB",
+            "Title": "Chinese (Traditional)"
+          },
+          {
+            "Index": 8,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "hrv",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Croatian - PGSSUB",
+            "Title": "Croatian"
+          },
+          {
+            "Index": 9,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "ces",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Czech - PGSSUB",
+            "Title": "Czech"
+          },
+          {
+            "Index": 10,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "dan",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Danish - PGSSUB",
+            "Title": "Danish"
+          },
+          {
+            "Index": 11,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "nld",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Dutch - PGSSUB",
+            "Title": "Dutch"
+          },
+          {
+            "Index": 12,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "fin",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Finnish - PGSSUB",
+            "Title": "Finnish"
+          },
+          {
+            "Index": 13,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "fra",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "French - PGSSUB",
+            "Title": "French"
+          },
+          {
+            "Index": 14,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "deu",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "German (SDH) - Hearing Impaired - PGSSUB",
+            "Title": "German (SDH)"
+          },
+          {
+            "Index": 15,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "ell",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Greek - PGSSUB",
+            "Title": "Greek"
+          },
+          {
+            "Index": 16,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "heb",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Hebrew - PGSSUB",
+            "Title": "Hebrew"
+          },
+          {
+            "Index": 17,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "hun",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Hungarian - PGSSUB",
+            "Title": "Hungarian"
+          },
+          {
+            "Index": 18,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "isl",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Icelandic - PGSSUB",
+            "Title": "Icelandic"
+          },
+          {
+            "Index": 19,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "ita",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Italian - PGSSUB",
+            "Title": "Italian"
+          },
+          {
+            "Index": 20,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "ita",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Italian (SDH) - Hearing Impaired - PGSSUB",
+            "Title": "Italian (SDH)"
+          },
+          {
+            "Index": 21,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "jpn",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Japanese - PGSSUB",
+            "Title": "Japanese"
+          },
+          {
+            "Index": 22,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "kor",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Korean - PGSSUB",
+            "Title": "Korean"
+          },
+          {
+            "Index": 23,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "nor",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Norwegian - PGSSUB",
+            "Title": "Norwegian"
+          },
+          {
+            "Index": 24,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "pol",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Polish - PGSSUB",
+            "Title": "Polish"
+          },
+          {
+            "Index": 25,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "por",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Portuguese (Brazilian) - PGSSUB",
+            "Title": "Portuguese (Brazilian)"
+          },
+          {
+            "Index": 26,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "por",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Portuguese (Iberian) - PGSSUB",
+            "Title": "Portuguese (Iberian)"
+          },
+          {
+            "Index": 27,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "ron",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Romanian - PGSSUB",
+            "Title": "Romanian"
+          },
+          {
+            "Index": 28,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "rus",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Russian - PGSSUB",
+            "Title": "Russian"
+          },
+          {
+            "Index": 29,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "slv",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Slovenian - PGSSUB",
+            "Title": "Slovenian"
+          },
+          {
+            "Index": 30,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "spa",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Spanish (Castilian) - PGSSUB",
+            "Title": "Spanish (Castilian)"
+          },
+          {
+            "Index": 31,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "spa",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Spanish (Latin American) - PGSSUB",
+            "Title": "Spanish (Latin American)"
+          },
+          {
+            "Index": 32,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "swe",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Swedish - PGSSUB",
+            "Title": "Swedish"
+          },
+          {
+            "Index": 33,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "tha",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Thai - PGSSUB",
+            "Title": "Thai"
+          },
+          {
+            "Index": 34,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "tur",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Turkish - PGSSUB",
+            "Title": "Turkish"
+          },
+          {
+            "Index": 35,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "zho",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Chinese (Traditional) (Commentary) - PGSSUB",
+            "Title": "Chinese (Traditional) (Commentary)"
+          },
+          {
+            "Index": 36,
+            "Type": "Subtitle",
+            "Codec": "PGSSUB",
+            "Language": "jpn",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "Japanese (Commentary) - PGSSUB",
+            "Title": "Japanese (Commentary)"
+          }
+        ]
+      },
+      {
+        "Path": "/mnt/grande/Museum/The Wizard of Oz (1939)/The Wizard of Oz (1939) - 1080p.mp4",
+        "Container": "mp4",
+        "Size": 1887263834,
+        "MediaStreams": [
+          {
+            "Index": 0,
+            "Type": "Subtitle",
+            "Codec": "subrip",
+            "Language": "deu",
+            "IsExternal": true,
+            "IsDefault": false,
+            "IsForced": false,
+            "Path": "/mnt/grande/Museum/The Wizard of Oz (1939)/The Wizard of Oz (1939) - 1080p.de.srt",
+            "DisplayTitle": "German - SUBRIP - External"
+          },
+          {
+            "Index": 1,
+            "Type": "Subtitle",
+            "Codec": "subrip",
+            "Language": "spa",
+            "IsExternal": true,
+            "IsDefault": false,
+            "IsForced": false,
+            "Path": "/mnt/grande/Museum/The Wizard of Oz (1939)/The Wizard of Oz (1939) - 1080p.es.srt",
+            "DisplayTitle": "Spanish - SUBRIP - External"
+          },
+          {
+            "Index": 2,
+            "Type": "Subtitle",
+            "Codec": "subrip",
+            "Language": "fra",
+            "IsExternal": true,
+            "IsDefault": false,
+            "IsForced": false,
+            "Path": "/mnt/grande/Museum/The Wizard of Oz (1939)/The Wizard of Oz (1939) - 1080p.fr.srt",
+            "DisplayTitle": "French - SUBRIP - External"
+          },
+          {
+            "Index": 3,
+            "Type": "Subtitle",
+            "Codec": "subrip",
+            "Language": "ita",
+            "IsExternal": true,
+            "IsDefault": false,
+            "IsForced": false,
+            "Path": "/mnt/grande/Museum/The Wizard of Oz (1939)/The Wizard of Oz (1939) - 1080p.it.srt",
+            "DisplayTitle": "Italian - SUBRIP - External"
+          },
+          {
+            "Index": 4,
+            "Type": "Subtitle",
+            "Codec": "subrip",
+            "Language": "por",
+            "IsExternal": true,
+            "IsDefault": false,
+            "IsForced": false,
+            "Path": "/mnt/grande/Museum/The Wizard of Oz (1939)/The Wizard of Oz (1939) - 1080p.pt.srt",
+            "DisplayTitle": "Portuguese - SUBRIP - External"
+          },
+          {
+            "Index": 5,
+            "Type": "Video",
+            "Codec": "h264",
+            "Language": "und",
+            "IsExternal": false,
+            "IsDefault": true,
+            "IsForced": false,
+            "DisplayTitle": "1080p H264 SDR"
+          },
+          {
+            "Index": 6,
+            "Type": "Audio",
+            "Codec": "aac",
+            "Language": "eng",
+            "IsExternal": false,
+            "IsDefault": true,
+            "IsForced": false,
+            "DisplayTitle": "Sound Media Handler - English - AAC - 5.1 - Default",
+            "Title": "Sound Media Handler"
+          },
+          {
+            "Index": 7,
+            "Type": "Audio",
+            "Codec": "aac",
+            "Language": "eng",
+            "IsExternal": false,
+            "IsDefault": true,
+            "IsForced": false,
+            "DisplayTitle": "Sound Media Handler - English - AAC - Stereo - Default",
+            "Title": "Sound Media Handler"
+          }
+        ]
+      }
+    ]
+  },
+  "serie": {
+    "Id": "4a817e8b6c75c05bdaaff7290ec03b12",
+    "Name": "Dragon Ball",
+    "OriginalTitle": "Dragon Ball movies",
+    "Type": "Series",
+    "Path": "/mnt/grande/Anime/Dragon Ball",
+    "ProductionYear": 1986,
+    "ProviderIds": {
+      "Imdb": "tt0280249",
+      "Tmdb": "100172",
+      "Tvdb": "76666",
+      "TvdbSlug": "dragon-ball",
+      "anidb": "1530",
+      "anilist": "223",
+      "eidr": "10.5240/B0F7-0B5D-95F6-3A2C-BFF3-T",
+      "myanimelist": "223",
+      "proxer": "1330"
+    }
+  },
+  "episodio_con_archivo": {
+    "Id": "e27e375a72628bb4d562a154a2a1c1fd",
+    "Name": "4-1-1",
+    "OriginalTitle": "4-1-1",
+    "Type": "Episode",
+    "Path": "/mnt/grande/Series/The Secret Life of the American Teenager/S04/The.Secret.Life.of.the.American.Teenager.S04E10.HDTV.XviD-LOL.avi",
+    "ProductionYear": 2011,
+    "ProviderIds": {
+      "Imdb": "tt2010736",
+      "Tvdb": "4144037"
+    },
+    "SeriesName": "Vida Secreta de una Adolescente",
+    "SeriesId": "2dddbd0a053c4f27688b7695b4da00cc",
+    "ParentIndexNumber": 4,
+    "IndexNumber": 10,
+    "MediaSources": [
+      {
+        "Path": "/mnt/grande/Series/The Secret Life of the American Teenager/S04/The.Secret.Life.of.the.American.Teenager.S04E10.HDTV.XviD-LOL.avi",
+        "Container": "avi",
+        "Size": 366814094,
+        "MediaStreams": [
+          {
+            "Index": 0,
+            "Type": "Subtitle",
+            "Codec": "subrip",
+            "Language": "eng",
+            "IsExternal": true,
+            "IsDefault": false,
+            "IsForced": false,
+            "Path": "/mnt/grande/Series/The Secret Life of the American Teenager/S04/The.Secret.Life.of.the.American.Teenager.S04E10.HDTV.XviD-LOL.en.srt",
+            "DisplayTitle": "English - SUBRIP - External"
+          },
+          {
+            "Index": 1,
+            "Type": "Subtitle",
+            "Codec": "subrip",
+            "Language": "spa",
+            "IsExternal": true,
+            "IsDefault": false,
+            "IsForced": false,
+            "Path": "/mnt/grande/Series/The Secret Life of the American Teenager/S04/The.Secret.Life.of.the.American.Teenager.S04E10.HDTV.XviD-LOL.es.srt",
+            "DisplayTitle": "Spanish - SUBRIP - External"
+          },
+          {
+            "Index": 2,
+            "Type": "Video",
+            "Codec": "mpeg4",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "360p MPEG4 SDR"
+          },
+          {
+            "Index": 3,
+            "Type": "Audio",
+            "Codec": "mp3",
+            "IsExternal": false,
+            "IsDefault": false,
+            "IsForced": false,
+            "DisplayTitle": "MP3 - Stereo"
+          }
+        ]
+      }
+    ]
+  },
+  "episodio_fantasma_sin_archivo": {
+    "Id": "a9f2bf942023850210e3f523c6ebd2a4",
+    "Name": "Deleted scene",
+    "OriginalTitle": "Deleted scene",
+    "Type": "Episode",
+    "ProductionYear": 2005,
+    "ProviderIds": {
+      "Tvdb": "7501190"
+    },
+    "SeriesName": "El Resplandor",
+    "SeriesId": "aa02b254d9e5bf3d7c12c5225a0f5065",
+    "ParentIndexNumber": 0,
+    "IndexNumber": 1,
+    "MediaSources": [
+      {
+        "Path": null,
+        "Container": null,
+        "Size": null,
+        "MediaStreams": []
+      }
+    ]
+  }
+}

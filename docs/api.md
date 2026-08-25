@@ -217,6 +217,8 @@ pudo hablar con qBittorrent.
 
 Los tests de contrato de la app (`ios/HolocronTests/ContractTests.swift`)
 decodifican **respuestas capturadas de un servidor real**, así que un cambio de
-nombre o de tipo en un campo rompe el build de iOS en CI en vez de aparecer como
-un bug en el teléfono. Si cambiás la forma de una respuesta, regenerá los
-fixtures (ver `ios/HolocronTests/Fixtures/README.md`).
+nombre o de tipo en un campo se detecta ahí en vez de aparecer como un bug en el
+teléfono. La app **no se compila en CI** (el runner de macOS costaba varios
+minutos por push), así que hay que correrlos a mano con `make ios-test` después
+de tocar la forma de una respuesta, y regenerar los fixtures (ver
+`ios/HolocronTests/Fixtures/README.md`).

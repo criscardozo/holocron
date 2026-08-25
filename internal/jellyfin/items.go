@@ -2,7 +2,6 @@ package jellyfin
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,7 +11,6 @@ import (
 const (
 	TypeMovie  = "Movie"
 	TypeSeries = "Series"
-	typeBoxSet = "BoxSet"
 )
 
 // fields asked for on every listing. MediaSources carries the per-file streams,
@@ -61,13 +59,17 @@ type itemsResponse struct {
 
 // Items returns every movie and series in the library.
 //
-// This is deliberately two queries, not one. A recursive listing filtered to
-// Movie and Series omits any movie that belongs to a collection — on the
-// library this was built against, 46 of 355 films were invisible that way, with
-// no error to hint at it. So collections are listed too and walked for their
-// children, deduplicating by id.
-func (c *Client) Items(ctx context.Context, userID string) ([]Item, error) {
-	direct, err := c.listItems(ctx, userID, url.Values{
+// Deliberately queried WITHOUT a user id. That is not an oversight: scoping the
+// listing to a user silently omits films that belong to a collection — 46 of 344
+// on the library this was built against — while also returning the collections
+// themselves as if they were titles. Unscoped, one call returns all 344 and no
+// collections, a set verified identical to walking every collection by hand.
+//
+// The trade-off is that UserData (watched, favourite, playback position) is
+// absent. Holocron does not need it to inventory files, and mixing the two
+// would mean taking the query that hides a seventh of the library.
+func (c *Client) Items(ctx context.Context) ([]Item, error) {
+	items, err := c.listItems(ctx, url.Values{
 		"Recursive":        {"true"},
 		"IncludeItemTypes": {TypeMovie + "," + TypeSeries},
 		"Fields":           {itemFields},
@@ -76,11 +78,11 @@ func (c *Client) Items(ctx context.Context, userID string) ([]Item, error) {
 		return nil, err
 	}
 
-	out := make([]Item, 0, len(direct))
-	seen := make(map[string]bool, len(direct))
-	for _, it := range direct {
-		// The server returns collections even when they are not requested, so
-		// the type is filtered here rather than trusted.
+	out := make([]Item, 0, len(items))
+	seen := make(map[string]bool, len(items))
+	for _, it := range items {
+		// Filtered rather than trusted: when a user id IS supplied this
+		// endpoint returns collections even though they were not requested.
 		if it.Type != TypeMovie && it.Type != TypeSeries {
 			continue
 		}
@@ -90,44 +92,10 @@ func (c *Client) Items(ctx context.Context, userID string) ([]Item, error) {
 		seen[it.ID] = true
 		out = append(out, it)
 	}
-
-	boxSets, err := c.listItems(ctx, userID, url.Values{
-		"Recursive":        {"true"},
-		"IncludeItemTypes": {typeBoxSet},
-		"Fields":           {"Path"},
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, bs := range boxSets {
-		if bs.Type != typeBoxSet {
-			continue
-		}
-		children, err := c.listItems(ctx, userID, url.Values{
-			"parentId": {bs.ID},
-			"Fields":   {itemFields},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("list collection %q: %w", bs.Name, err)
-		}
-		for _, it := range children {
-			if it.Type != TypeMovie && it.Type != TypeSeries {
-				continue
-			}
-			if seen[it.ID] {
-				continue
-			}
-			seen[it.ID] = true
-			out = append(out, it)
-		}
-	}
 	return out, nil
 }
 
-func (c *Client) listItems(ctx context.Context, userID string, q url.Values) ([]Item, error) {
-	if userID != "" {
-		q.Set("userId", userID)
-	}
+func (c *Client) listItems(ctx context.Context, q url.Values) ([]Item, error) {
 	var resp itemsResponse
 	if err := c.do(ctx, http.MethodGet, "/Items?"+q.Encode(), &resp); err != nil {
 		return nil, err
