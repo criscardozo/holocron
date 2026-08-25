@@ -95,7 +95,7 @@ El dashboard tiene que dejar leer de un vistazo qué necesita atención:
 - **Necesita acción** — número grande en acento + `attn-widget` + un chip en la
   tira «Atención» del encabezado (nombres inválidos, subtítulos faltantes,
   discos ≥ 90 %).
-- **No configurado** — texto apagado con link a Ajustes ("Plex no configurado").
+- **No configurado** — texto apagado con link a Ajustes ("Jellyfin no configurado").
 - **Error / sin conexión** — `.notice.error`, `.badge-no` o `.st-err`.
 
 Lo que está bien queda tranquilo de fondo; lo que falta, salta.

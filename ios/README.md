@@ -6,7 +6,7 @@ WebView.
 
 Cubre las cuatro áreas del panel: **estado** de la Pi, **torrents** (agregar
 magnets, pausar, borrar), **subtítulos** (buscar y descargar) y **medios**
-(inventario de Plex, `.nfo`) con el explorador de **disco**.
+(inventario de Jellyfin) con el explorador de **disco**.
 
 ## Requisitos
 

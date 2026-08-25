@@ -95,44 +95,41 @@ con `os.Root`**: cualquier intento de salir del root configurado da `400`.
 
 `type` es `movies` o `tv`.
 
-### Vincular Plex (device link)
+### Vincular Jellyfin (Quick Connect)
 
-Obtiene el token de Plex sin que el usuario lo busque a mano en el navegador.
+Obtiene el token de Jellyfin sin que el usuario busque una API key.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| `POST` | `/api/v1/plex/link` | Pide un código a plex.tv y arranca el flujo |
-| `GET` | `/api/v1/plex/link` | Estado actual (se consulta en loop) |
-| `POST` | `/api/v1/plex/link/server` | Guarda el servidor elegido: `{"baseUrl": "…"}` |
+| `POST` | `/api/v1/jellyfin/link` | Pide un código y arranca el flujo |
+| `GET` | `/api/v1/jellyfin/link` | Estado actual (se consulta en loop) |
 
 ```json
-{
-  "state": "pending",
-  "code": "QWER",
-  "authUrl": "https://app.plex.tv/auth#?clientID=…&code=QWER",
-  "servers": []
-}
+{"state": "pending", "code": "640045", "user": "", "admin": false}
 ```
 
 `state` es `idle`, `pending`, `linked` o `expired`. El flujo es:
 
-1. `POST` → devuelve `code` y `authUrl`. Se le muestra el código al usuario.
-2. El usuario abre `authUrl` (o plex.tv/link) y autoriza.
+1. `POST` → devuelve un `code` de 6 dígitos. Se le muestra al usuario.
+2. El usuario lo aprueba en Jellyfin, en su perfil → **Quick Connect**.
 3. `GET` cada ~2 s hasta que `state` pase a `linked`. **En ese momento el
-   servidor ya guardó el token**, aunque el usuario abandone el paso siguiente.
-4. `servers` trae los servidores de la cuenta con su mejor URL (se prefiere una
-   conexión local y no-relay, ideal para la LAN). `POST …/server` guarda la elegida.
+   servidor ya guardó el token.**
 
-El código vence a los 10 minutos (`expired`); en ese caso se arranca de nuevo.
-Si la detección de servidores falla, el link igual queda hecho y `servers` viene
-vacío: se carga la URL a mano.
+Cuando queda vinculado, `user` trae quién autorizó y `admin` si esa cuenta es
+administradora — pedirle a Jellyfin que escriba metadata requiere serlo, así que
+conviene avisarlo antes que fallar después.
+
+La dirección del servidor se carga **antes** del código (`POST /settings/jellyfin`
+en la web): a diferencia de Plex no hay un servicio en la nube por el que
+descubrir servidores. Si Quick Connect está desactivado en Jellyfin, el `POST`
+responde con ese motivo — es un toggle del panel del servidor.
 
 ### Medios
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| `GET` | `/api/v1/media` | Inventario de Plex + contadores |
-| `POST` | `/api/v1/media/sync` | Sincroniza desde Plex (202) |
+| `GET` | `/api/v1/media` | Inventario de Jellyfin + contadores |
+| `POST` | `/api/v1/media/sync` | Sincroniza desde Jellyfin (202) |
 | `POST` | `/api/v1/media/nfo` | Genera los `.nfo` (202) |
 
 ```json
@@ -147,11 +144,11 @@ vacío: se carga la URL a mano.
 }
 ```
 
-Con `configured: false` (Plex sin configurar) el resto de los campos se omiten
+Con `configured: false` (Jellyfin sin vincular) el resto de los campos se omiten
 y `items` viene vacío. La lista se corta en 500 ítems; `truncated` lo indica.
 
 Los dos `POST` devuelven `202` tanto si arrancaron el trabajo como si ya había
-uno corriendo, y `412` si Plex no está configurado.
+uno corriendo, y `412` si Jellyfin no está vinculado.
 
 ### Subtítulos
 
@@ -165,7 +162,7 @@ uno corriendo, y `412` si Plex no está configurado.
 
 El `POST` recibe `{"fileId": 123, "path": "/mnt/media/…"}`. **`path` se valida
 contra el inventario**: sólo se puede escribir en carpetas que Holocron
-registró desde Plex; cualquier otra cosa es `400`.
+registró desde Jellyfin; cualquier otra cosa es `400`.
 
 ### Torrents
 

@@ -55,27 +55,36 @@ encontrado, agrupadas por biblioteca.
 
 ---
 
-## Feature 4a — Generación de archivos .nfo desde Plex
+## Feature 4a — Inventario de medios desde Jellyfin
 
-Plex Server no mantiene un `.nfo` por película/serie. Holocron recorre cada
-directorio de medio y escribe un `.nfo` con la metadata que Plex ya resolvió,
-incluyendo un campo que indica si hay subtítulos en español.
+Holocron inventaría la biblioteca desde Jellyfin: título, año, identificadores
+externos y si hay subtítulos en español. **Los subtítulos los reporta Jellyfin**,
+que ya conoce cada pista de cada archivo (incluidas las embebidas), así que no se
+recorre el disco para averiguarlo.
 
-- **Reutiliza**: `plex` y `plexauth` de `plexmatch-generator`. El cliente ya lista
-  bibliotecas, pagina por headers (`X-Plex-Container-Start/Size`), y trae por item
-  `title`, `year`, `guid`, `ratingKey`, `type` y las rutas de archivo
-  (`Media[].Part[].file` para películas, `Location[].path` para series). El login por
-  PIN + autodescubrimiento de servidor en LAN ya está resuelto.
-- **`.nfo`**: formato XML estándar de Kodi/Jellyfin (`<movie>`, `<tvshow>`), que Plex
-  también puede leer con el agente adecuado. Incluye `<title>`, `<year>`,
-  identificadores, y `<subtitle language="spa">` según detección.
-- **Datos**: `media_items` (`path, type, title, year, plex_guid, has_subs_es,
-  nfo_written_at`). Generación vía `jobs` (`kind: nfo-generate`).
-- **Endpoints**: `GET /media` (inventario + estado de .nfo), `POST /media/nfo`
-  (generar), `GET/POST /settings` para credenciales/URL de Plex.
-- **A cuidar**: el fix de `AltGUIDs` (`json:"Guid"` como array aparte del `guid`
-  string) ya documentado en el port en Go; el remapping de rutas host↔Plex si Plex
-  reporta paths distintos a los del filesystem local.
+> Nota: Jellyfin escribe sus propios `.nfo` cuando la biblioteca tiene activado
+> «guardar metadata». Si Holocron escribiera los mismos archivos, ganaría el
+> último en escribir — así que conviene que sólo uno de los dos sea el dueño.
+
+- **Cliente** (`jellyfin`): Quick Connect para el token, e inventario con
+  `GET /Items` **sin** `userId` — al filtrar por usuario, Jellyfin esconde las
+  películas que pertenecen a una colección (46 de 344 en la biblioteca real) y a
+  la vez devuelve las colecciones como si fueran títulos. Se descartan los ítems
+  sin `Path`: son los que existen en el proveedor de metadata pero no en disco.
+- **`.nfo`**: formato XML estándar de Kodi/Jellyfin (`<movie>`, `<tvshow>`).
+  Incluye `<title>`, `<year>`, identificadores, y `<subtitle language="spa">`
+  según detección.
+- **Datos**: `media_items` (`path, type, title, year, server_item_id,
+  provider_ids, has_subs_es, nfo_written_at`). Sync y generación vía `jobs`
+  (`kind: library-sync`, `nfo-generate`).
+- **Endpoints**: `GET /media` (inventario + estado de .nfo), `POST /media/sync`
+  (traer de Jellyfin), `POST /media/nfo` (generar), y en Ajustes
+  `POST /settings/jellyfin` + `/settings/jellyfin/link` para la dirección y el
+  Quick Connect.
+- **A cuidar**: `ProviderIds` se modela como mapa, no como struct, porque trae
+  claves con espacios (`"official website"`). Un título puede tener varios
+  archivos (misma película en 1080p y 4K) y los subtítulos cuelgan de uno solo,
+  así que hay que unir las pistas de todos.
 
 ---
 

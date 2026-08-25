@@ -7,8 +7,8 @@ pasar a la siguiente. Los números de feature refieren a los pedidos originales.
 
 Fases 0 a 5 implementadas, con tests (incluido `-race`) y binario `arm64`
 cross-compilado. Ver «Ya sumado después de las fases» al final para lo que
-llegó más tarde (rediseño Noir, CI, releases, API JSON, app iOS y device-link
-de Plex).
+llegó más tarde (rediseño Noir, CI, releases, API JSON, app iOS y la migración
+del módulo de medios de Plex a Jellyfin).
 
 ## Fase 0 — Fundaciones
 
@@ -48,13 +48,17 @@ dashboard vacío que arranca en la Pi.
 - **Pantalla de errores**: lista de carpetas mal nombradas con lo esperado vs. lo
   encontrado. (Posible fase futura: renombrado asistido.)
 
-## Fase 3 — Integración Plex + archivos .nfo (feature 4a)
+## Fase 3 — Integración con el servidor de medios + archivos .nfo (feature 4a)
 
-- Portado de `plex` y `plexauth` desde `plexmatch-generator` (cliente con
-  `X-Plex-Token`, login por PIN, autodescubrimiento de servidor en LAN).
+> Esta fase se construyó contra **Plex** y después se migró a **Jellyfin** (ver
+> «Ya sumado» al final): el HTPC dejó de usar Plex. La forma de la fase no
+> cambió, sí el cliente.
+
+- Cliente del servidor de medios (`plex` en su momento, hoy `jellyfin`): auth sin
+  copiar tokens a mano e inventario de la biblioteca.
 - `nfo`: recorre cada directorio de medio y escribe un `.nfo` con la metadata que
-  Plex ya resolvió (título, año, GUID, etc.), incluyendo un campo de si hay
-  subtítulos en español.
+  el servidor ya resolvió (título, año, identificadores), incluyendo un campo de
+  si hay subtítulos en español.
 - Inventario en `media_items`.
 - Widget de estado (cuántos medios tienen/no tienen `.nfo`) + acción de generar.
 
@@ -84,9 +88,12 @@ dashboard vacío que arranca en la Pi.
 - **Releases automáticas** por tag `v*` (binario `arm64` + checksum) e
   **instalador/actualizador** para la Pi headless (`scripts/install.sh`).
 - **API JSON + app iOS** nativa (ver [api.md](api.md) y `ios/`).
-- **Login por PIN de Plex** (`plexauth`, portado del proyecto hermano): el token
-  se obtiene vinculando la cuenta en plex.tv, y los servidores se autodetectan.
 - **Categorías de qBittorrent** al agregar un magnet, y visibles por torrent.
+- **Migración de Plex a Jellyfin**: el HTPC dejó de usar Plex, así que el módulo
+  de medios apuntaba a un servidor apagado. Auth por **Quick Connect** (un código
+  de 6 dígitos que se aprueba en Jellyfin, sin copiar API keys), y los subtítulos
+  salen de la API — Jellyfin ya conoce cada pista de cada archivo — en vez de
+  recorrer el disco por título. Los paquetes `plex`/`plexauth` se eliminaron.
 - **Actualización desde la UI**: chequeo contra las releases de GitHub y botón de
   instalar, vía un helper de systemd con privilegios (el servicio no puede
   reemplazarse a sí mismo).
@@ -94,6 +101,6 @@ dashboard vacío que arranca en la Pi.
 ## Ideas para más adelante (fuera de alcance inicial)
 
 - Renombrado asistido de carpetas mal nombradas (Fase 2).
-- Control del servicio de Plex (reiniciar, refrescar bibliotecas).
+- Control del servicio de Jellyfin (reiniciar, refrescar bibliotecas).
 - Notificaciones (descargas terminadas, disco casi lleno).
 - Basic Auth opcional (con comparación constant-time).

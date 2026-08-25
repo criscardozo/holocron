@@ -53,10 +53,9 @@ holocron/
     folders/                # store de carpetas vigiladas (disk | movies | tv)
     naming/                 # validador de convención "Título (Año)" + service
     settings/               # store key/value de credenciales de servicios
-    plex/                   # cliente de Plex Media Server (portado de plexmatch-generator)
-    plexauth/               # device-link con plex.tv: token sin copiarlo a mano + autodescubrimiento
-    library/                # sync de inventario Plex→media_items + generación de .nfo
-    nfo/                    # generación de archivos .nfo desde metadata de Plex
+    jellyfin/               # cliente de Jellyfin: Quick Connect, inventario, subtítulos
+    library/                # sync de inventario Jellyfin→media_items + generación de .nfo
+    nfo/                    # generación de archivos .nfo desde la metadata del server
     subs/                   # detección de subtítulos presentes junto al medio
     opensubtitles/          # cliente de la API v1 de OpenSubtitles
     subtitles/              # medios sin subs ES + búsqueda/descarga
@@ -79,9 +78,10 @@ holocron/
   go.mod
 ```
 
-Los paquetes `scanner`, `plex`, `plexauth` se **portan** desde los proyectos
-hermanos, no se reescriben de cero. Se adaptan a la interfaz de `jobs` y a las
-tablas de `db`.
+El paquete `scanner` se **porta** desde `diskusage-pi`, no se reescribe de cero.
+Se adapta a la interfaz de `jobs` y a las tablas de `db`. Los clientes de Plex
+(`plex`, `plexauth`) existieron hasta que el HTPC migró a Jellyfin y se
+eliminaron: quedaba código que no corría contra nada.
 
 ## 4. Modelo de datos (SQLite)
 
@@ -91,14 +91,14 @@ configurable). Migraciones SQL embebidas con `//go:embed`, aplicadas al arrancar
 Tablas previstas (crecen por fase):
 
 - `settings` — pares clave/valor para config editable desde la UI (rutas de
-  bibliotecas, API keys, URL/credenciales de Plex y qBittorrent).
+  bibliotecas, API keys, dirección y token de Jellyfin, credenciales de qBittorrent).
 - `watched_folders` — carpetas que el usuario elige vigilar (para el widget de disco
   y el validador de nombres): `id, label, path, purpose`.
 - `scan_results` — cache del último escaneo de disco por carpeta (JSON + timestamp).
 - `naming_issues` — resultados del validador de nombres: `path, type, expected,
   found, resolved`.
 - `media_items` — inventario de medios detectados (para .nfo y subtítulos): `path,
-  type, title, year, plex_guid, has_subs_es, nfo_written_at`.
+  type, title, year, server_item_id, provider_ids, has_subs_es, nfo_written_at`.
 - `jobs` — trabajos en background: `id, kind, status, progress, error, started_at,
   finished_at, result`.
 
@@ -153,7 +153,8 @@ Dos niveles, igual criterio que `diskusage-pi`:
   `--addr` (default `:8090`), `--db`, `--log-level`. Sin TLS por ahora (LAN de
   confianza, sin auth — decisión tomada).
 - **Aplicación** (editable desde la UI, persistida en `settings`): rutas de medios,
-  credenciales de Plex/qBittorrent, API key de OpenSubtitles.
+  dirección y token de Jellyfin, credenciales de qBittorrent, API key de
+  OpenSubtitles.
 
 ## 8. Seguridad
 
@@ -171,16 +172,16 @@ Dos niveles, igual criterio que `diskusage-pi`:
   TOCTOU). Se descarta el patrón `filepath.Clean` + `strings.HasPrefix` (frágil), y
   también usar `os.Root` sólo como validador previo. Tests:
   `internal/scanner/scanner_test.go`.
-- **Escrituras derivadas de Plex**: los `.nfo` y los subtítulos se escriben en las
-  rutas que **reporta el servidor Plex** (guardadas en `media_items`), no en rutas
-  que elija el cliente: la descarga de subtítulos valida el destino contra el
-  inventario antes de escribir. Es una confianza explícita en Plex; un servidor
-  comprometido podría inducir escrituras donde reporte. El hardening de systemd
+- **Escrituras derivadas del servidor de medios**: los `.nfo` y los subtítulos se
+  escriben en las rutas que **reporta Jellyfin** (guardadas en `media_items`), no
+  en rutas que elija el cliente: la descarga de subtítulos valida el destino
+  contra el inventario antes de escribir. Es una confianza explícita en Jellyfin;
+  un servidor comprometido podría inducir escrituras donde reporte. El hardening de systemd
   (`ProtectSystem=strict` + `ReadWritePaths`) acota el daño a las carpetas de medios.
 - **Errores hacia el usuario**: mensajes genéricos en la UI; el detalle técnico va al
   log del servidor. Nunca exponer rutas internas, stack traces ni errores crudos de
   la DB o de APIs externas al navegador.
-- **Secretos** (tokens de Plex, API key de OpenSubtitles, credenciales de
+- **Secretos** (token de Jellyfin, API key de OpenSubtitles, credenciales de
   qBittorrent): en SQLite con permisos owner-only sobre el archivo; nunca en logs ni
   en el binario. Client IDs/tokens que haya que generar usan `crypto/rand`.
 - **Bind**: `--addr` por defecto escucha en todas las interfaces (`:8090`) porque el

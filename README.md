@@ -3,8 +3,8 @@
 Panel de administración y dashboard web para un HTPC basado en Raspberry Pi.
 
 Holocron es una aplicación web liviana, escrita en Go, para administrar de forma
-remota una Raspberry Pi que actúa como HTPC: corre **Plex Media Server** como servidor
-de medios y **qBittorrent** para descargas por torrent. Se accede desde el navegador
+remota una Raspberry Pi que actúa como HTPC: corre **Jellyfin** como servidor de
+medios y **qBittorrent** para descargas por torrent. Se accede desde el navegador
 dentro de la red local, no expone nada a internet, y reúne en un solo lugar el estado
 del equipo y las tareas de mantenimiento habituales de la biblioteca.
 
@@ -19,11 +19,11 @@ HTMX) va embebida en el ejecutable. Corre como servicio de systemd en la Pi.
   que muestra el peso real de cada subcarpeta y archivo (tipo `du`, con drill-down).
 - **Validador de nombres** — detecta las carpetas de Películas/Series que no cumplen
   la convención «Título (Año)», con lo esperado vs. lo encontrado.
-- **Medios y archivos `.nfo`** — inventaría la biblioteca desde Plex y genera un `.nfo`
-  por película/serie con la metadata que Plex ya resolvió (título, año, identificadores)
-  e indica si hay subtítulos en español. La conexión a Plex se hace **vinculando la
-  cuenta** (código en plex.tv): el token se obtiene solo y los servidores se detectan,
-  sin tener que sacar el `X-Plex-Token` del navegador.
+- **Medios** — inventaría la biblioteca desde Jellyfin: título, año, identificadores
+  externos (imdb/tmdb/tvdb) y si hay subtítulos en español. Los subtítulos los reporta
+  Jellyfin, así que **no se recorre el disco** para averiguarlo y se detectan también
+  los embebidos. La conexión se hace con **Quick Connect**: Holocron muestra un código,
+  lo aprobás en Jellyfin y el token queda guardado, sin buscar API keys a mano.
 - **Subtítulos** — lista los medios sin subtítulo en español y permite buscarlos y
   descargarlos desde OpenSubtitles.
 - **Torrents** — administra qBittorrent (estado, progreso, velocidades, pausar/reanudar/
@@ -36,8 +36,8 @@ resultados se cachean; nada corre en loop consumiendo la Pi de fondo.
 ## App iOS
 
 Además de la web hay una **app nativa en SwiftUI** ([`ios/`](ios/)) que cubre las
-mismas cuatro áreas desde el teléfono: estado de la Pi, torrents (pegar un magnet
-desde el celular es el caso estrella), subtítulos y medios con explorador de disco.
+mismas áreas desde el teléfono: estado de la Pi, torrents (pegar un magnet desde el
+celular es el caso estrella), subtítulos y medios con explorador de disco.
 
 Habla con el servidor por una [API JSON versionada](docs/api.md) bajo `/api/v1`,
 que es la **única parte autenticada**: la web sigue abierta dentro de la LAN, pero
@@ -57,7 +57,7 @@ curl -fsSL https://raw.githubusercontent.com/criscardozo/holocron/main/scripts/i
 
 Cuando termina, imprime la URL de acceso (por defecto `http://<ip-de-la-pi>:8090`).
 Abrila desde otra máquina de la LAN y configurá las carpetas de medios y las
-credenciales de Plex/OpenSubtitles/qBittorrent desde **Ajustes**.
+credenciales de Jellyfin/OpenSubtitles/qBittorrent desde **Ajustes**.
 
 > **El puerto por defecto es 8090**, no 8080: ese último suele estar tomado por la
 > WebUI de qBittorrent en el mismo equipo. Si venías de una versión anterior,
@@ -103,9 +103,10 @@ curl -fsSL https://raw.githubusercontent.com/criscardozo/holocron/main/scripts/i
 > eso solo; si no lo querés, instalá con `HOLOCRON_NO_UPDATER=1` y el panel te
 > muestra el comando manual en vez del botón.
 >
-> Tené en cuenta que la web no tiene autenticación: cualquiera en tu LAN puede
-> apretar ese botón y provocar un reinicio. El binario viene de tus releases y se
-> verifica por SHA-256, así que el riesgo es la interrupción, no el contenido.
+> **El botón pide el token de la API** (el mismo de la app iOS, que se genera en
+> Ajustes). La web no tiene contraseña porque vive en una LAN de confianza, pero
+> reiniciar el servicio es la única acción que no debería estar al alcance de
+> cualquiera que pase por la red.
 
 Para desinstalar (borra el binario, la unit y el usuario; **conserva** la base de datos
 en `/var/lib/holocron`):
@@ -121,9 +122,10 @@ Dos niveles:
 - **Arranque** (flags o variables de entorno del servicio): `--addr` (default `:8090`),
   `--db` (default `/var/lib/holocron/holocron.db` bajo systemd), `--log-level`. Los
   flags pisan a las variables `HOLOCRON_ADDR` / `HOLOCRON_DB` / `HOLOCRON_LOG_LEVEL`.
-- **Aplicación** (desde la UI, persistido en SQLite): carpetas de medios, URL y token de
-  Plex, API key y usuario de OpenSubtitles, URL y credenciales de qBittorrent. Las
-  credenciales viven en la base con permisos owner-only; nunca en el binario.
+- **Aplicación** (desde la UI, persistido en SQLite): carpetas de medios, dirección de
+  Jellyfin (el token se obtiene por Quick Connect), API key y usuario de OpenSubtitles,
+  URL y credenciales de qBittorrent. Las credenciales viven en la base con permisos
+  owner-only; nunca en el binario.
 
 ## Compilación (desde la MacBook)
 
