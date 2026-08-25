@@ -54,8 +54,8 @@ holocron/
     naming/                 # validador de convención "Título (Año)" + service
     settings/               # store key/value de credenciales de servicios
     jellyfin/               # cliente de Jellyfin: Quick Connect, inventario, subtítulos
-    library/                # sync de inventario Jellyfin→media_items + generación de .nfo
-    nfo/                    # generación de archivos .nfo desde la metadata del server
+    library/                # sync de inventario Jellyfin→media_items
+    quality/                # informe de calidad de la biblioteca (huérfanos, metadata, numeración)
     subs/                   # detección de subtítulos presentes junto al medio
     opensubtitles/          # cliente de la API v1 de OpenSubtitles
     subtitles/              # medios sin subs ES + búsqueda/descarga
@@ -97,8 +97,10 @@ Tablas previstas (crecen por fase):
 - `scan_results` — cache del último escaneo de disco por carpeta (JSON + timestamp).
 - `naming_issues` — resultados del validador de nombres: `path, type, expected,
   found, resolved`.
-- `media_items` — inventario de medios detectados (para .nfo y subtítulos): `path,
-  type, title, year, server_item_id, provider_ids, has_subs_es, nfo_written_at`.
+- `media_items` — inventario de películas y series: `path, type, title, year,
+  server_item_id, provider_ids, has_subs_es`.
+- `quality_reports` — el último informe de calidad, como un único documento JSON
+  (`CHECK (id = 1)`): cubre episodios, que no están en `media_items`.
 - `jobs` — trabajos en background: `id, kind, status, progress, error, started_at,
   finished_at, result`.
 
@@ -107,12 +109,13 @@ Tablas previstas (crecen por fase):
 
 ## 5. Trabajos en background (`jobs`)
 
-Varias features son lentas (escanear un disco grande, generar .nfo de toda la
-biblioteca, buscar subtítulos contra una API). No pueden bloquear un request HTTP.
+Varias features son lentas (escanear un disco grande, auditar la biblioteca
+entera, buscar subtítulos contra una API). No pueden bloquear un request HTTP.
 
 `jobs` provee:
 
-- Lanzar un trabajo por su `kind` (p. ej. `disk-scan`, `nfo-generate`).
+- Lanzar un trabajo por su `kind` (p. ej. `disk-scan`, `media-sync`,
+  `quality-scan`).
 - Estado con máquina simple: `idle → running → done | error`, con `progress`
   (0–100) y contadores, inspirado en el cache de estados de `diskusage-pi-claude`.
 - La UI hace polling con HTMX (`hx-trigger="every 2s"`) a un endpoint de estado
@@ -142,7 +145,7 @@ Patrones de HTMX a usar (fragmentos mínimos, sin JS propio):
   fragmento deja de pedir solo cuando el job termina (el server devuelve el resumen
   final sin el atributo de polling).
 - **`hx-confirm`** en toda acción destructiva (borrar torrent, quitar carpeta
-  vigilada, sobrescribir .nfo).
+  vigilada, borrar un torrent).
 - Cada endpoint de fragmento devuelve **solo el HTML necesario**, no la página.
 
 ## 7. Configuración del server
@@ -172,11 +175,12 @@ Dos niveles, igual criterio que `diskusage-pi`:
   TOCTOU). Se descarta el patrón `filepath.Clean` + `strings.HasPrefix` (frágil), y
   también usar `os.Root` sólo como validador previo. Tests:
   `internal/scanner/scanner_test.go`.
-- **Escrituras derivadas del servidor de medios**: los `.nfo` y los subtítulos se
-  escriben en las rutas que **reporta Jellyfin** (guardadas en `media_items`), no
-  en rutas que elija el cliente: la descarga de subtítulos valida el destino
-  contra el inventario antes de escribir. Es una confianza explícita en Jellyfin;
-  un servidor comprometido podría inducir escrituras donde reporte. El hardening de systemd
+- **Escrituras derivadas del servidor de medios**: lo único que Holocron escribe
+  en la biblioteca son subtítulos, y siempre en rutas que **reporta Jellyfin**
+  (guardadas en `media_items`), nunca en rutas que elija el cliente: la descarga
+  valida el destino contra el inventario antes de escribir. Es una confianza
+  explícita en Jellyfin; un servidor comprometido podría inducir escrituras
+  donde reporte. Los `.nfo` **no** se escriben: son de Jellyfin. El hardening de systemd
   (`ProtectSystem=strict` + `ReadWritePaths`) acota el daño a las carpetas de medios.
 - **Errores hacia el usuario**: mensajes genéricos en la UI; el detalle técnico va al
   log del servidor. Nunca exponer rutas internas, stack traces ni errores crudos de
@@ -268,8 +272,8 @@ En lugar de copiar el binario a mano, el flujo normal es:
 `packaging/holocron.service` queda como unit de referencia para una instalación
 manual; si se cambia el hardening, hay que tocar los dos lugares.
 
-> **Importante**: la unit usa `ProtectSystem=strict`, así que **generar `.nfo` y
-> descargar subtítulos requiere listar las carpetas de medios en `ReadWritePaths`**
+> **Importante**: la unit usa `ProtectSystem=strict`, así que **descargar
+> subtítulos requiere listar las carpetas de medios en `ReadWritePaths`**
 > (el instalador lo hace con `HOLOCRON_MEDIA_PATHS`). Sin eso, esos trabajos fallan
 > y ahora lo informan explícitamente en la UI en vez de quedarse en silencio.
 

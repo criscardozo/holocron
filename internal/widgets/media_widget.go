@@ -9,8 +9,8 @@ import (
 	"github.com/cristian/holocron/web/templates"
 )
 
-// MediaWidget shows the media inventory summary (total, with .nfo, without
-// Spanish subtitles).
+// MediaWidget shows the media inventory summary (total, films, without Spanish
+// subtitles).
 type MediaWidget struct {
 	library *library.Service
 }
@@ -26,7 +26,7 @@ func (w MediaWidget) Card(ctx context.Context) templ.Component {
 	if view.Configured {
 		if st, err := w.library.Stats(ctx); err == nil {
 			view.Total = st.Total
-			view.WithNFO = st.WithNFO
+			view.Movies = st.Movies
 			view.WithoutSubs = st.WithoutSubs
 		}
 	}

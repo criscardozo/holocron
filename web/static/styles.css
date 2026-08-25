@@ -361,7 +361,7 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .token-gate .input { width: auto; min-width: 200px; }
 .token-box { padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-2); border: 1px solid var(--color-divider); user-select: all; }
 
-/* plex.tv device link */
+/* Jellyfin Quick Connect */
 .sep { border: 0; border-top: 1px solid var(--color-divider); margin: var(--space-6) 0 var(--space-4); }
 .link-step { font-size: 13px; margin: var(--space-3) 0 0; }
 .link-code {

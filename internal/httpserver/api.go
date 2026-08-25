@@ -42,7 +42,6 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 
 	api.HandleFunc("GET /v1/media", s.apiMedia)
 	api.HandleFunc("POST /v1/media/sync", s.apiMediaSync)
-	api.HandleFunc("POST /v1/media/nfo", s.apiMediaNFO)
 
 	api.HandleFunc("GET /v1/subtitles", s.apiSubtitles)
 	api.HandleFunc("GET /v1/subtitles/search", s.apiSubtitleSearch)
@@ -287,7 +286,6 @@ type apiMediaItem struct {
 	Title     string `json:"title"`
 	Year      int    `json:"year"`
 	Type      string `json:"type"`
-	HasNFO    bool   `json:"hasNfo"`
 	HasSubsES bool   `json:"hasSubsEs"`
 }
 
@@ -311,16 +309,15 @@ func (s *Server) apiMedia(w http.ResponseWriter, r *http.Request) {
 	for _, it := range items {
 		out = append(out, apiMediaItem{
 			Path: it.Path, Title: it.Title, Year: it.Year, Type: it.Type,
-			HasNFO: it.HasNFO, HasSubsES: it.HasSubsES,
+			HasSubsES: it.HasSubsES,
 		})
 	}
 	s.writeJSON(w, http.StatusOK, map[string]any{
 		"configured":    true,
 		"total":         stats.Total,
-		"withNfo":       stats.WithNFO,
+		"movies":        stats.Movies,
 		"withoutSubsEs": stats.WithoutSubs,
 		"syncing":       s.deps.Library.Syncing(),
-		"generatingNfo": s.deps.Library.GeneratingNFO(),
 		"items":         out,
 		"truncated":     len(items) >= apiListLimit && stats.Total > len(items),
 	})
@@ -329,13 +326,6 @@ func (s *Server) apiMedia(w http.ResponseWriter, r *http.Request) {
 func (s *Server) apiMediaSync(w http.ResponseWriter, r *http.Request) {
 	s.apiStartJob(w, r, func(ctx context.Context) error {
 		_, err := s.deps.Library.StartSync(ctx)
-		return err
-	})
-}
-
-func (s *Server) apiMediaNFO(w http.ResponseWriter, r *http.Request) {
-	s.apiStartJob(w, r, func(ctx context.Context) error {
-		_, err := s.deps.Library.StartGenerateNFO(ctx)
 		return err
 	})
 }

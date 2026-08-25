@@ -30,7 +30,7 @@ ProtectHome=true
 PrivateTmp=true
 
 # ProtectSystem=strict makes the whole filesystem read-only except the state
-# directory, so writing .nfo files and subtitles into the library REQUIRES
+# directory, so writing subtitles into the library REQUIRES
 # listing the media paths here. Without this, those jobs fail and report it.
 #   ReadWritePaths=/mnt/media /srv/downloads
 

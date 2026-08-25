@@ -90,7 +90,7 @@ struct MediaView: View {
     private func stats(_ library: MediaLibrary) -> some View {
         HStack(spacing: 24) {
             stat("\(library.total ?? 0)", "ítems", tinted: false)
-            stat("\(library.withNfo ?? 0)", "con .nfo", tinted: false)
+            stat("\(library.movies ?? 0)", "películas", tinted: false)
             stat("\(library.withoutSubsEs ?? 0)", "sin subs ES", tinted: (library.withoutSubsEs ?? 0) > 0)
             Spacer()
         }
@@ -119,18 +119,6 @@ struct MediaView: View {
             }
             .buttonStyle(.borderless)
             .disabled(library.syncing == true)
-
-            Button {
-                Task { await run { try await $0.generateNFO() } }
-            } label: {
-                if library.generatingNfo == true {
-                    HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Generando…") }
-                } else {
-                    Label("Generar .nfo", systemImage: "doc.text")
-                }
-            }
-            .buttonStyle(.borderless)
-            .disabled(library.generatingNfo == true)
         }
     }
 
@@ -143,7 +131,6 @@ struct MediaView: View {
                 .lineLimit(1)
             HStack(spacing: 6) {
                 Pill(text: item.type == "movie" ? "Peli" : "Serie", kind: .neutral)
-                Pill(text: item.hasNfo ? ".nfo sí" : ".nfo no", kind: item.hasNfo ? .yes : .no)
                 Pill(text: item.hasSubsEs ? "subs ES" : "sin subs", kind: item.hasSubsEs ? .yes : .no)
             }
         }

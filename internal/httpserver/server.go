@@ -77,10 +77,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /naming", s.handleNamingPage)
 	mux.HandleFunc("POST /naming/scan", s.handleNamingScan)
 
-	// Phase 3: media inventory & .nfo generation.
+	// Phase 3: media inventory.
 	mux.HandleFunc("GET /media", s.handleMediaPage)
 	mux.HandleFunc("POST /media/sync", s.handleMediaSync)
-	mux.HandleFunc("POST /media/nfo", s.handleMediaNFO)
 	mux.HandleFunc("GET /media/status", s.handleMediaStatus)
 
 	// Phase 4: subtitles (OpenSubtitles).

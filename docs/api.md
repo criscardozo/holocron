@@ -130,16 +130,15 @@ responde con ese motivo — es un toggle del panel del servidor.
 |---|---|---|
 | `GET` | `/api/v1/media` | Inventario de Jellyfin + contadores |
 | `POST` | `/api/v1/media/sync` | Sincroniza desde Jellyfin (202) |
-| `POST` | `/api/v1/media/nfo` | Genera los `.nfo` (202) |
 
 ```json
 {
-  "configured": true, "total": 342, "withNfo": 318, "withoutSubsEs": 12,
-  "syncing": false, "generatingNfo": false, "truncated": false,
+  "configured": true, "total": 344, "movies": 298, "withoutSubsEs": 12,
+  "syncing": false, "truncated": false,
   "items": [{
     "path": "/mnt/media/peliculas/Dune Parte Dos (2024)",
     "title": "Dune: Parte Dos", "year": 2024, "type": "movie",
-    "hasNfo": true, "hasSubsEs": false
+    "hasSubsEs": false
   }]
 }
 ```

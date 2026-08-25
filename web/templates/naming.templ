@@ -71,7 +71,7 @@ templ namingContent(v NamingPageView) {
 		<div class="notice mb-6">
 			@IconSm("alert")
 			<span>
-				<strong>{ fmt.Sprintf("%d carpetas", v.Count) }</strong> con nombre inválido. El patrón esperado es <span class="mono">Título (Año)</span> — corregilas para que Plex las reconozca bien.
+				<strong>{ fmt.Sprintf("%d carpetas", v.Count) }</strong> con nombre inválido. El patrón esperado es <span class="mono">Título (Año)</span> — corregilas para que Jellyfin las reconozca bien.
 			</span>
 		</div>
 		@namingGroup("Películas", filterIssues(v.Issues, "movies"))

@@ -72,7 +72,6 @@ struct ContractTests {
         let movie = try #require(library.items.first { $0.type == "movie" })
         #expect(movie.title == "Dune: Parte Dos")
         #expect(movie.year == 2024)
-        #expect(movie.hasNfo)
         #expect(!movie.hasSubsEs)
     }
 

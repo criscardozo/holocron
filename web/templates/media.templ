@@ -19,14 +19,14 @@ templ JobStatus(v JobStatusView) {
 }
 
 // MediaBody is the dashboard media widget body: the inventory trio plus a link
-// to the detail page (where the sync/nfo actions live).
+// to the detail page (where the sync action lives).
 templ MediaBody(v MediaCardView) {
 	if !v.Configured {
-		<p class="muted">Plex no configurado. <a href="/settings">Conectar</a>.</p>
+		<p class="muted">Jellyfin no vinculado. <a href="/settings">Conectar</a>.</p>
 	} else {
 		<div class="media-stats">
 			<div><div class="n">{ fmt.Sprintf("%d", v.Total) }</div><div class="cap">ítems</div></div>
-			<div><div class="n">{ fmt.Sprintf("%d", v.WithNFO) }</div><div class="cap">con .nfo</div></div>
+			<div><div class="n">{ fmt.Sprintf("%d", v.Movies) }</div><div class="cap">películas</div></div>
 			<div><div class="n warn">{ fmt.Sprintf("%d", v.WithoutSubs) }</div><div class="cap">sin subs ES</div></div>
 		</div>
 		<div class="w-foot">
@@ -44,37 +44,31 @@ templ MediaPage(v MediaPageView) {
 		<div class="page-head">
 			<div>
 				<h1>Medios</h1>
-				<p class="sub">Inventario de Plex + estado de <span class="mono">.nfo</span> por ítem</p>
+				<p class="sub">Inventario de Jellyfin: qué hay en disco y qué tiene subtítulos en español</p>
 			</div>
 		</div>
 		if !v.Configured {
-			<p class="muted">Conectá tu servidor Plex en <a href="/settings">Ajustes</a> para inventariar tus medios.</p>
+			<p class="muted">Vinculá tu servidor Jellyfin en <a href="/settings">Ajustes</a> para inventariar tus medios.</p>
 		} else {
 			@MediaDetailSection(v)
 		}
 	}
 }
 
-// MediaDetailSection is re-fetched after sync/nfo jobs complete.
+// MediaDetailSection is re-fetched when the sync job completes.
 templ MediaDetailSection(v MediaPageView) {
 	<section id="media-detail">
 		<div class="card elev-sm stat-band">
 			<div class="stat-trio">
 				<div><div class="n">{ fmt.Sprintf("%d", v.Total) }</div><div class="cap">ítems</div></div>
-				<div><div class="n">{ fmt.Sprintf("%d", v.WithNFO) }</div><div class="cap">con .nfo</div></div>
+				<div><div class="n">{ fmt.Sprintf("%d", v.Movies) }</div><div class="cap">películas</div></div>
 				<div><div class="n warn">{ fmt.Sprintf("%d", v.WithoutSubs) }</div><div class="cap">sin subtítulos ES</div></div>
 			</div>
 			<div class="actions">
 				<form hx-post="/media/sync" hx-target="#media-status" hx-swap="innerHTML">
 					<button class="btn btn-primary" type="submit" disabled?={ v.Syncing }>
 						@IconSm("plug")
-						Sincronizar desde Plex
-					</button>
-				</form>
-				<form hx-post="/media/nfo" hx-target="#media-status" hx-swap="innerHTML">
-					<button class="btn btn-secondary" type="submit" disabled?={ v.GeneratingNFO }>
-						@IconSm("doc")
-						Generar .nfo
+						Sincronizar desde Jellyfin
 					</button>
 				</form>
 			</div>
@@ -83,7 +77,7 @@ templ MediaDetailSection(v MediaPageView) {
 		if len(v.Items) > 0 {
 			<div class="table-scroll">
 				<table class="table">
-				<thead><tr><th>Título</th><th class="w-80">Tipo</th><th class="num w-70">Año</th><th class="w-90">.nfo</th><th class="w-110">Subs ES</th></tr></thead>
+				<thead><tr><th>Título</th><th class="w-80">Tipo</th><th class="num w-70">Año</th><th class="w-110">Subs ES</th></tr></thead>
 				<tbody>
 					for _, it := range v.Items {
 						<tr>
@@ -97,7 +91,6 @@ templ MediaDetailSection(v MediaPageView) {
 							</td>
 							<td><span class="badge badge-neutral">{ it.Type }</span></td>
 							<td class="num">{ yearStr(it.Year) }</td>
-							<td>@yesNoBadge(it.HasNFO)</td>
 							<td>@yesNoBadge(it.HasSubsES)</td>
 						</tr>
 					}
@@ -108,7 +101,7 @@ templ MediaDetailSection(v MediaPageView) {
 				<p class="muted">Se muestran { fmt.Sprintf("%d", len(v.Items)) } de { fmt.Sprintf("%d", v.Total) } ítems.</p>
 			}
 		} else {
-			<p class="muted">Sin inventario. Tocá «Sincronizar desde Plex».</p>
+			<p class="muted">Sin inventario. Tocá «Sincronizar desde Jellyfin».</p>
 		}
 	</section>
 }

@@ -48,7 +48,7 @@ dashboard vacío que arranca en la Pi.
 - **Pantalla de errores**: lista de carpetas mal nombradas con lo esperado vs. lo
   encontrado. (Posible fase futura: renombrado asistido.)
 
-## Fase 3 — Integración con el servidor de medios + archivos .nfo (feature 4a)
+## Fase 3 — Integración con el servidor de medios (feature 4a)
 
 > Esta fase se construyó contra **Plex** y después se migró a **Jellyfin** (ver
 > «Ya sumado» al final): el HTPC dejó de usar Plex. La forma de la fase no
@@ -56,16 +56,16 @@ dashboard vacío que arranca en la Pi.
 
 - Cliente del servidor de medios (`plex` en su momento, hoy `jellyfin`): auth sin
   copiar tokens a mano e inventario de la biblioteca.
-- `nfo`: recorre cada directorio de medio y escribe un `.nfo` con la metadata que
-  el servidor ya resolvió (título, año, identificadores), incluyendo un campo de
-  si hay subtítulos en español.
+- Generación de `.nfo` con la metadata que el servidor ya resolvió. **Quitada
+  después**: Jellyfin escribe esos mismos archivos, y dos escritores sobre una
+  ruta significa que gana el último.
 - Inventario en `media_items`.
-- Widget de estado (cuántos medios tienen/no tienen `.nfo`) + acción de generar.
+- Widget de estado del inventario + acción de sincronizar.
 
 ## Fase 4 — Subtítulos con OpenSubtitles (feature 4b)
 
 - `subtitles`: detección de subtítulos presentes (busca `.srt`/`.ssa`/`.sub` o lo
-  declarado en el `.nfo`, embebido o aparte) y cliente de la API de
+  declarado por Jellyfin, embebido o aparte) y cliente de la API de
   [OpenSubtitles](https://opensubtitles.stoplight.io/docs/opensubtitles-api).
 - **Widget** que lista películas/series sin subtítulos.
 - Búsqueda y descarga de subtítulos desde la UI.

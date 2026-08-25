@@ -246,7 +246,7 @@ func namingContent(v NamingPageView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</strong> con nombre inválido. El patrón esperado es <span class=\"mono\">Título (Año)</span> — corregilas para que Plex las reconozca bien.</span></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</strong> con nombre inválido. El patrón esperado es <span class=\"mono\">Título (Año)</span> — corregilas para que Jellyfin las reconozca bien.</span></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

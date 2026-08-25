@@ -62,25 +62,21 @@ externos y si hay subtítulos en español. **Los subtítulos los reporta Jellyfi
 que ya conoce cada pista de cada archivo (incluidas las embebidas), así que no se
 recorre el disco para averiguarlo.
 
-> Nota: Jellyfin escribe sus propios `.nfo` cuando la biblioteca tiene activado
-> «guardar metadata». Si Holocron escribiera los mismos archivos, ganaría el
-> último en escribir — así que conviene que sólo uno de los dos sea el dueño.
+> Holocron **no escribe `.nfo`**. Lo hizo hasta la v0.4.1: Jellyfin escribe los
+> mismos archivos cuando la biblioteca tiene activado «guardar metadata», y dos
+> escritores sobre la misma ruta significa que gana el último. El dueño es
+> Jellyfin; Holocron sólo lee.
 
 - **Cliente** (`jellyfin`): Quick Connect para el token, e inventario con
   `GET /Items` **sin** `userId` — al filtrar por usuario, Jellyfin esconde las
   películas que pertenecen a una colección (46 de 344 en la biblioteca real) y a
   la vez devuelve las colecciones como si fueran títulos. Se descartan los ítems
   sin `Path`: son los que existen en el proveedor de metadata pero no en disco.
-- **`.nfo`**: formato XML estándar de Kodi/Jellyfin (`<movie>`, `<tvshow>`).
-  Incluye `<title>`, `<year>`, identificadores, y `<subtitle language="spa">`
-  según detección.
 - **Datos**: `media_items` (`path, type, title, year, server_item_id,
-  provider_ids, has_subs_es, nfo_written_at`). Sync y generación vía `jobs`
-  (`kind: library-sync`, `nfo-generate`).
-- **Endpoints**: `GET /media` (inventario + estado de .nfo), `POST /media/sync`
-  (traer de Jellyfin), `POST /media/nfo` (generar), y en Ajustes
-  `POST /settings/jellyfin` + `/settings/jellyfin/link` para la dirección y el
-  Quick Connect.
+  provider_ids, has_subs_es`). El sync corre por `jobs` (`kind: media-sync`).
+- **Endpoints**: `GET /media` (inventario), `POST /media/sync` (traer de
+  Jellyfin), y en Ajustes `POST /settings/jellyfin` +
+  `/settings/jellyfin/link` para la dirección y el Quick Connect.
 - **A cuidar**: `ProviderIds` se modela como mapa, no como struct, porque trae
   claves con espacios (`"official website"`). Un título puede tener varios
   archivos (misma película en 1080p y 4K) y los subtítulos cuelgan de uno solo,
@@ -95,7 +91,7 @@ y descargar.
 
 - **Detección de subtítulos presentes** (`subtitles`): para cada medio, se considera
   que tiene subtítulos si existe un archivo `.srt`/`.ssa`/`.sub` junto al video, o si
-  el `.nfo` declara subtítulo (embebido o aparte).
+  Jellyfin declara una pista de subtítulos (embebida o aparte).
 - **Búsqueda/descarga**: cliente de la
   [API de OpenSubtitles](https://opensubtitles.stoplight.io/docs/opensubtitles-api/e3750fd63a100-getting-started).
   Requiere API key (se guarda en `settings`). Búsqueda por título/año o por hash del

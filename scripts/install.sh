@@ -13,7 +13,7 @@
 #   HOLOCRON_VERSION       release tag to install (default: latest)
 #   HOLOCRON_ADDR          listen address (default: :8090)
 #   HOLOCRON_MEDIA_PATHS   space-separated dirs to grant the service RW access to
-#                          (systemd ReadWritePaths; needed to write .nfo/subtitles)
+#                          (systemd ReadWritePaths; needed to write subtitles)
 #   HOLOCRON_BINARY_URL    override the download URL (skips release resolution)
 #   HOLOCRON_LOCAL_BINARY  path to an already-present binary (skips the download)
 #
@@ -297,8 +297,8 @@ do_install() {
 	log "Open $(access_url) from another machine on the LAN."
 	if [ -z "$MEDIA_PATHS" ]; then
 		echo
-		warn "The service is hardened with ProtectSystem=strict: it cannot write .nfo"
-		warn "or subtitles outside its state dir until you grant access to the media"
+		warn "The service is hardened with ProtectSystem=strict: it cannot write"
+		warn "subtitles outside its state dir until you grant access to the media"
 		warn "folders. Re-run with HOLOCRON_MEDIA_PATHS=\"/path/one /path/two\"."
 	fi
 }

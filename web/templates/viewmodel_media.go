@@ -4,21 +4,20 @@ package templates
 type MediaCardView struct {
 	Configured  bool
 	Total       int
-	WithNFO     int
+	Movies      int
 	WithoutSubs int
 }
 
 // MediaPageView drives the media detail page. Truncated reports that the
 // inventory table shows only the first page of a larger library.
 type MediaPageView struct {
-	Configured    bool
-	Syncing       bool
-	GeneratingNFO bool
-	Total         int
-	WithNFO       int
-	WithoutSubs   int
-	Truncated     bool
-	Items         []MediaItemRow
+	Configured  bool
+	Syncing     bool
+	Total       int
+	Movies      int
+	WithoutSubs int
+	Truncated   bool
+	Items       []MediaItemRow
 }
 
 // MediaItemRow is one inventory row.
@@ -27,7 +26,6 @@ type MediaItemRow struct {
 	Year      int
 	Type      string
 	Path      string
-	HasNFO    bool
 	HasSubsES bool
 }
 

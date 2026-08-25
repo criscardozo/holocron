@@ -82,7 +82,6 @@ struct MediaItem: Codable, Identifiable, Hashable {
     var title: String
     var year: Int
     var type: String
-    var hasNfo: Bool
     var hasSubsEs: Bool
 
     var id: String { path }
@@ -91,10 +90,9 @@ struct MediaItem: Codable, Identifiable, Hashable {
 struct MediaLibrary: Codable {
     var configured: Bool
     var total: Int?
-    var withNfo: Int?
+    var movies: Int?
     var withoutSubsEs: Int?
     var syncing: Bool?
-    var generatingNfo: Bool?
     var items: [MediaItem]
     var truncated: Bool?
 }

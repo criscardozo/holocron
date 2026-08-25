@@ -75,7 +75,7 @@ curl -fsSL …/install.sh | sudo HOLOCRON_VERSION=v0.1.0 bash
 curl -fsSL …/install.sh | sudo HOLOCRON_ADDR=:9000 bash
 
 # Dar acceso de lectura/escritura a las carpetas de medios (hardening de systemd).
-# Sin esto, el servicio no puede escribir .nfo ni subtítulos fuera de su estado.
+# Sin esto, el servicio no puede escribir subtítulos fuera de su estado.
 curl -fsSL …/install.sh | sudo HOLOCRON_MEDIA_PATHS="/mnt/media /srv/downloads" bash
 ```
 

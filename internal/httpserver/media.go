@@ -20,9 +20,8 @@ func (s *Server) mediaView(ctx context.Context) templates.MediaPageView {
 		return v
 	}
 	v.Syncing = s.deps.Library.Syncing()
-	v.GeneratingNFO = s.deps.Library.GeneratingNFO()
 	if st, err := s.deps.Library.Stats(ctx); err == nil {
-		v.Total, v.WithNFO, v.WithoutSubs = st.Total, st.WithNFO, st.WithoutSubs
+		v.Total, v.Movies, v.WithoutSubs = st.Total, st.Movies, st.WithoutSubs
 	}
 	const listLimit = 500
 	if items, err := s.deps.Library.Items(ctx, listLimit); err == nil {
@@ -32,7 +31,6 @@ func (s *Server) mediaView(ctx context.Context) templates.MediaPageView {
 				Year:      it.Year,
 				Type:      it.Type,
 				Path:      it.Path,
-				HasNFO:    it.HasNFO,
 				HasSubsES: it.HasSubsES,
 			})
 		}
@@ -43,19 +41,14 @@ func (s *Server) mediaView(ctx context.Context) templates.MediaPageView {
 
 func (s *Server) handleMediaSync(w http.ResponseWriter, r *http.Request) {
 	_, err := s.deps.Library.StartSync(r.Context())
-	s.renderJobStart(w, r, err, "Sincronizando…", "/media/status?job=sync")
-}
-
-func (s *Server) handleMediaNFO(w http.ResponseWriter, r *http.Request) {
-	_, err := s.deps.Library.StartGenerateNFO(r.Context())
-	s.renderJobStart(w, r, err, "Generando .nfo…", "/media/status?job=nfo")
+	s.renderJobStart(w, r, err, "Sincronizando…", "/media/status")
 }
 
 func (s *Server) renderJobStart(w http.ResponseWriter, r *http.Request, err error, label, statusHref string) {
 	if err != nil && !errors.Is(err, jobs.ErrKindBusy) {
 		msg := "No se pudo iniciar."
 		if errors.Is(err, library.ErrNotConfigured) {
-			msg = "Plex no está configurado."
+			msg = "Jellyfin no está vinculado."
 		}
 		s.log.Warn("start media job", "error", err)
 		s.render(w, r, templates.JobStatus(templates.JobStatusView{Error: msg}))
@@ -69,16 +62,8 @@ func (s *Server) renderJobStart(w http.ResponseWriter, r *http.Request, err erro
 }
 
 func (s *Server) handleMediaStatus(w http.ResponseWriter, r *http.Request) {
-	kind := library.KindSync
-	label, statusHref := "Sincronizando…", "/media/status?job=sync"
-	running := s.deps.Library.Syncing()
-	if r.URL.Query().Get("job") == "nfo" {
-		kind = library.KindNFO
-		label, statusHref = "Generando .nfo…", "/media/status?job=nfo"
-		running = s.deps.Library.GeneratingNFO()
-	}
-
-	if running {
+	const label, statusHref = "Sincronizando…", "/media/status"
+	if s.deps.Library.Syncing() {
 		s.render(w, r, templates.JobStatus(templates.JobStatusView{
 			Running: true, Label: label, StatusHref: statusHref,
 		}))
@@ -90,7 +75,7 @@ func (s *Server) handleMediaStatus(w http.ResponseWriter, r *http.Request) {
 		ReloadSelect: "#media-detail",
 		ReloadTarget: "#media-detail",
 	}
-	if job, ok := s.deps.Library.LastJob(kind); ok {
+	if job, ok := s.deps.Library.LastJob(); ok {
 		if job.Status == jobs.StatusError {
 			view.Error = "El trabajo falló."
 		} else {

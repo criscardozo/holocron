@@ -4,18 +4,34 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
 // Item types Holocron cares about.
 const (
-	TypeMovie  = "Movie"
-	TypeSeries = "Series"
+	TypeMovie   = "Movie"
+	TypeSeries  = "Series"
+	TypeEpisode = "Episode"
 )
 
 // fields asked for on every listing. MediaSources carries the per-file streams,
 // which is where subtitles live.
 const itemFields = "Path,ProviderIds,MediaSources,MediaStreams,ProductionYear"
+
+// auditFields adds what a quality report needs and the inventory does not:
+// the synopsis, and the season/episode numbers that reveal a collision. Kept
+// apart from itemFields so the ordinary sync does not pay for overviews it
+// never reads.
+const auditFields = itemFields + ",Overview,IndexNumber,ParentIndexNumber,SeriesName,SeriesId"
+
+// auditPageSize bounds one response. Episodes carry their streams, so asking
+// for two thousand at once would mean a multi-megabyte decode on a Pi.
+const auditPageSize = 300
+
+// maxAuditPages stops a paging loop that never converges — a server that
+// ignores StartIndex would otherwise return page one forever.
+const maxAuditPages = 80
 
 // MediaStream is one track of a file: video, audio or subtitle.
 type MediaStream struct {
@@ -50,6 +66,16 @@ type Item struct {
 	ProviderIDs map[string]string `json:"ProviderIds"`
 	Sources     []MediaSource     `json:"MediaSources"`
 	Streams     []MediaStream     `json:"MediaStreams"`
+
+	// Overview is the synopsis. Only requested by the audit listing.
+	Overview string `json:"Overview"`
+	// Episode and Season are pointers because absent numbering and number zero
+	// are different findings: a special is legitimately season 0, while an
+	// episode Jellyfin could not place has no number at all.
+	Episode    *int   `json:"IndexNumber"`
+	Season     *int   `json:"ParentIndexNumber"`
+	SeriesName string `json:"SeriesName"`
+	SeriesID   string `json:"SeriesId"`
 }
 
 type itemsResponse struct {
@@ -101,6 +127,55 @@ func (c *Client) listItems(ctx context.Context, q url.Values) ([]Item, error) {
 		return nil, err
 	}
 	return resp.Items, nil
+}
+
+// AuditItems returns every movie, series and episode with the fields a quality
+// report needs. Unlike Items it pages: the episode count is an order of
+// magnitude larger, and each episode carries its streams.
+//
+// Paging is defensive rather than trusting. Items are deduplicated by id and
+// the loop stops as soon as a page adds nothing new, so a server that ignores
+// StartIndex or reorders between pages yields a short report instead of an
+// endless one. progress, when set, is called with how many items are in hand.
+func (c *Client) AuditItems(ctx context.Context, progress func(count, total int)) ([]Item, error) {
+	seen := make(map[string]bool)
+	var out []Item
+
+	for page := 0; page < maxAuditPages; page++ {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		q := url.Values{
+			"Recursive":        {"true"},
+			"IncludeItemTypes": {TypeMovie + "," + TypeSeries + "," + TypeEpisode},
+			"Fields":           {auditFields},
+			"SortBy":           {"SortName"},
+			"SortOrder":        {"Ascending"},
+			"StartIndex":       {strconv.Itoa(page * auditPageSize)},
+			"Limit":            {strconv.Itoa(auditPageSize)},
+		}
+		var resp itemsResponse
+		if err := c.do(ctx, http.MethodGet, "/Items?"+q.Encode(), &resp); err != nil {
+			return nil, err
+		}
+
+		added := 0
+		for _, it := range resp.Items {
+			if it.ID == "" || seen[it.ID] {
+				continue
+			}
+			seen[it.ID] = true
+			out = append(out, it)
+			added++
+		}
+		if progress != nil {
+			progress(len(out), resp.TotalRecordCount)
+		}
+		if added == 0 || len(resp.Items) < auditPageSize {
+			break
+		}
+	}
+	return out, nil
 }
 
 // OnDisk reports whether the item actually has a file. Jellyfin lists episodes

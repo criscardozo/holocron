@@ -100,10 +100,6 @@ struct APIClient: Sendable {
         try await send("media/sync", method: "POST")
     }
 
-    func generateNFO() async throws {
-        try await send("media/nfo", method: "POST")
-    }
-
     // MARK: - Subtitles
 
     func subtitles() async throws -> SubtitlesReport {

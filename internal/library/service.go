@@ -1,32 +1,32 @@
 // Package library syncs the movie/series inventory from Jellyfin into SQLite.
 // Jellyfin reports each file's subtitle tracks, so nothing here touches the
 // media disk to work out what is present.
+//
+// It used to write .nfo files too. Jellyfin writes those itself when a library
+// has "save metadata as NFO" on, and two writers over one file means the last
+// one wins — so Holocron stopped being one of them.
 package library
 
 import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
-	"github.com/cristian/holocron/internal/nfo"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/version"
 )
 
-// Job kinds.
-const (
-	KindSync = "media-sync"
-	KindNFO  = "nfo-generate"
-)
+// KindSync is the job kind for an inventory sync.
+const KindSync = "media-sync"
 
-// ErrNotConfigured means the Plex URL or token has not been set.
-var ErrNotConfigured = errors.New("plex is not configured")
+// ErrNotConfigured means the Jellyfin address or token has not been set. It is
+// jellyfin.ErrNotLinked, so a handler comparing against either matches.
+var ErrNotConfigured = jellyfin.ErrNotLinked
 
-// Service manages the media inventory and .nfo generation.
+// Service manages the media inventory.
 type Service struct {
 	db       *sql.DB
 	settings *settings.Store
@@ -45,30 +45,22 @@ type Item struct {
 	Title     string
 	Year      int
 	HasSubsES bool
-	HasNFO    bool
 }
 
 // Stats summarises the inventory.
 type Stats struct {
 	Total       int
-	WithNFO     int
+	Movies      int
 	WithoutSubs int
 }
 
 // Configured reports whether a Jellyfin connection has been established.
 func (s *Service) Configured(ctx context.Context) bool {
-	return s.settings.GetDefault(ctx, settings.KeyJellyfinURL, "") != "" &&
-		s.settings.GetDefault(ctx, settings.KeyJellyfinToken, "") != ""
+	return jellyfin.Linked(ctx, s.settings)
 }
 
 func (s *Service) client(ctx context.Context) (*jellyfin.Client, error) {
-	url := s.settings.GetDefault(ctx, settings.KeyJellyfinURL, "")
-	token := s.settings.GetDefault(ctx, settings.KeyJellyfinToken, "")
-	if url == "" || token == "" {
-		return nil, ErrNotConfigured
-	}
-	device := s.settings.GetDefault(ctx, settings.KeyJellyfinDeviceID, "")
-	return jellyfin.New(url, token, device, version.Current()), nil
+	return jellyfin.FromSettings(ctx, s.settings, version.Current())
 }
 
 // TestConnection asks the server to identify itself, to verify the connection.
@@ -83,11 +75,8 @@ func (s *Service) TestConnection(ctx context.Context) (jellyfin.ServerInfo, erro
 // Syncing reports whether a sync is currently running.
 func (s *Service) Syncing() bool { return s.jobs.IsRunning(KindSync) }
 
-// GeneratingNFO reports whether an .nfo generation is currently running.
-func (s *Service) GeneratingNFO() bool { return s.jobs.IsRunning(KindNFO) }
-
-// LastJob returns the most recent job of the given kind (KindSync or KindNFO).
-func (s *Service) LastJob(kind string) (jobs.Job, bool) { return s.jobs.Latest(kind) }
+// LastJob returns the most recent sync job.
+func (s *Service) LastJob() (jobs.Job, bool) { return s.jobs.Latest(KindSync) }
 
 // StartSync fetches the movie/series inventory from Jellyfin into media_items.
 func (s *Service) StartSync(ctx context.Context) (jobs.Job, error) {
@@ -194,105 +183,15 @@ func mediaType(t string) string {
 	return "movie"
 }
 
-// StartGenerateNFO writes a .nfo file for each inventory item whose folder is
-// accessible on the host.
-func (s *Service) StartGenerateNFO(ctx context.Context) (jobs.Job, error) {
-	return s.jobs.Start(KindNFO, func(jobCtx context.Context, p *jobs.Progress) (string, error) {
-		return s.generateNFO(jobCtx, p)
-	})
-}
-
-func (s *Service) generateNFO(ctx context.Context, p *jobs.Progress) (string, error) {
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT path, type, title, year, plex_guid, has_subs_es, plex_alt_ids FROM media_items`)
-	if err != nil {
-		return "", fmt.Errorf("list media: %w", err)
-	}
-	type row struct {
-		path, typ, title, guid, altIDs string
-		year, hasSubs                  int
-	}
-	var items []row
-	for rows.Next() {
-		var r row
-		if err := rows.Scan(&r.path, &r.typ, &r.title, &r.year, &r.guid, &r.hasSubs, &r.altIDs); err != nil {
-			_ = rows.Close()
-			return "", fmt.Errorf("scan media: %w", err)
-		}
-		items = append(items, r)
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
-		return "", fmt.Errorf("iterate media: %w", err)
-	}
-	if err := rows.Close(); err != nil {
-		return "", fmt.Errorf("close media rows: %w", err)
-	}
-
-	var written, failed int
-	var firstErr error
-	for i, r := range items {
-		if err := ctx.Err(); err != nil {
-			return "", err
-		}
-		p.Set(i * 100 / max(len(items), 1))
-
-		ids := map[string]string{}
-		if err := json.Unmarshal([]byte(r.altIDs), &ids); err != nil {
-			ids = map[string]string{} // a malformed cache must not stop the job
-		}
-		it := nfo.Item{
-			Title:          r.title,
-			Year:           r.year,
-			PlexGUID:       r.guid,
-			IDs:            ids,
-			HasSpanishSubs: r.hasSubs == 1,
-		}
-		var werr error
-		switch r.typ {
-		case "movie":
-			_, werr = nfo.WriteMovie(r.path, it)
-		case "show":
-			_, werr = nfo.WriteShow(r.path, it)
-		default:
-			continue
-		}
-		if werr != nil {
-			// The folder may be unreachable from this host, or the service may
-			// lack write access (systemd ProtectSystem=strict without the media
-			// paths in ReadWritePaths). Keep going, but do not stay silent:
-			// a run where everything fails must say so.
-			failed++
-			if firstErr == nil {
-				firstErr = werr
-			}
-			continue
-		}
-		if _, err := s.db.ExecContext(ctx,
-			`UPDATE media_items SET nfo_written_at = datetime('now') WHERE path = ?`, r.path); err != nil {
-			return "", fmt.Errorf("mark nfo written: %w", err)
-		}
-		written++
-	}
-
-	if written == 0 && failed > 0 {
-		return "", fmt.Errorf("no se pudo escribir ningún .nfo (%d intentos): %w", failed, firstErr)
-	}
-	if failed > 0 {
-		return fmt.Sprintf("%d .nfo escritos, %d fallaron", written, failed), nil
-	}
-	return fmt.Sprintf("%d .nfo escritos", written), nil
-}
-
 // Stats returns inventory counters.
 func (s *Service) Stats(ctx context.Context) (Stats, error) {
 	var st Stats
 	err := s.db.QueryRowContext(ctx, `
 		SELECT
 			COUNT(*),
-			COALESCE(SUM(CASE WHEN nfo_written_at IS NOT NULL THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN type = 'movie' THEN 1 ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN has_subs_es = 0 THEN 1 ELSE 0 END), 0)
-		FROM media_items`).Scan(&st.Total, &st.WithNFO, &st.WithoutSubs)
+		FROM media_items`).Scan(&st.Total, &st.Movies, &st.WithoutSubs)
 	if err != nil {
 		return Stats{}, fmt.Errorf("media stats: %w", err)
 	}
@@ -302,7 +201,7 @@ func (s *Service) Stats(ctx context.Context) (Stats, error) {
 // Items lists inventory rows for display, ordered by type then title.
 func (s *Service) Items(ctx context.Context, limit int) ([]Item, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT path, type, title, year, has_subs_es, nfo_written_at IS NOT NULL
+		`SELECT path, type, title, year, has_subs_es
 		 FROM media_items ORDER BY type, title LIMIT ?`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list items: %w", err)
@@ -312,7 +211,7 @@ func (s *Service) Items(ctx context.Context, limit int) ([]Item, error) {
 	var out []Item
 	for rows.Next() {
 		var it Item
-		if err := rows.Scan(&it.Path, &it.Type, &it.Title, &it.Year, &it.HasSubsES, &it.HasNFO); err != nil {
+		if err := rows.Scan(&it.Path, &it.Type, &it.Title, &it.Year, &it.HasSubsES); err != nil {
 			return nil, fmt.Errorf("scan item: %w", err)
 		}
 		out = append(out, it)
