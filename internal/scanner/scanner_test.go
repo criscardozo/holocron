@@ -129,3 +129,44 @@ func TestBrowseFindsPathInSecondRoot(t *testing.T) {
 		t.Error("expected a non-zero allocated size through os.Root")
 	}
 }
+
+// The scan walks the children of a watched folder, but the filesystem figures
+// describe the drive. Deriving them from the first child made the reported
+// diskPath a subdirectory — on the real library, a hidden macOS one.
+func TestScanReportsTheConfiguredDiskPath(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	child := filepath.Join(root, "Peliculas")
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(child, "a.mkv"), 4096)
+
+	sc := New(Options{Paths: []string{child}, DiskPath: root})
+	res, err := sc.Scan(context.Background())
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if res.DiskPath != root {
+		t.Errorf("DiskPath = %q, want the watched folder %q", res.DiskPath, root)
+	}
+	if res.TotalBytes == 0 {
+		t.Error("expected filesystem stats for the watched folder")
+	}
+}
+
+// Without DiskPath the old behaviour stands, so nothing else has to change.
+func TestScanFallsBackToTheFirstPath(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "a.mkv"), 2048)
+
+	sc := New(Options{Paths: []string{root}})
+	res, err := sc.Scan(context.Background())
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if res.DiskPath != root {
+		t.Errorf("DiskPath = %q, want %q", res.DiskPath, root)
+	}
+}

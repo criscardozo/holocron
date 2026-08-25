@@ -26,7 +26,11 @@ import (
 
 // Options configures a Scanner.
 type Options struct {
-	Paths             []string
+	Paths []string
+	// DiskPath is the directory whose filesystem is measured and reported. It
+	// defaults to the first usable entry in Paths, which is wrong whenever
+	// Paths holds children of the directory the caller actually cares about.
+	DiskPath          string
 	TopLimit          int
 	ExcludePaths      []string
 	OneFileSystem     bool
@@ -123,7 +127,7 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 		return result, err
 	}
 
-	if diskPath := s.firstExistingPath(); diskPath != "" {
+	if diskPath := s.diskPath(); diskPath != "" {
 		stat, err := filesystemStat(diskPath)
 		if err != nil {
 			scanErrors.add(diskPath, err)
@@ -498,6 +502,14 @@ func (s *Scanner) directorySize(ctx context.Context, root string, rootDevice uin
 		return total, err
 	}
 	return total, nil
+}
+
+// diskPath is the directory to report filesystem stats for.
+func (s *Scanner) diskPath() string {
+	if s.options.DiskPath != "" {
+		return s.options.DiskPath
+	}
+	return s.firstExistingPath()
 }
 
 func (s *Scanner) firstExistingPath() string {

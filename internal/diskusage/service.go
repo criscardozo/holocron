@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/jobs"
@@ -60,7 +61,11 @@ func (s *Service) StartScan(ctx context.Context, folderID int64) (jobs.Job, erro
 	}
 
 	sc := scanner.New(scanner.Options{
-		Paths:             paths,
+		Paths: paths,
+		// The scan walks the children, but the filesystem figures belong to the
+		// watched folder itself: reporting a child made diskPath point at a
+		// hidden directory rather than the drive being measured.
+		DiskPath:          folder.Path,
 		TopLimit:          topLimit,
 		MaxReportedErrors: maxScanError,
 		Concurrency:       concurrency,
@@ -121,8 +126,15 @@ func (s *Service) CachedResult(ctx context.Context, folderID int64) (scanner.Res
 	return result, scannedAt, true, nil
 }
 
-// childDirs returns the immediate subdirectories of root (skipping symlinks and
-// files). Errors are ignored: the caller falls back to scanning root itself.
+// childDirs returns the immediate subdirectories of root (skipping symlinks,
+// files and hidden directories). Errors are ignored: the caller falls back to
+// scanning root itself.
+//
+// Hidden directories are skipped because they are not what anyone is looking at
+// when they ask what is filling a media drive. On this HTPC the media disk is
+// exFAT written to from a Mac, so it carries .Spotlight-V100 and .Trashes —
+// noise in the listing, and .Spotlight-V100 in particular holds many small
+// entries, which is exactly what makes a du-style walk slow.
 func childDirs(root string) []string {
 	entries, err := os.ReadDir(root)
 	if err != nil {
@@ -130,12 +142,13 @@ func childDirs(root string) []string {
 	}
 	var dirs []string
 	for _, e := range entries {
-		if e.Type()&os.ModeSymlink != 0 {
+		if e.Type()&os.ModeSymlink != 0 || !e.IsDir() {
 			continue
 		}
-		if e.IsDir() {
-			dirs = append(dirs, filepath.Join(root, e.Name()))
+		if strings.HasPrefix(e.Name(), ".") {
+			continue
 		}
+		dirs = append(dirs, filepath.Join(root, e.Name()))
 	}
 	return dirs
 }
