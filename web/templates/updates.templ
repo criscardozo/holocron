@@ -48,7 +48,8 @@ templ Updates(v UpdatesView) {
 				}
 				if v.Installable {
 					<div class="actions">
-						<form hx-post="/settings/updates/install" hx-target="#updates" hx-swap="outerHTML" hx-confirm="Se va a descargar e instalar la versión nueva, y el servicio se reinicia. ¿Seguimos?">
+						<form class="token-gate" hx-post="/settings/updates/install" hx-target="#updates" hx-swap="outerHTML" hx-confirm="Se va a descargar e instalar la versión nueva, y el servicio se reinicia. ¿Seguimos?">
+							<input class="input" type="password" name="token" required placeholder="Token de la API" aria-label="Token de la API"/>
 							<button type="submit" class="btn btn-primary">
 								@IconSm("download")
 								Actualizar ahora
@@ -64,6 +65,9 @@ templ Updates(v UpdatesView) {
 				} else {
 					@manualUpdate()
 				}
+				<p class="muted link-step">
+					Pide el token porque esta acción reinicia el servicio, y la web no tiene contraseña. Está en «App iOS», más abajo.
+				</p>
 			} else {
 				<span class="w-ok">
 					@IconSm("check")
