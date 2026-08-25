@@ -16,6 +16,7 @@ import (
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
+	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
@@ -35,6 +36,7 @@ type Deps struct {
 	Naming       *naming.Service
 	Settings     *settings.Store
 	Library      *library.Service
+	Quality      *quality.Service
 	Subtitles    *subtitles.Service
 	Torrents     *torrents.Service
 	APIToken     *apitoken.Store
@@ -81,6 +83,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /media", s.handleMediaPage)
 	mux.HandleFunc("POST /media/sync", s.handleMediaSync)
 	mux.HandleFunc("GET /media/status", s.handleMediaStatus)
+
+	// Library quality: the audit and its findings.
+	mux.HandleFunc("GET /quality", s.handleQualityPage)
+	mux.HandleFunc("POST /quality/scan", s.handleQualityScan)
+	mux.HandleFunc("GET /quality/status", s.handleQualityStatus)
+	mux.HandleFunc("POST /quality/refresh", s.handleQualityRefresh)
 
 	// Phase 4: subtitles (OpenSubtitles).
 	mux.HandleFunc("GET /subtitles", s.handleSubtitlesPage)

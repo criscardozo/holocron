@@ -22,6 +22,7 @@ import (
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
+	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
@@ -55,6 +56,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	diskService := diskusage.NewService(database, folderStore, jobManager)
 	namingService := naming.NewService(database, folderStore)
 	libraryService := library.NewService(database, settingsStore, jobManager)
+	qualityService := quality.NewService(database, settingsStore, jobManager)
 	subtitlesService := subtitles.NewService(database, settingsStore)
 	torrentsService := torrents.NewService(settingsStore)
 	apiTokenStore := apitoken.NewStore(settingsStore)
@@ -67,6 +69,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		widgets.NewNamingWidget(namingService),
 		widgets.NewSubtitlesWidget(subtitlesService),
 		widgets.NewMediaWidget(libraryService),
+		widgets.NewQualityWidget(qualityService),
 		widgets.NewTorrentsWidget(torrentsService),
 	)
 
@@ -78,6 +81,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Naming:       namingService,
 		Settings:     settingsStore,
 		Library:      libraryService,
+		Quality:      qualityService,
 		Subtitles:    subtitlesService,
 		Torrents:     torrentsService,
 		APIToken:     apiTokenStore,

@@ -16,6 +16,7 @@ var navItems = []struct{ Label, Href string }{
 	{"Disco", "/disk"},
 	{"Nombres", "/naming"},
 	{"Medios", "/media"},
+	{"Calidad", "/quality"},
 	{"Subtítulos", "/subtitles"},
 	{"Torrents", "/torrents"},
 	{"Ajustes", "/settings"},

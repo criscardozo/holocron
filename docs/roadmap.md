@@ -94,6 +94,11 @@ dashboard vacío que arranca en la Pi.
   de 6 dígitos que se aprueba en Jellyfin, sin copiar API keys), y los subtítulos
   salen de la API — Jellyfin ya conoce cada pista de cada archivo — en vez de
   recorrer el disco por título. Los paquetes `plex`/`plexauth` se eliminaron.
+- **Panel de calidad de biblioteca**: cinco contadores accionables (sin
+  subtítulos ES, sin sinopsis, título genérico, fantasmas, numeración repetida)
+  sobre un análisis bajo demanda que incluye episodios. En el mismo movimiento
+  se quitó el escritor de `.nfo`: Jellyfin escribe esos archivos y dos
+  escritores sobre una ruta significa que gana el último.
 - **Actualización desde la UI**: chequeo contra las releases de GitHub y botón de
   instalar, vía un helper de systemd con privilegios (el servicio no puede
   reemplazarse a sí mismo).

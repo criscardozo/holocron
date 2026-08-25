@@ -8,12 +8,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
+	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/scanner"
 	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/internal/torrents"
@@ -42,6 +44,10 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 
 	api.HandleFunc("GET /v1/media", s.apiMedia)
 	api.HandleFunc("POST /v1/media/sync", s.apiMediaSync)
+
+	api.HandleFunc("GET /v1/quality", s.apiQuality)
+	api.HandleFunc("POST /v1/quality/scan", s.apiQualityScan)
+	api.HandleFunc("POST /v1/quality/refresh", s.apiQualityRefresh)
 
 	api.HandleFunc("GET /v1/subtitles", s.apiSubtitles)
 	api.HandleFunc("GET /v1/subtitles/search", s.apiSubtitleSearch)
@@ -339,6 +345,84 @@ func (s *Server) apiStartJob(w http.ResponseWriter, r *http.Request, start func(
 		s.writeJSON(w, http.StatusAccepted, map[string]any{"started": true})
 	case errors.Is(err, library.ErrNotConfigured):
 		s.apiError(w, http.StatusPreconditionFailed, "Jellyfin is not configured")
+	default:
+		s.apiFailure(w, r, err)
+	}
+}
+
+// ── library quality ─────────────────────────────────────────────────────
+
+type apiQualityFinding struct {
+	Category string `json:"category"`
+	ItemID   string `json:"itemId"`
+	Title    string `json:"title"`
+	Detail   string `json:"detail"`
+	Path     string `json:"path"`
+	Kind     string `json:"kind"`
+}
+
+// apiQuality returns the cached report. It never runs an audit: that reads the
+// whole library from Jellyfin, so it stays an explicit POST.
+func (s *Server) apiQuality(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if !s.deps.Quality.Configured(ctx) {
+		s.writeJSON(w, http.StatusOK, map[string]any{"configured": false, "findings": []apiQualityFinding{}})
+		return
+	}
+	report, ok, err := s.deps.Quality.Latest(ctx)
+	if err != nil {
+		s.apiFailure(w, r, err)
+		return
+	}
+
+	counts := make(map[string]int, len(quality.Categories))
+	for _, c := range quality.Categories {
+		counts[string(c)] = report.Count(c)
+	}
+	findings := make([]apiQualityFinding, 0, len(report.Findings))
+	for _, f := range report.Findings {
+		findings = append(findings, apiQualityFinding{
+			Category: string(f.Category), ItemID: f.ItemID, Title: f.Title,
+			Detail: f.Detail, Path: f.Path, Kind: f.Kind,
+		})
+	}
+
+	payload := map[string]any{
+		"configured": true,
+		"hasReport":  ok,
+		"scanning":   s.deps.Quality.Scanning(),
+		"admin":      s.deps.Quality.Admin(ctx),
+		"scanned":    report.Scanned,
+		"total":      report.Total(),
+		"counts":     counts,
+		"findings":   findings,
+	}
+	if ok && !report.GeneratedAt.IsZero() {
+		payload["generatedAt"] = report.GeneratedAt.UTC().Format(time.RFC3339)
+	}
+	s.writeJSON(w, http.StatusOK, payload)
+}
+
+func (s *Server) apiQualityScan(w http.ResponseWriter, r *http.Request) {
+	s.apiStartJob(w, r, func(ctx context.Context) error {
+		_, err := s.deps.Quality.StartScan(ctx)
+		return err
+	})
+}
+
+func (s *Server) apiQualityRefresh(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		s.apiError(w, http.StatusBadRequest, "Malformed form")
+		return
+	}
+	err := s.deps.Quality.Refresh(r.Context(), r.PostFormValue("item"))
+	switch {
+	case err == nil:
+		s.writeJSON(w, http.StatusAccepted, map[string]any{"requested": true})
+	case errors.Is(err, quality.ErrNotAdmin):
+		s.apiError(w, http.StatusForbidden, "The linked Jellyfin account is not an administrator")
+	case errors.Is(err, quality.ErrUnknownItem), errors.Is(err, quality.ErrNoReport):
+		s.apiError(w, http.StatusNotFound, "That item is not in the current report")
 	default:
 		s.apiFailure(w, r, err)
 	}

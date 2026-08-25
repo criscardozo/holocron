@@ -1,0 +1,187 @@
+package templates
+
+import "fmt"
+
+// QualityBody is the dashboard quality widget: how many findings the last audit
+// left, broken down by category.
+templ QualityBody(v QualityCardView) {
+	if !v.Configured {
+		<p class="muted">Jellyfin no vinculado. <a href="/settings">Conectar</a>.</p>
+	} else if !v.HasReport {
+		<p class="muted">Sin analizar todavía.</p>
+		<div class="w-foot">
+			<a class="w-link" href="/quality">
+				Analizar la biblioteca
+				@IconSm("chev")
+			</a>
+		</div>
+	} else {
+		<div class="cols2">
+			<ul class="stat-list">
+				for _, c := range v.Counts {
+					<li>
+						<span class="stat-key">{ c.Label }</span>
+						<span class="stat-val">{ fmt.Sprintf("%d", c.Count) }</span>
+					</li>
+				}
+			</ul>
+			<div class="sys-now">
+				<span class="big-num">{ fmt.Sprintf("%d", v.Total) }</span>
+				<span class="cap">hallazgos</span>
+			</div>
+		</div>
+		<div class="w-foot">
+			<a class="w-link" href="/quality">
+				Ver detalle
+				@IconSm("chev")
+			</a>
+		</div>
+	}
+}
+
+// QualityPage is the library quality panel.
+templ QualityPage(v QualityPageView) {
+	@Layout("Calidad") {
+		<div class="page-head">
+			<div>
+				<h1>Calidad</h1>
+				<p class="sub">Qué le falta a la biblioteca: subtítulos, metadata, archivos que ya no están</p>
+			</div>
+		</div>
+		if !v.Configured {
+			<p class="muted">Vinculá tu servidor Jellyfin en <a href="/settings">Ajustes</a> para poder analizarla.</p>
+		} else {
+			@QualityDetailSection(v)
+		}
+	}
+}
+
+// QualityDetailSection is re-fetched when the audit finishes.
+templ QualityDetailSection(v QualityPageView) {
+	<section id="quality-detail">
+		<div class="card elev-sm stat-band">
+			<div class="stat-trio">
+				<div>
+					<div class="n warn">{ fmt.Sprintf("%d", v.Total) }</div>
+					<div class="cap">hallazgos</div>
+				</div>
+				<div>
+					<div class="n">{ fmt.Sprintf("%d", v.Scanned) }</div>
+					<div class="cap">ítems revisados</div>
+				</div>
+			</div>
+			<div class="actions">
+				<form hx-post="/quality/scan" hx-target="#quality-status" hx-swap="innerHTML">
+					<button class="btn btn-primary" type="submit" disabled?={ v.Scanning }>
+						@IconSm("search")
+						Analizar la biblioteca
+					</button>
+				</form>
+				if v.GeneratedAt != "" {
+					<span class="muted">Último análisis { v.GeneratedAt }</span>
+				}
+			</div>
+		</div>
+		<div id="quality-status"></div>
+		if !v.HasReport {
+			<p class="muted">
+				Todavía no se analizó. El análisis le pide a Jellyfin la biblioteca entera
+				—incluidos los episodios— así que tarda un rato y conviene no hacerlo
+				mientras se está mirando algo.
+			</p>
+		} else {
+			<nav class="tabs" aria-label="Tipos de hallazgo">
+				for _, c := range v.Counts {
+					if c.Active {
+						<a class="tab active" href={ templ.SafeURL(c.Href) } aria-current="page">
+							{ c.Label } ({ fmt.Sprintf("%d", c.Count) })
+						</a>
+					} else {
+						<a class="tab" href={ templ.SafeURL(c.Href) }>
+							{ c.Label } ({ fmt.Sprintf("%d", c.Count) })
+						</a>
+					}
+				}
+			</nav>
+			if v.Selected != nil {
+				@qualityGroup(*v.Selected, v.Admin)
+			}
+		}
+	</section>
+}
+
+templ qualityGroup(g QualityGroupView, admin bool) {
+	if g.Hint != "" {
+		<p class="muted mb-6">{ g.Hint }</p>
+	}
+	if len(g.Rows) == 0 {
+		<p class="muted">Nada por acá. { g.Label } no tiene hallazgos.</p>
+	} else {
+		if g.Refreshable && !admin {
+			<div class="notice mb-6">
+				@IconSm("alert")
+				<span>
+					La cuenta de Jellyfin vinculada no es administradora, así que no se le puede
+					pedir que vuelva a leer la metadata. Vinculá una cuenta admin en <a href="/settings">Ajustes</a>.
+				</span>
+			</div>
+		}
+		<div class="table-scroll">
+			<table class="table">
+			<thead>
+				<tr>
+					<th>Ítem</th>
+					<th class="w-90">Tipo</th>
+					<th>Detalle</th>
+					if g.Refreshable && admin {
+						<th class="w-130">Acción</th>
+					}
+				</tr>
+			</thead>
+			<tbody>
+				for _, row := range g.Rows {
+					<tr>
+						<td>
+							<div class="title-cell">
+								<span class="t">{ row.Title }</span>
+								if row.Path != "" {
+									<span class="p">{ row.Path }</span>
+								}
+							</div>
+						</td>
+						<td><span class="badge badge-neutral">{ row.Kind }</span></td>
+						<td class="muted">{ row.Detail }</td>
+						if g.Refreshable && admin {
+							<td class="row-act">
+								<form hx-post="/quality/refresh" hx-target="closest td" hx-swap="innerHTML">
+									<input type="hidden" name="item" value={ row.ItemID }/>
+									<button class="btn btn-ghost" type="submit"
+											aria-label={ "Refrescar la metadata de " + row.Title }>
+										@IconSm("refresh")
+										Refrescar
+									</button>
+								</form>
+							</td>
+						}
+					</tr>
+				}
+			</tbody>
+			</table>
+		</div>
+		if g.Truncated {
+			<p class="muted">
+				Se muestran { fmt.Sprintf("%d", len(g.Rows)) } de { fmt.Sprintf("%d", g.Count) }.
+				El resto aparece a medida que se resuelvan estos.
+			</p>
+		}
+	}
+}
+
+// QualityRefreshResult replaces the action cell of the row that was refreshed.
+templ QualityRefreshResult(v QualityRefreshView) {
+	if v.Error {
+		<span class="badge badge-no">{ v.Message }</span>
+	} else {
+		<span class="badge badge-yes">{ v.Message }</span>
+	}
+}

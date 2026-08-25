@@ -149,6 +149,42 @@ y `items` viene vacío. La lista se corta en 500 ítems; `truncated` lo indica.
 Los dos `POST` devuelven `202` tanto si arrancaron el trabajo como si ya había
 uno corriendo, y `412` si Jellyfin no está vinculado.
 
+### Calidad de biblioteca
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/api/v1/quality` | El último informe cacheado |
+| `POST` | `/api/v1/quality/scan` | Corre un análisis nuevo (202) |
+| `POST` | `/api/v1/quality/refresh` | Le pide a Jellyfin releer un ítem (202) |
+
+```json
+{
+  "configured": true, "hasReport": true, "scanning": false, "admin": true,
+  "generatedAt": "2026-08-26T00:46:10Z", "scanned": 2336, "total": 1804,
+  "counts": {
+    "subs-missing": 1225, "no-synopsis": 500, "generic-title": 46,
+    "ghost": 87, "collision": 4
+  },
+  "findings": [{
+    "category": "collision", "itemId": "a1b2c3",
+    "title": "Chernobyl · S01E01 · 1:23:45",
+    "detail": "S01E01 aparece en 2 archivos",
+    "path": "/mnt/media/series/Chernobyl/S01/ep0.mkv",
+    "kind": "episodio"
+  }]
+}
+```
+
+El `GET` **nunca** analiza: leer la biblioteca entera de Jellyfin (episodios
+incluidos) es un `POST` explícito. `counts` trae los totales reales; `findings`
+se corta en 200 por categoría, así que un contador puede ser mayor que la
+cantidad de hallazgos devueltos.
+
+`refresh` toma `item=<itemId>` form-encoded y sólo acepta ids que estén en el
+informe vigente: el id llega del cliente y termina en una escritura sobre el
+servidor de medios. Responde `404` si no lo reconoce y `403` si la cuenta de
+Jellyfin vinculada no es administradora (releer metadata lo requiere).
+
 ### Subtítulos
 
 | Método | Ruta | Qué hace |

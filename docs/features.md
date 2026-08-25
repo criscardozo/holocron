@@ -84,6 +84,41 @@ recorre el disco para averiguarlo.
 
 ---
 
+## Feature 4c — Panel de calidad de biblioteca
+
+**Pantalla** con cinco contadores, cada uno con su lista. Responde «qué le falta
+a la biblioteca», que es distinto de «cuánto hay»:
+
+| Categoría | Qué es |
+|---|---|
+| Sin subtítulos ES | Ni pista en español ni audio en español |
+| Sin sinopsis | Jellyfin no tiene descripción del ítem |
+| Título genérico | `Episode 4`, o el nombre del archivo: no lo identificó |
+| Fantasmas | Jellyfin lo lista y el archivo ya no está |
+| Numeración repetida | Dos episodios con el mismo `SxxEyy`; uno queda tapado |
+
+- **Datos**: un único documento JSON en `quality_reports` (`CHECK (id = 1)`),
+  reemplazado por cada análisis. Cubre **episodios**, que no están en
+  `media_items` — meter dos mil filas de episodio ahí cambiaría lo que significa
+  el inventario.
+- **Análisis** (`quality`): `jobs` con `kind: quality-scan`. Pide a Jellyfin
+  `Movie,Series,Episode` **paginado** (los episodios traen sus pistas, así que
+  pedir dos mil de una es un decode de varios MB en la Pi) y clasifica en
+  memoria. `Analyse` es una función pura sobre la respuesta, así que las reglas
+  se testean contra respuestas capturadas y no contra un servidor prendido.
+- **Reglas que importan**: una serie es un directorio y no tiene pistas propias,
+  así que **no** se le pregunta por subtítulos (sería un falso hallazgo por cada
+  serie). Un fantasma se reporta una sola vez, como fantasma. Dos episodios «sin
+  número» no colisionan entre sí.
+- **Acción**: donde el problema es metadata (sin sinopsis, título genérico) hay
+  un botón que le pide a Jellyfin un `FullRefresh` del ítem. Requiere cuenta
+  administradora —se avisa antes, no después del 403— y el id se valida contra
+  el informe vigente antes de mandar nada.
+- **Tope**: se muestran 200 hallazgos por categoría; los contadores son los
+  totales reales y la UI dice cuándo la lista está cortada.
+
+---
+
 ## Feature 4b — Búsqueda de subtítulos (OpenSubtitles)
 
 **Widget**: lista de películas/series **sin** subtítulos. Desde ahí se pueden buscar

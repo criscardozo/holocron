@@ -247,6 +247,7 @@ select.input { cursor: pointer; }
 
 .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); align-items: center; }
 .sys-now { display: flex; flex-direction: column; gap: var(--space-2); }
+.sys-now .cap { font-size: 12px; color: color-mix(in srgb, var(--color-text) 52%, transparent); }
 .sys-num { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; line-height: 1; }
 .w-ok { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: color-mix(in srgb, var(--color-text) 50%, transparent); }
 .w-ok .ic { color: var(--ok); }

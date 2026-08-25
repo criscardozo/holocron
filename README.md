@@ -24,6 +24,11 @@ HTMX) va embebida en el ejecutable. Corre como servicio de systemd en la Pi.
   Jellyfin, así que **no se recorre el disco** para averiguarlo y se detectan también
   los embebidos. La conexión se hace con **Quick Connect**: Holocron muestra un código,
   lo aprobás en Jellyfin y el token queda guardado, sin buscar API keys a mano.
+- **Calidad de biblioteca** — el panel que dice qué está *mal*, no cuánto hay:
+  ítems sin subtítulos en español, sin sinopsis, con título genérico (el scraper
+  no los identificó), «fantasmas» que Jellyfin lista pero cuyo archivo ya no
+  está, y episodios que se pisan con el mismo `SxxEyy`. Donde el arreglo es
+  metadata, un botón le pide a Jellyfin que la vuelva a leer.
 - **Subtítulos** — lista los medios sin subtítulo en español y permite buscarlos y
   descargarlos desde OpenSubtitles.
 - **Torrents** — administra qBittorrent (estado, progreso, velocidades, pausar/reanudar/
