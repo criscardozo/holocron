@@ -13,9 +13,9 @@ import (
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
+	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
-	"github.com/cristian/holocron/internal/plexauth"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
@@ -28,18 +28,18 @@ import (
 // Deps are the dependencies shared by the HTTP handlers. Later phases add their
 // own services here.
 type Deps struct {
-	Log       *slog.Logger
-	Widgets   *widgets.Registry
-	Folders   *folders.Store
-	Disk      *diskusage.Service
-	Naming    *naming.Service
-	Settings  *settings.Store
-	Library   *library.Service
-	Subtitles *subtitles.Service
-	Torrents  *torrents.Service
-	APIToken  *apitoken.Store
-	PlexAuth  *plexauth.Service
-	Updates   *updates.Service
+	Log          *slog.Logger
+	Widgets      *widgets.Registry
+	Folders      *folders.Store
+	Disk         *diskusage.Service
+	Naming       *naming.Service
+	Settings     *settings.Store
+	Library      *library.Service
+	Subtitles    *subtitles.Service
+	Torrents     *torrents.Service
+	APIToken     *apitoken.Store
+	JellyfinLink *jellyfin.LinkService
+	Updates      *updates.Service
 }
 
 // Server serves the Holocron web UI.
@@ -98,12 +98,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /settings", s.handleSettings)
 	mux.HandleFunc("POST /settings/folders", s.handleAddFolder)
 	mux.HandleFunc("POST /settings/folders/delete", s.handleDeleteFolder)
-	mux.HandleFunc("POST /settings/plex", s.handleSavePlex)
-	mux.HandleFunc("GET /settings/plex/test", s.handlePlexTest)
-	mux.HandleFunc("POST /settings/plex/link", s.handlePlexLinkStart)
-	mux.HandleFunc("GET /settings/plex/link/status", s.handlePlexLinkStatus)
-	mux.HandleFunc("POST /settings/plex/link/server", s.handlePlexLinkServer)
-	mux.HandleFunc("POST /settings/plex/link/cancel", s.handlePlexLinkCancel)
+	mux.HandleFunc("POST /settings/jellyfin", s.handleSaveJellyfinURL)
+	mux.HandleFunc("GET /settings/jellyfin/test", s.handleJellyfinTest)
+	mux.HandleFunc("POST /settings/jellyfin/link", s.handleJellyfinLinkStart)
+	mux.HandleFunc("GET /settings/jellyfin/link/status", s.handleJellyfinLinkStatus)
+	mux.HandleFunc("POST /settings/jellyfin/link/cancel", s.handleJellyfinLinkCancel)
+	mux.HandleFunc("POST /settings/jellyfin/unlink", s.handleJellyfinUnlink)
 	mux.HandleFunc("POST /settings/opensubtitles", s.handleSaveOpenSubtitles)
 	mux.HandleFunc("POST /settings/qbittorrent", s.handleSaveQbit)
 	mux.HandleFunc("POST /settings/api-token", s.handleGenerateAPIToken)

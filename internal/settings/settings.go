@@ -12,11 +12,15 @@ import (
 
 // Well-known setting keys.
 const (
-	KeyPlexURL   = "plex.url"
-	KeyPlexToken = "plex.token"
-	// KeyPlexClientID identifies this device to plex.tv across restarts, so the
-	// account's "authorised devices" list keeps one Holocron entry.
-	KeyPlexClientID      = "plex.client_id"
+	// Jellyfin replaced Plex on this HTPC. KeyJellyfinDeviceID identifies this
+	// install to the server across restarts, so its device list keeps one
+	// Holocron entry; the user id is needed for any per-user query.
+	KeyJellyfinURL       = "jellyfin.url"
+	KeyJellyfinToken     = "jellyfin.token"
+	KeyJellyfinUserID    = "jellyfin.user_id"
+	KeyJellyfinUser      = "jellyfin.user"
+	KeyJellyfinAdmin     = "jellyfin.is_admin"
+	KeyJellyfinDeviceID  = "jellyfin.device_id"
 	KeyOpenSubtitlesKey  = "opensubtitles.api_key"
 	KeyOpenSubtitlesUser = "opensubtitles.username"
 	KeyOpenSubtitlesPass = "opensubtitles.password"

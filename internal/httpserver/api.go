@@ -11,9 +11,9 @@ import (
 
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/folders"
+	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
-	"github.com/cristian/holocron/internal/plexauth"
 	"github.com/cristian/holocron/internal/scanner"
 	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/internal/torrents"
@@ -37,9 +37,8 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 	api.HandleFunc("GET /v1/naming", s.apiNaming)
 	api.HandleFunc("POST /v1/naming/scan", s.apiNamingScan)
 
-	api.HandleFunc("POST /v1/plex/link", s.apiPlexLinkStart)
-	api.HandleFunc("GET /v1/plex/link", s.apiPlexLinkStatus)
-	api.HandleFunc("POST /v1/plex/link/server", s.apiPlexLinkServer)
+	api.HandleFunc("POST /v1/jellyfin/link", s.apiJellyfinLinkStart)
+	api.HandleFunc("GET /v1/jellyfin/link", s.apiJellyfinLinkStatus)
 
 	api.HandleFunc("GET /v1/media", s.apiMedia)
 	api.HandleFunc("POST /v1/media/sync", s.apiMediaSync)
@@ -349,63 +348,44 @@ func (s *Server) apiStartJob(w http.ResponseWriter, r *http.Request, start func(
 	case err == nil, errors.Is(err, jobs.ErrKindBusy):
 		s.writeJSON(w, http.StatusAccepted, map[string]any{"started": true})
 	case errors.Is(err, library.ErrNotConfigured):
-		s.apiError(w, http.StatusPreconditionFailed, "Plex is not configured")
+		s.apiError(w, http.StatusPreconditionFailed, "Jellyfin is not configured")
 	default:
 		s.apiFailure(w, r, err)
 	}
 }
 
-// ── plex device link ────────────────────────────────────────────────────
+// ── jellyfin quick connect ─────────────────────────────────────────────
 
-// The app drives the same flow as the web UI: start, poll, pick a server.
-func (s *Server) apiPlexLinkStart(w http.ResponseWriter, r *http.Request) {
-	status, err := s.deps.PlexAuth.Start(r.Context())
+// The app drives the same flow as the web UI: start, then poll.
+func (s *Server) apiJellyfinLinkStart(w http.ResponseWriter, r *http.Request) {
+	status, err := s.deps.JellyfinLink.Start(r.Context())
 	if err != nil {
-		s.log.Warn("api plex link start", "error", err)
-		s.apiError(w, http.StatusBadGateway, "could not reach plex.tv")
+		s.log.Warn("api jellyfin link start", "error", err)
+		s.apiError(w, http.StatusBadGateway, linkErrorMessage(err))
 		return
 	}
-	s.writeJSON(w, http.StatusOK, plexLinkPayload(status))
+	s.writeJSON(w, http.StatusOK, jellyfinLinkPayload(status))
 }
 
-func (s *Server) apiPlexLinkStatus(w http.ResponseWriter, r *http.Request) {
-	status, err := s.deps.PlexAuth.Check(r.Context())
+func (s *Server) apiJellyfinLinkStatus(w http.ResponseWriter, r *http.Request) {
+	status, err := s.deps.JellyfinLink.Check(r.Context())
 	switch {
-	case errors.Is(err, plexauth.ErrNoLinkInProgress):
-		s.writeJSON(w, http.StatusOK, map[string]any{"state": string(plexauth.StateIdle)})
+	case errors.Is(err, jellyfin.ErrNoLinkInProgress):
+		s.writeJSON(w, http.StatusOK, map[string]any{"state": string(jellyfin.StateIdle)})
 	case err != nil:
-		s.log.Warn("api plex link check", "error", err)
-		s.apiError(w, http.StatusBadGateway, "could not reach plex.tv")
+		s.log.Warn("api jellyfin link check", "error", err)
+		s.apiError(w, http.StatusBadGateway, linkErrorMessage(err))
 	default:
-		s.writeJSON(w, http.StatusOK, plexLinkPayload(status))
+		s.writeJSON(w, http.StatusOK, jellyfinLinkPayload(status))
 	}
 }
 
-func (s *Server) apiPlexLinkServer(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		BaseURL string `json:"baseUrl"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		s.apiError(w, http.StatusBadRequest, "invalid JSON body")
-		return
-	}
-	if err := s.deps.PlexAuth.SelectServer(r.Context(), body.BaseURL); err != nil {
-		s.apiError(w, http.StatusBadRequest, "baseUrl is required")
-		return
-	}
-	s.writeJSON(w, http.StatusOK, map[string]any{"ok": true})
-}
-
-func plexLinkPayload(status plexauth.Status) map[string]any {
-	servers := status.Servers
-	if servers == nil {
-		servers = []plexauth.Server{}
-	}
+func jellyfinLinkPayload(status jellyfin.Status) map[string]any {
 	return map[string]any{
-		"state":   string(status.State),
-		"code":    status.Code,
-		"authUrl": status.AuthURL,
-		"servers": servers,
+		"state": string(status.State),
+		"code":  status.Code,
+		"user":  status.User,
+		"admin": status.Admin,
 	}
 }
 

@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,12 +19,9 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	view := templates.SettingsView{
-		Purposes: []string{folders.PurposeDisk, folders.PurposeMovies, folders.PurposeTV},
-		Notice:   r.URL.Query().Get("notice"),
-		PlexURL:  s.deps.Settings.GetDefault(ctx, settings.KeyPlexURL, ""),
-	}
-	if _, ok, _ := s.deps.Settings.Get(ctx, settings.KeyPlexToken); ok {
-		view.PlexTokenSet = true
+		Purposes:    []string{folders.PurposeDisk, folders.PurposeMovies, folders.PurposeTV},
+		Notice:      r.URL.Query().Get("notice"),
+		JellyfinURL: s.deps.Settings.GetDefault(ctx, settings.KeyJellyfinURL, ""),
 	}
 	view.OpenSubsUser = s.deps.Settings.GetDefault(ctx, settings.KeyOpenSubtitlesUser, "")
 	if _, ok, _ := s.deps.Settings.Get(ctx, settings.KeyOpenSubtitlesKey); ok {
@@ -39,9 +35,9 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	view.APITokenSet = s.deps.APIToken.Configured(ctx)
 	view.Updates = s.updatesView(ctx, false)
 	// A reload mid-flow should keep showing the code rather than restart it.
-	if s.deps.PlexAuth.Pending() {
-		if status, err := s.deps.PlexAuth.Check(ctx); err == nil {
-			view.PlexLink = linkView(status)
+	if s.deps.JellyfinLink.Pending() {
+		if status, err := s.deps.JellyfinLink.Check(ctx); err == nil {
+			view.JellyfinLink = linkView(status)
 		}
 	}
 	for _, f := range list {
@@ -82,27 +78,6 @@ func (s *Server) handleDeleteFolder(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.deps.Folders.Delete(r.Context(), id); err != nil {
 		s.log.Warn("delete folder", "id", id, "error", err)
-	}
-	s.redirect(w, r, "/settings")
-}
-
-func (s *Server) handleSavePlex(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad form", http.StatusBadRequest)
-		return
-	}
-	ctx := r.Context()
-	if err := s.deps.Settings.Set(ctx, settings.KeyPlexURL, strings.TrimSpace(r.PostFormValue("url"))); err != nil {
-		s.serverError(w, r, err)
-		return
-	}
-	// Only overwrite the token when a new one is provided, so leaving the field
-	// blank keeps the stored token.
-	if token := strings.TrimSpace(r.PostFormValue("token")); token != "" {
-		if err := s.deps.Settings.Set(ctx, settings.KeyPlexToken, token); err != nil {
-			s.serverError(w, r, err)
-			return
-		}
 	}
 	s.redirect(w, r, "/settings")
 }
@@ -173,18 +148,4 @@ func (s *Server) handleRevokeAPIToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.redirect(w, r, "/settings?notice="+url.QueryEscape("Token de la API revocado."))
-}
-
-func (s *Server) handlePlexTest(w http.ResponseWriter, r *http.Request) {
-	libs, err := s.deps.Library.TestConnection(r.Context())
-	if err != nil {
-		s.log.Warn("plex test", "error", err)
-		s.render(w, r, templates.PlexTest(false, "No se pudo conectar con Plex. Revisá la URL y el token.", nil))
-		return
-	}
-	names := make([]string, 0, len(libs))
-	for _, l := range libs {
-		names = append(names, l.Title)
-	}
-	s.render(w, r, templates.PlexTest(true, fmt.Sprintf("Conectado: %d bibliotecas.", len(libs)), names))
 }

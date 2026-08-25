@@ -6,8 +6,7 @@ type SettingsView struct {
 	Folders      []SettingsFolderRow
 	Purposes     []string
 	Notice       string
-	PlexURL      string
-	PlexTokenSet bool
+	JellyfinURL  string
 	OpenSubsUser string
 	OpenSubsSet  bool
 	QbitURL      string
@@ -16,8 +15,8 @@ type SettingsView struct {
 	// APITokenSet reports whether a JSON API token exists. The token itself is
 	// never shown again: only its digest is stored.
 	APITokenSet bool
-	// PlexLink drives the plex.tv device-link fragment.
-	PlexLink PlexLinkView
+	// JellyfinLink drives the Quick Connect fragment.
+	JellyfinLink JellyfinLinkView
 	// Updates drives the update panel.
 	Updates UpdatesView
 }

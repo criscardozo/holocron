@@ -18,10 +18,10 @@ import (
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/httpserver"
+	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
-	"github.com/cristian/holocron/internal/plexauth"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
@@ -58,7 +58,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	subtitlesService := subtitles.NewService(database, settingsStore)
 	torrentsService := torrents.NewService(settingsStore)
 	apiTokenStore := apitoken.NewStore(settingsStore)
-	plexAuthService := plexauth.NewService(settingsStore)
+	jellyfinLink := jellyfin.NewLinkService(settingsStore)
 	updatesService := updates.NewService(filepath.Dir(cfg.DBPath))
 
 	registry := widgets.NewRegistry(
@@ -71,18 +71,18 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	)
 
 	srv := httpserver.New(httpserver.Deps{
-		Log:       logger,
-		Widgets:   registry,
-		Folders:   folderStore,
-		Disk:      diskService,
-		Naming:    namingService,
-		Settings:  settingsStore,
-		Library:   libraryService,
-		Subtitles: subtitlesService,
-		Torrents:  torrentsService,
-		APIToken:  apiTokenStore,
-		PlexAuth:  plexAuthService,
-		Updates:   updatesService,
+		Log:          logger,
+		Widgets:      registry,
+		Folders:      folderStore,
+		Disk:         diskService,
+		Naming:       namingService,
+		Settings:     settingsStore,
+		Library:      libraryService,
+		Subtitles:    subtitlesService,
+		Torrents:     torrentsService,
+		APIToken:     apiTokenStore,
+		JellyfinLink: jellyfinLink,
+		Updates:      updatesService,
 	})
 
 	httpSrv := &http.Server{

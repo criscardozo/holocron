@@ -1,6 +1,6 @@
-// Package library syncs the movie/show inventory from Plex into SQLite and
-// generates .nfo files for it. It ties together the Plex client, the subtitle
-// detector and the .nfo writer.
+// Package library syncs the movie/series inventory from Jellyfin into SQLite.
+// Jellyfin reports each file's subtitle tracks, so nothing here touches the
+// media disk to work out what is present.
 package library
 
 import (
@@ -9,13 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
+	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/nfo"
-	"github.com/cristian/holocron/internal/plex"
 	"github.com/cristian/holocron/internal/settings"
-	"github.com/cristian/holocron/internal/subs"
+	"github.com/cristian/holocron/internal/version"
 )
 
 // Job kinds.
@@ -56,29 +55,29 @@ type Stats struct {
 	WithoutSubs int
 }
 
-// Configured reports whether Plex credentials are set.
+// Configured reports whether a Jellyfin connection has been established.
 func (s *Service) Configured(ctx context.Context) bool {
-	url := s.settings.GetDefault(ctx, settings.KeyPlexURL, "")
-	token := s.settings.GetDefault(ctx, settings.KeyPlexToken, "")
-	return url != "" && token != ""
+	return s.settings.GetDefault(ctx, settings.KeyJellyfinURL, "") != "" &&
+		s.settings.GetDefault(ctx, settings.KeyJellyfinToken, "") != ""
 }
 
-func (s *Service) client(ctx context.Context) (*plex.Client, error) {
-	url := s.settings.GetDefault(ctx, settings.KeyPlexURL, "")
-	token := s.settings.GetDefault(ctx, settings.KeyPlexToken, "")
+func (s *Service) client(ctx context.Context) (*jellyfin.Client, error) {
+	url := s.settings.GetDefault(ctx, settings.KeyJellyfinURL, "")
+	token := s.settings.GetDefault(ctx, settings.KeyJellyfinToken, "")
 	if url == "" || token == "" {
 		return nil, ErrNotConfigured
 	}
-	return plex.New(url, token), nil
+	device := s.settings.GetDefault(ctx, settings.KeyJellyfinDeviceID, "")
+	return jellyfin.New(url, token, device, version.Current()), nil
 }
 
-// TestConnection lists the Plex libraries to verify the credentials work.
-func (s *Service) TestConnection(ctx context.Context) ([]plex.Library, error) {
+// TestConnection asks the server to identify itself, to verify the connection.
+func (s *Service) TestConnection(ctx context.Context) (jellyfin.ServerInfo, error) {
 	c, err := s.client(ctx)
 	if err != nil {
-		return nil, err
+		return jellyfin.ServerInfo{}, err
 	}
-	return c.Libraries(ctx)
+	return c.Info(ctx)
 }
 
 // Syncing reports whether a sync is currently running.
@@ -90,7 +89,7 @@ func (s *Service) GeneratingNFO() bool { return s.jobs.IsRunning(KindNFO) }
 // LastJob returns the most recent job of the given kind (KindSync or KindNFO).
 func (s *Service) LastJob(kind string) (jobs.Job, bool) { return s.jobs.Latest(kind) }
 
-// StartSync fetches the movie/show inventory from Plex into media_items.
+// StartSync fetches the movie/series inventory from Jellyfin into media_items.
 func (s *Service) StartSync(ctx context.Context) (jobs.Job, error) {
 	c, err := s.client(ctx)
 	if err != nil {
@@ -101,58 +100,57 @@ func (s *Service) StartSync(ctx context.Context) (jobs.Job, error) {
 	})
 }
 
-func (s *Service) sync(ctx context.Context, c *plex.Client, p *jobs.Progress) (string, error) {
-	libs, err := c.Libraries(ctx)
+func (s *Service) sync(ctx context.Context, c *jellyfin.Client, p *jobs.Progress) (string, error) {
+	items, err := c.Items(ctx)
 	if err != nil {
-		return "", fmt.Errorf("list libraries: %w", err)
+		return "", fmt.Errorf("list items: %w", err)
 	}
+	p.Set(60)
 
-	relevant := make([]plex.Library, 0, len(libs))
-	for _, lib := range libs {
-		if lib.Type == "movie" || lib.Type == "show" {
-			relevant = append(relevant, lib)
-		}
-	}
-
-	// Collect first, write second. The upserts belong in one transaction (one
-	// commit instead of one fsync per item on the microSD), but the collection
-	// phase makes HTTP calls to Plex and walks each media folder — and with
-	// SetMaxOpenConns(1) a transaction held across all that would block every
-	// other query in the app for the length of the sync.
+	// Collect first, write second: the transaction must not span the network
+	// call above, because with a single database connection it would block
+	// every other query for the length of the sync.
 	type row struct {
-		path, typ, title, guid, altIDs string
-		year                           int
-		hasSubs                        bool
+		path, typ, title, itemID, providerIDs string
+		year                                  int
+		hasSubs                               bool
 	}
-	var pending []row
-
-	for i, lib := range relevant {
-		p.Set(i * 90 / max(len(relevant), 1))
-		items, err := c.AllLibraryItems(ctx, lib.ID)
+	pending := make([]row, 0, len(items))
+	skipped := 0
+	for _, it := range items {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		// Jellyfin lists titles it knows from metadata providers but has never
+		// seen on disk. There is nothing to inventory for those.
+		if !it.OnDisk() {
+			skipped++
+			continue
+		}
+		folder := it.Folder()
+		if folder == "" {
+			skipped++
+			continue
+		}
+		ids, err := json.Marshal(it.ProviderIDs)
 		if err != nil {
-			return "", fmt.Errorf("list items of %q: %w", lib.Title, err)
+			ids = []byte("{}")
 		}
-		for _, it := range items {
-			if err := ctx.Err(); err != nil {
-				return "", err
-			}
-			folder := resolveFolder(it)
-			if folder == "" {
-				continue
-			}
-			detected := subs.DetectDir(folder)
-			altIDs, err := json.Marshal(parseAltIDs(it))
-			if err != nil {
-				altIDs = []byte("{}")
-			}
-			pending = append(pending, row{
-				path: folder, typ: it.Type, title: it.Title, guid: it.Guid,
-				altIDs: string(altIDs), year: it.Year, hasSubs: detected.SpanishSubtitle,
-			})
-		}
+		pending = append(pending, row{
+			path:  folder,
+			typ:   mediaType(it.Type),
+			title: it.Name,
+			// Subtitles come from Jellyfin, which already knows every track of
+			// every file — including embedded ones. This replaces walking each
+			// title's directory, once per title, on a slow USB disk.
+			hasSubs:     it.HasSpanishSubtitles(),
+			itemID:      it.ID,
+			providerIDs: string(ids),
+			year:        it.Year,
+		})
 	}
 
-	p.Set(95)
+	p.Set(80)
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", fmt.Errorf("begin tx: %w", err)
@@ -160,29 +158,40 @@ func (s *Service) sync(ctx context.Context, c *plex.Client, p *jobs.Progress) (s
 	defer func() { _ = tx.Rollback() }()
 
 	stmt, err := tx.PrepareContext(ctx,
-		`INSERT INTO media_items (path, type, title, year, plex_guid, has_subs_es, plex_alt_ids)
+		`INSERT INTO media_items (path, type, title, year, server_item_id, has_subs_es, provider_ids)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(path) DO UPDATE SET
 		   type = excluded.type, title = excluded.title, year = excluded.year,
-		   plex_guid = excluded.plex_guid, has_subs_es = excluded.has_subs_es,
-		   plex_alt_ids = excluded.plex_alt_ids`)
+		   server_item_id = excluded.server_item_id, has_subs_es = excluded.has_subs_es,
+		   provider_ids = excluded.provider_ids`)
 	if err != nil {
 		return "", fmt.Errorf("prepare upsert: %w", err)
 	}
 	defer func() { _ = stmt.Close() }()
 
-	count := 0
 	for _, r := range pending {
 		if _, err := stmt.ExecContext(ctx,
-			r.path, r.typ, r.title, r.year, r.guid, boolToInt(r.hasSubs), r.altIDs); err != nil {
+			r.path, r.typ, r.title, r.year, r.itemID, boolToInt(r.hasSubs), r.providerIDs); err != nil {
 			return "", fmt.Errorf("upsert media item: %w", err)
 		}
-		count++
 	}
 	if err := tx.Commit(); err != nil {
 		return "", fmt.Errorf("commit sync: %w", err)
 	}
-	return fmt.Sprintf("%d ítems", count), nil
+
+	if skipped > 0 {
+		return fmt.Sprintf("%d ítems (%d sin archivo)", len(pending), skipped), nil
+	}
+	return fmt.Sprintf("%d ítems", len(pending)), nil
+}
+
+// mediaType maps Jellyfin's item types onto the values already stored in
+// media_items, so existing rows and new ones agree.
+func mediaType(t string) string {
+	if t == jellyfin.TypeSeries {
+		return "show"
+	}
+	return "movie"
 }
 
 // StartGenerateNFO writes a .nfo file for each inventory item whose folder is
@@ -290,7 +299,7 @@ func (s *Service) Stats(ctx context.Context) (Stats, error) {
 	return st, nil
 }
 
-// Items lists inventory rows for display, newest-largest first by title.
+// Items lists inventory rows for display, ordered by type then title.
 func (s *Service) Items(ctx context.Context, limit int) ([]Item, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT path, type, title, year, has_subs_es, nfo_written_at IS NOT NULL
@@ -309,40 +318,6 @@ func (s *Service) Items(ctx context.Context, limit int) ([]Item, error) {
 		out = append(out, it)
 	}
 	return out, rows.Err()
-}
-
-func resolveFolder(it plex.Metadata) string {
-	switch it.Type {
-	case "movie":
-		if len(it.Media) > 0 && len(it.Media[0].Part) > 0 {
-			return parentDir(it.Media[0].Part[0].File)
-		}
-	case "show":
-		if len(it.Location) > 0 {
-			return it.Location[0].Path
-		}
-	}
-	return ""
-}
-
-// parentDir returns the directory of a file path, handling both / and \.
-func parentDir(file string) string {
-	file = strings.ReplaceAll(file, "\\", "/")
-	if idx := strings.LastIndex(file, "/"); idx >= 0 {
-		return file[:idx]
-	}
-	return ""
-}
-
-// parseAltIDs turns Plex's alternate GUIDs ("imdb://tt123") into a type→id map.
-func parseAltIDs(it plex.Metadata) map[string]string {
-	ids := map[string]string{}
-	for _, g := range it.AltGUIDs {
-		if typ, val, ok := strings.Cut(g.ID, "://"); ok {
-			ids[typ] = val
-		}
-	}
-	return ids
 }
 
 func boolToInt(b bool) int {

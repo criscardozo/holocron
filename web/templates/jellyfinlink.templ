@@ -1,0 +1,62 @@
+package templates
+
+// JellyfinLink is the Quick Connect fragment. While a code is outstanding it
+// polls itself every 2s; once linked it reports who authorised, and warns when
+// that account cannot ask Jellyfin to write metadata.
+templ JellyfinLink(v JellyfinLinkView) {
+	<div id="jellyfin-link">
+		if v.Error != "" {
+			<div class="notice error mb-6">
+				@IconSm("alert")
+				<span>{ v.Error }</span>
+			</div>
+		}
+		if v.Pending {
+			<div class="job" hx-get="/settings/jellyfin/link/status" hx-trigger="every 2s" hx-target="#jellyfin-link" hx-swap="outerHTML">
+				<span class="spinner"></span>
+				<span>Esperando que lo autorices en Jellyfin…</span>
+			</div>
+			<p class="muted link-step">1. Abrí Jellyfin y entrá a tu perfil → <strong>Quick Connect</strong>.</p>
+			<p class="muted link-step">2. Ingresá este código:</p>
+			<p class="link-code">{ v.Code }</p>
+			<form method="post" action="/settings/jellyfin/link/cancel" hx-post="/settings/jellyfin/link/cancel" hx-target="body">
+				<button type="submit" class="btn btn-secondary">Cancelar</button>
+			</form>
+		} else if v.Linked {
+			<div class="notice mb-6">
+				@IconSm("check")
+				<span>Vinculado como <strong>{ v.User }</strong>.</span>
+			</div>
+			if !v.Admin {
+				<div class="notice error mb-6">
+					@IconSm("alert")
+					<span>Esa cuenta no es administradora, así que pedirle a Jellyfin que escriba metadata va a fallar. Vinculá con una cuenta admin si lo necesitás.</span>
+				</div>
+			}
+			<div class="actions">
+				<button class="btn btn-secondary" hx-get="/settings/jellyfin/test" hx-target="#jellyfin-test" hx-swap="innerHTML">Probar conexión</button>
+				<form method="post" action="/settings/jellyfin/unlink" hx-post="/settings/jellyfin/unlink" hx-target="body" hx-confirm="¿Desvincular Jellyfin?">
+					<button type="submit" class="btn btn-danger">Desvincular</button>
+				</form>
+			</div>
+			<div id="jellyfin-test"></div>
+		} else {
+			<p class="desc">Vinculá tu cuenta con un código y Holocron obtiene el token solo.</p>
+			<form hx-post="/settings/jellyfin/link" hx-target="#jellyfin-link" hx-swap="outerHTML">
+				<button type="submit" class="btn btn-primary">
+					@IconSm("plug")
+					Conectar con Jellyfin
+				</button>
+			</form>
+		}
+	</div>
+}
+
+// JellyfinTest renders the result of a connection test.
+templ JellyfinTest(ok bool, message string) {
+	if ok {
+		<p class="ok-badge">{ message }</p>
+	} else {
+		<p class="error">{ message }</p>
+	}
+}

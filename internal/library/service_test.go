@@ -2,10 +2,12 @@ package library
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,119 +16,148 @@ import (
 	"github.com/cristian/holocron/internal/settings"
 )
 
-// mockPlex serves the minimal Plex endpoints the sync uses. movieFile is the
-// file path reported for the single movie.
-func mockPlex(t *testing.T, movieFile string) *httptest.Server {
+// mockJellyfin serves one movie whose file lives at movieFile, with a Spanish
+// subtitle track attached. Only the endpoints the sync uses are implemented.
+func mockJellyfin(t *testing.T, movieFile string) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
-	mux.HandleFunc("/library/sections", func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Plex-Token") == "" {
-			t.Error("missing X-Plex-Token header")
-		}
-		_, _ = w.Write([]byte(`{"MediaContainer":{"Directory":[{"key":"1","type":"movie","title":"Movies"}]}}`))
+
+	mux.HandleFunc("/System/Info", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"ServerName":"ObiWan","Version":"10.11.11"}`))
 	})
-	mux.HandleFunc("/library/sections/1/all", func(w http.ResponseWriter, r *http.Request) {
-		// Second page is empty, ending pagination.
-		if r.Header.Get("X-Plex-Container-Start") != "0" {
-			_, _ = w.Write([]byte(`{"MediaContainer":{"Metadata":[]}}`))
-			return
+
+	mux.HandleFunc("/Items", func(w http.ResponseWriter, r *http.Request) {
+		// The sync must not scope the listing to a user: doing so hides films
+		// that belong to a collection.
+		if r.URL.Query().Get("userId") != "" {
+			t.Errorf("the inventory query must not send userId, got %q", r.URL.RawQuery)
 		}
-		_, _ = w.Write([]byte(`{"MediaContainer":{"Metadata":[{
-			"ratingKey":"10","type":"movie","title":"The Matrix","year":1999,
-			"guid":"plex://movie/abc",
-			"Guid":[{"id":"imdb://tt0133093"},{"id":"tmdb://603"}],
-			"Media":[{"Part":[{"file":"` + movieFile + `"}]}]
-		}]}}`))
+		if got := r.Header.Get("Authorization"); !strings.Contains(got, "Token=") {
+			t.Errorf("missing token in %q", got)
+		}
+		payload := map[string]any{
+			"TotalRecordCount": 2,
+			"Items": []any{
+				map[string]any{
+					"Id": "abc", "Name": "The Matrix", "Type": "Movie",
+					"Path": movieFile, "ProductionYear": 1999,
+					"ProviderIds": map[string]string{"Imdb": "tt0133093", "official website": "x"},
+					"MediaSources": []any{map[string]any{
+						"Path": movieFile,
+						"MediaStreams": []any{
+							map[string]any{"Type": "Subtitle", "Language": "spa", "IsExternal": true},
+							map[string]any{"Type": "Audio", "Language": "eng"},
+						},
+					}},
+				},
+				// An episode Jellyfin knows about but has never seen on disk.
+				// The sync must skip it rather than inventory a missing file.
+				map[string]any{
+					"Id": "ghost", "Name": "Deleted scene", "Type": "Movie", "Path": "",
+				},
+			},
+		}
+		_ = json.NewEncoder(w).Encode(payload)
 	})
-	return httptest.NewServer(mux)
+
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv
 }
 
-func TestSyncAndGenerateNFO(t *testing.T) {
+func TestSyncFromJellyfin(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
-	// Media folder on disk so .nfo can be written and subs detected.
-	movieDir := filepath.Join(t.TempDir(), "The Matrix (1999)")
+	dir := t.TempDir()
+	movieDir := filepath.Join(dir, "The Matrix (1999)")
 	if err := os.MkdirAll(movieDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	movieFile := filepath.Join(movieDir, "The Matrix (1999).mkv")
-	if err := os.WriteFile(movieFile, []byte("x"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	// A Spanish subtitle sitting next to it.
-	if err := os.WriteFile(filepath.Join(movieDir, "The Matrix.es.srt"), []byte("1"), 0o600); err != nil {
+	if err := os.WriteFile(movieFile, []byte("video"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	srv := mockPlex(t, movieFile)
-	defer srv.Close()
+	srv := mockJellyfin(t, movieFile)
 
-	database, err := db.Open(ctx, filepath.Join(t.TempDir(), "test.db"))
+	database, err := db.Open(ctx, filepath.Join(dir, "test.db"))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("open db: %v", err)
 	}
 	defer func() { _ = database.Close() }()
 
-	st := settings.NewStore(database)
-	_ = st.Set(ctx, settings.KeyPlexURL, srv.URL)
-	_ = st.Set(ctx, settings.KeyPlexToken, "token")
+	store := settings.NewStore(database)
+	for k, v := range map[string]string{
+		settings.KeyJellyfinURL:      srv.URL,
+		settings.KeyJellyfinToken:    "tok",
+		settings.KeyJellyfinDeviceID: "dev",
+	} {
+		if err := store.Set(ctx, k, v); err != nil {
+			t.Fatal(err)
+		}
+	}
 
-	svc := NewService(database, st, jobs.NewManager())
+	svc := NewService(database, store, jobs.NewManager())
+	if !svc.Configured(ctx) {
+		t.Fatal("expected the service to read as configured")
+	}
+	if info, err := svc.TestConnection(ctx); err != nil || info.Name != "ObiWan" {
+		t.Fatalf("TestConnection = %+v, %v", info, err)
+	}
 
-	// Sync.
-	if _, err := svc.StartSync(ctx); err != nil {
+	job, err := svc.StartSync(ctx)
+	if err != nil {
 		t.Fatalf("StartSync: %v", err)
 	}
-	waitIdle(t, svc.Syncing)
+	waitForJob(t, svc, job.ID)
 
 	stats, err := svc.Stats(ctx)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Stats: %v", err)
 	}
+	// Only the title with a file is inventoried; the ghost is skipped.
 	if stats.Total != 1 {
-		t.Fatalf("Total = %d, want 1", stats.Total)
+		t.Fatalf("total = %d, want 1 (the ghost must be skipped)", stats.Total)
 	}
+	// Jellyfin reported a Spanish subtitle, so nothing is missing — and no
+	// directory was walked to find that out.
 	if stats.WithoutSubs != 0 {
-		t.Errorf("WithoutSubs = %d, want 0 (Spanish sub present)", stats.WithoutSubs)
+		t.Errorf("withoutSubs = %d, want 0", stats.WithoutSubs)
 	}
 
-	// Generate .nfo.
-	if _, err := svc.StartGenerateNFO(ctx); err != nil {
-		t.Fatalf("StartGenerateNFO: %v", err)
-	}
-	waitIdle(t, svc.GeneratingNFO)
-
-	nfoPath := filepath.Join(movieDir, "movie.nfo")
-	data, err := os.ReadFile(nfoPath)
+	items, err := svc.Items(ctx, 10)
 	if err != nil {
-		t.Fatalf("expected movie.nfo written: %v", err)
+		t.Fatalf("Items: %v", err)
 	}
-	for _, want := range []string{"The Matrix", "1999", "plex://movie/abc", "tt0133093", `language="spa">yes`} {
-		if !contains(string(data), want) {
-			t.Errorf("movie.nfo missing %q; got:\n%s", want, data)
-		}
+	if len(items) != 1 {
+		t.Fatalf("got %d items, want 1", len(items))
+	}
+	it := items[0]
+	if it.Title != "The Matrix" || it.Year != 1999 || it.Type != "movie" {
+		t.Errorf("unexpected item: %+v", it)
+	}
+	// The inventory records the folder, not the file.
+	if it.Path != movieDir {
+		t.Errorf("path = %q, want the folder %q", it.Path, movieDir)
+	}
+	if !it.HasSubsES {
+		t.Error("expected the Spanish subtitle to be recorded")
 	}
 }
 
-func waitIdle(t *testing.T, running func() bool) {
+func waitForJob(t *testing.T, svc *Service, id string) {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		if !running() {
+	for range 200 {
+		if job, ok := svc.jobs.Get(id); ok && job.Status != jobs.StatusRunning {
+			if job.Status == jobs.StatusError {
+				t.Fatalf("job failed: %s", job.Err)
+			}
 			return
 		}
-		time.Sleep(5 * time.Millisecond)
+		waitTick()
 	}
-	t.Fatal("job did not finish in time")
+	t.Fatal("job did not finish")
 }
 
-func contains(s, sub string) bool {
-	return len(s) >= len(sub) && (func() bool {
-		for i := 0; i+len(sub) <= len(s); i++ {
-			if s[i:i+len(sub)] == sub {
-				return true
-			}
-		}
-		return false
-	})()
-}
+func waitTick() { time.Sleep(10 * time.Millisecond) }
