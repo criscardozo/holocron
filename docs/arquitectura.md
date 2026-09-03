@@ -215,7 +215,7 @@ formulario de Access en lugar de JSON.
 
 Las dos **ya están aplicadas**. La de la raíz (política `Hogar`, sesión de 24 h
 para que cerrar sesión signifique algo). Se verifica sin credenciales: un `GET`
-a cualquier ruta responde `302` a `merlines.cloudflareaccess.com` con
+a cualquier ruta responde `302` a `<team>.cloudflareaccess.com` con
 `auth_status: NONE` en el JWT de meta.
 
 En `/api` la política es **Service Auth**, no Bypass. Bypass dejaría esa ruta

@@ -72,7 +72,7 @@ y el esquema no se parece en nada al de Holocron:
 
 ```json
 {"message": "Forbidden. You don't have permission to view this…",
- "status_code": 403, "aud": "ddb3…", "ray_id": "a353…",
+ "status_code": 403, "aud": "<id de la aplicación>", "ray_id": "<id del pedido>",
  "ip_address": "…", "is_warp": false, "is_gateway": false, "mtls_status": "NONE"}
 ```
 

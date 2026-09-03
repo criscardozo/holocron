@@ -112,7 +112,7 @@ struct AccessChallengeTests {
     }
 
     @Test func theLoginHostIsAChallenge() {
-        let http = response("https://merlines.cloudflareaccess.com/cdn-cgi/access/login/x", 200,
+        let http = response("https://example.cloudflareaccess.com/cdn-cgi/access/login/x", 200,
                             contentType: "text/html; charset=utf-8")
         #expect(APIClient.isAccessChallenge(http))
     }
