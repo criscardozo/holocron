@@ -15,6 +15,22 @@ struct SettingsView: View {
         @Bindable var settings = settings
 
         Form {
+            if !settings.isConfigured {
+                // The welcome text lives here, in the screen that can act on
+                // it, rather than in an overlay over the whole app.
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Falta configurar el servidor")
+                            .font(.callout.weight(.semibold))
+                        Text("Con la dirección y el token, las demás pestañas empiezan a funcionar.")
+                            .font(.footnote)
+                            .foregroundStyle(Noir.muted)
+                    }
+                    .padding(.vertical, 2)
+                }
+                .listRowBackground(Noir.surface)
+            }
+
             Section {
                 TextField("192.168.1.10:8090", text: $settings.serverURL)
                     .textInputAutocapitalization(.never)
