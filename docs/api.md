@@ -47,179 +47,33 @@ sigue validando después. Ver la sección de seguridad en
 [arquitectura.md](arquitectura.md) para las dos aplicaciones de Access que hacen
 falta y por qué son dos.
 
-Un rechazo de Access **no** se parece a un error de la API, y el código de
-estado no sirve para reconocerlo. Medido contra el despliegue real:
+Un rechazo de Access **no** se parece a un error de la API, y ni el código de
+estado ni el formato del cuerpo sirven para reconocerlo. Medido contra el
+despliegue real:
 
-| Situación | Respuesta de Access |
-|---|---|
-| Sin credenciales, pedido tipo API | `401` + HTML + `WWW-Authenticate: Cloudflare-Access …` |
-| Headers de service token inválidos | `302` + HTML (al login) |
-| Navegador sin sesión | `302` + HTML (al login) |
+| Situación | Código | `Content-Type` | Señal presente |
+|---|---|---|---|
+| `/api` sin headers, `Accept: application/json` | `403` | **`application/json`** | `cf-access-aud`, `cf-access-domain` |
+| `/api` sin headers, `Accept: */*` o ninguno | `403` | `text/html` | `cf-access-aud`, `cf-access-domain` |
+| `/api` con headers inválidos | `403` | `text/html` | `cf-access-aud`, `cf-access-domain` |
+| Raíz, pedido tipo AJAX sin sesión | `401` | `text/html` | `WWW-Authenticate: Cloudflare-Access` |
+| Raíz, navegación sin sesión | `302` | `text/html` | `location` a `*.cloudflareaccess.com` |
 
-Lo único constante es que **nunca devuelve JSON**, ni pidiéndoselo con
-`Accept: application/json`. Un cliente que siga redirects termina con un `200`
-y la página de login en el cuerpo. Se reconoce, en este orden: por el host final
-(`*.cloudflareaccess.com`), por el header `WWW-Authenticate: Cloudflare-Access`
-—inequívoco y sin depender del código— y como último recurso por un cuerpo HTML
-con `401`, `403` o `3xx`.
+Cuidado con la tentación de asumir que **Access nunca devuelve JSON**: es falso.
+Pidiéndoselo con `Accept: application/json` responde `403` con
+`{"message":"Forbidden. You don't have permission to view this…"}` — y ojo, usa
+`message`, no el `error` de Holocron, así que un cliente que sólo lea `error`
+muestra un mensaje vacío. Tampoco hay redirect que seguir en el `403`, ni
+`WWW-Authenticate`.
 
-## Endpoints
+Lo único presente en **todos** los rechazos son los headers propios de Access
+(`cf-access-aud`, `cf-access-domain`), que no dependen del código, del cuerpo ni
+del redirect. Es la señal en la que conviene apoyarse; el resto quedan como
+respaldo por si alguna versión deja de anunciarse.
 
-### Sistema
-
-`GET /api/v1/system`
-
-Métricas de la Pi. Cada valor es `null` cuando no se puede leer (fuera de Linux
-no existe `/proc`), así que el cliente debe tolerar nulos.
-
-```json
-{
-  "cpuPercent": 34.2, "memUsedBytes": 3221225472, "memTotalBytes": 8589934592,
-  "memPercent": 37.5, "tempCelsius": 52.1, "uptimeSeconds": 1051200,
-  "load1": 0.82, "hostname": "raspberrypi"
-}
-```
-
-### Disco
-
-| Método | Ruta | Qué hace |
-|---|---|---|
-| `GET` | `/api/v1/disk` | Carpetas vigiladas con su uso |
-| `GET` | `/api/v1/disk/{id}` | Detalle: uso, estado del escaneo y carpetas más grandes |
-| `GET` | `/api/v1/disk/{id}/browse?path=…` | Un nivel del drill-down |
-| `POST` | `/api/v1/disk/{id}/scan` | Dispara el escaneo (202; es asincrónico) |
-
-`GET /api/v1/disk`:
-
-```json
-{"folders": [{
-  "id": 1, "label": "Películas", "path": "/mnt/media/peliculas",
-  "totalBytes": 2000000000000, "usedBytes": 1500000000000,
-  "freeBytes": 500000000000, "usedPercent": 75, "available": true
-}]}
-```
-
-`available: false` significa que no se pudo leer el filesystem (disco
-desconectado); en ese caso los tamaños vienen en cero.
-
-`GET /api/v1/disk/{id}` agrega `scanning` (bool), `scannedAt` (timestamp UTC,
-sólo si hay un escaneo cacheado) y `top` (las carpetas más grandes). El escaneo
-es un trabajo en background: se dispara con `POST …/scan` y se consulta
-`scanning` hasta que vuelve en `false`.
-
-`browse` sin `path` lista la raíz de la carpeta. **El servidor confina la ruta
-con `os.Root`**: cualquier intento de salir del root configurado da `400`.
-
-### Nombres
-
-| Método | Ruta | Qué hace |
-|---|---|---|
-| `GET` | `/api/v1/naming` | Carpetas que no cumplen «Título (Año)» |
-| `POST` | `/api/v1/naming/scan` | Re-escanea (es barato, responde sincrónico) |
-
-```json
-{"count": 1, "issues": [{
-  "path": "/mnt/media/peliculas/Interstellar 2014", "type": "movies",
-  "found": "Interstellar 2014", "expected": "Interstellar (2014)"
-}]}
-```
-
-`type` es `movies` o `tv`.
-
-### Vincular Jellyfin (Quick Connect)
-
-Obtiene el token de Jellyfin sin que el usuario busque una API key.
-
-| Método | Ruta | Qué hace |
-|---|---|---|
-| `POST` | `/api/v1/jellyfin/link` | Pide un código y arranca el flujo |
-| `GET` | `/api/v1/jellyfin/link` | Estado actual (se consulta en loop) |
-
-```json
-{"state": "pending", "code": "640045", "user": "", "admin": false}
-```
-
-`state` es `idle`, `pending`, `linked` o `expired`. El flujo es:
-
-1. `POST` → devuelve un `code` de 6 dígitos. Se le muestra al usuario.
-2. El usuario lo aprueba en Jellyfin, en su perfil → **Quick Connect**.
-3. `GET` cada ~2 s hasta que `state` pase a `linked`. **En ese momento el
-   servidor ya guardó el token.**
-
-Cuando queda vinculado, `user` trae quién autorizó y `admin` si esa cuenta es
-administradora — pedirle a Jellyfin que escriba metadata requiere serlo, así que
-conviene avisarlo antes que fallar después.
-
-La dirección se **normaliza** al guardarla: `192.168.0.2:8096` se guarda como
-`http://192.168.0.2:8096`. Sin esquema no es una URL —`net/url` lee los dos
-puntos como separador de esquema— y el request no se llega a armar, así que
-todas las llamadas fallaban con un «no se pudo conectar» genérico.
-
-La dirección se carga **antes** del código (`POST /settings/jellyfin`
-en la web): a diferencia de Plex no hay un servicio en la nube por el que
-descubrir servidores. Si Quick Connect está desactivado en Jellyfin, el `POST`
-responde con ese motivo — es un toggle del panel del servidor.
-
-### Medios
-
-| Método | Ruta | Qué hace |
-|---|---|---|
-| `GET` | `/api/v1/media` | Inventario de Jellyfin + contadores |
-| `POST` | `/api/v1/media/sync` | Sincroniza desde Jellyfin (202) |
-
-```json
-{
-  "configured": true, "total": 344, "movies": 298, "withoutSubsEs": 12,
-  "syncing": false, "truncated": false,
-  "items": [{
-    "path": "/mnt/media/peliculas/Dune Parte Dos (2024)",
-    "title": "Dune: Parte Dos", "year": 2024, "type": "movie",
-    "hasSubsEs": false
-  }]
-}
-```
-
-Con `configured: false` (Jellyfin sin vincular) el resto de los campos se omiten
-y `items` viene vacío. La lista se corta en 500 ítems; `truncated` lo indica.
-
-Los dos `POST` devuelven `202` tanto si arrancaron el trabajo como si ya había
-uno corriendo, y `412` si Jellyfin no está vinculado.
-
-### Calidad de biblioteca
-
-| Método | Ruta | Qué hace |
-|---|---|---|
-| `GET` | `/api/v1/quality` | El último informe cacheado |
-| `POST` | `/api/v1/quality/scan` | Corre un análisis nuevo (202) |
-| `POST` | `/api/v1/quality/refresh` | Le pide a Jellyfin releer un ítem (202) |
-
-```json
-{
-  "configured": true, "hasReport": true, "scanning": false, "admin": true,
-  "generatedAt": "2026-08-26T00:46:10Z", "scanned": 2336, "total": 1804,
-  "counts": {
-    "subs-missing": 1225, "no-synopsis": 500, "generic-title": 46,
-    "ghost": 87, "collision": 4
-  },
-  "findings": [{
-    "category": "collision", "itemId": "a1b2c3",
-    "title": "Chernobyl · S01E01 · 1:23:45",
-    "detail": "S01E01 aparece en 2 archivos",
-    "path": "/mnt/media/series/Chernobyl/S01/ep0.mkv",
-    "kind": "episodio"
-  }]
-}
-```
-
-El `GET` **nunca** analiza: leer la biblioteca entera de Jellyfin (episodios
-incluidos) es un `POST` explícito. `counts` trae los totales reales; `findings`
-se corta en 200 por categoría, así que un contador puede ser mayor que la
-cantidad de hallazgos devueltos.
-
-`refresh` toma `item=<itemId>` form-encoded y sólo acepta ids que estén en el
-informe vigente: el id llega del cliente y termina en una escritura sobre el
-servidor de medios. Responde `404` si no lo reconoce y `403` si la cuenta de
-Jellyfin vinculada no es administradora (releer metadata lo requiere).
+Con las dos capas puestas y **sin** el bearer token de Holocron, la respuesta es
+`401 application/json {"error":"missing bearer token"}`: Access dejó pasar y
+Holocron pidió lo suyo. Que se distingan es justamente el punto.
 
 ### Subtítulos
 

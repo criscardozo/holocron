@@ -244,23 +244,31 @@ struct APIClient: Sendable {
         }
     }
 
-    /// Recognises Cloudflare Access getting in the way. Three signals, in order
-    /// of how much they can be trusted, because the status code turned out not
-    /// to be one: measured against the real deployment, Access answers 401 to a
-    /// request that looks like AJAX and 302 when the service token headers are
-    /// wrong — and that second one is the likely case in practice, someone
-    /// mis-pasting the id or the secret.
+    /// Recognises Cloudflare Access getting in the way.
     ///
-    /// What it never does is answer JSON, not even when asked for it.
+    /// Access stamps `cf-access-aud` and `cf-access-domain` on its own
+    /// responses, and that is the only signal present in every rejection
+    /// measured against the real deployment. Everything else varies: the status
+    /// is 403 for a Service Auth refusal and 302 for a browser with no session,
+    /// `WWW-Authenticate` appears only on the AJAX-style 401, there is no
+    /// redirect to follow on the 403 — and the body is **not** always HTML.
+    /// Asked with `Accept: application/json`, Access answers 403 with
+    /// `{"message":"Forbidden…"}`, which is why "it never speaks JSON" cannot
+    /// be the rule even though it is tempting. Ordered by how much each signal
+    /// can be trusted.
     static func isAccessChallenge(_ http: HTTPURLResponse) -> Bool {
-        // 1. The redirect was followed and we ended up on the login host.
+        // 1. Access identifying itself, regardless of status, body or redirect.
+        if http.value(forHTTPHeaderField: "cf-access-aud") != nil { return true }
+        if http.value(forHTTPHeaderField: "cf-access-domain") != nil { return true }
+        // 2. The redirect was followed and we landed on the login host.
         if http.url?.host()?.hasSuffix(".cloudflareaccess.com") == true { return true }
-        // 2. Unambiguous, and independent of the status code.
-        let challenge = http.value(forHTTPHeaderField: "WWW-Authenticate")?.lowercased() ?? ""
-        if challenge.contains("cloudflare-access") { return true }
-        // 3. Last resort: HTML where this API only ever speaks JSON.
-        let contentType = http.value(forHTTPHeaderField: "Content-Type")?.lowercased() ?? ""
-        guard contentType.contains("text/html") else { return false }
+        // 3. The challenge header, on the AJAX-shaped 401.
+        if http.value(forHTTPHeaderField: "WWW-Authenticate")?
+            .lowercased().contains("cloudflare-access") == true { return true }
+        // 4. Last resort, for an Access version that stops announcing itself:
+        // HTML where this API only ever answers JSON.
+        guard http.value(forHTTPHeaderField: "Content-Type")?
+            .lowercased().contains("text/html") == true else { return false }
         return http.statusCode == 401 || http.statusCode == 403 || (300..<400).contains(http.statusCode)
     }
 

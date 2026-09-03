@@ -81,12 +81,34 @@ struct APIErrorTests {
 /// wrong place.
 struct AccessChallengeTests {
     private func response(_ url: String, _ status: Int, contentType: String?,
-                          challenge: String? = nil) -> HTTPURLResponse {
+                          challenge: String? = nil, accessAUD: Bool = false) -> HTTPURLResponse {
         var headers: [String: String] = [:]
         if let contentType { headers["Content-Type"] = contentType }
         if let challenge { headers["WWW-Authenticate"] = challenge }
+        if accessAUD {
+            headers["cf-access-aud"] = String(repeating: "d", count: 64)
+            headers["cf-access-domain"] = "holocron.merli.store"
+        }
         return HTTPURLResponse(url: URL(string: url)!, statusCode: status,
                                httpVersion: nil, headerFields: headers)!
+    }
+
+    @Test func serviceAuthRefusalIsCaughtEvenWhenItAnswersJSON() {
+        // The measured shape of a Service Auth refusal when the client asks for
+        // JSON: 403, application/json, {"message":"Forbidden…"} — no redirect
+        // and no WWW-Authenticate. Every rule except the cf-access headers
+        // misses this one, and it is the request the app actually makes.
+        let http = response("https://holocron.merli.store/api/v1/system", 403,
+                            contentType: "application/json; charset=utf-8", accessAUD: true)
+        #expect(APIClient.isAccessChallenge(http))
+    }
+
+    @Test func serviceAuthRefusalInHTMLIsCaughtToo() {
+        // Same refusal without an explicit Accept, which is what URLSession
+        // sends by default.
+        let http = response("https://holocron.merli.store/api/v1/system", 403,
+                            contentType: "text/html", accessAUD: true)
+        #expect(APIClient.isAccessChallenge(http))
     }
 
     @Test func theLoginHostIsAChallenge() {

@@ -213,7 +213,7 @@ Son dos porque la app iOS **no puede completar un login de navegador**: con una
 sola aplicación cubriendo todo el dominio, la app recibiría el HTML del
 formulario de Access en lugar de JSON.
 
-La aplicación de la raíz **ya está aplicada** (política `Hogar`, sesión de 24 h
+Las dos **ya están aplicadas**. La de la raíz (política `Hogar`, sesión de 24 h
 para que cerrar sesión signifique algo). Se verifica sin credenciales: un `GET`
 a cualquier ruta responde `302` a `merlines.cloudflareaccess.com` con
 `auth_status: NONE` en el JWT de meta.
@@ -226,15 +226,16 @@ la app manda en cada request y guarda en el Keychain (el secreto) y en
 bearer token detrás: dos capas, a propósito.
 
 La app iOS reconoce el rechazo de Access como tal. Hace falta porque no se
-parece a un error de la API: `URLSession` sigue el redirect y devuelve la página
-de login con status 200, así que decodificar fallaría con «el servidor respondió
-algo inesperado» y mandaría a buscar el problema al lugar equivocado. Se detecta
-por el host final (`*.cloudflareaccess.com`) o por un 401/403 con cuerpo HTML
-donde la API sólo contesta JSON.
+parece a un error de la API, y **ninguna de las heurísticas obvias alcanza**: el
+código es 403 con Service Auth y 302 en el navegador, en el 403 no hay redirect
+que seguir, y el cuerpo tampoco es siempre HTML —pidiéndole
+`Accept: application/json` responde JSON—. Lo único presente en todos los casos
+son los headers `cf-access-aud` / `cf-access-domain`, que es en lo que se apoya
+la detección. El detalle medido está en [api.md](api.md).
 
-Mientras la aplicación de `/api` no exista, la de la raíz cubre **todo** el
-dominio, `/api` incluido: la app iOS sólo puede entrar por la LAN, porque por el
-dominio público recibe el `302` al login.
+En la API de Cloudflare, el path **no** es un campo aparte: va dentro del
+dominio (`"domain": "holocron.merli.store/api"`). Mandarlo como `path` crea dos
+aplicaciones del mismo dominio y falla con `application_already_exists`.
 
 Lo que Access **no** hace: el origen sigue sin autenticación. Sólo sirve si el
 túnel es la única puerta — nada de abrir además el `:8090` en el router, porque
