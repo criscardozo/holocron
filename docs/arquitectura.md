@@ -194,6 +194,40 @@ Dos niveles, igual criterio que `diskusage-pi`:
   (LAN de confianza); se puede acotar a una IP específica vía el flag.
 - CSP estricta en headers, HTMX y CSS servidos desde el mismo origen (embebidos).
 
+### Exponerlo fuera de la LAN (Cloudflare Access)
+
+La decisión de no tener login vale **sólo dentro de la LAN**. Si el dashboard se
+publica en internet —acá con un túnel de Cloudflare en `holocron.merli.store`—
+esa decisión deja de sostenerse: cualquiera que dé con la URL puede borrar
+torrents o carpetas vigiladas. La autenticación la pone **Cloudflare Access**
+adelante, no Holocron: sigue sin haber usuarios ni sesiones en el código.
+
+Van **dos aplicaciones** de Access, no una, y el orden importa porque Access
+resuelve por ruta y gana la más específica:
+
+| Aplicación | Ruta | Política |
+|---|---|---|
+| Holocron API | `holocron.merli.store/api` | **Bypass** (Everyone) |
+| Holocron | `holocron.merli.store` | **Allow** — email del dueño, One-time PIN |
+
+El bypass de `/api` no es un descuido: **esa parte ya está autenticada** por
+Holocron con un bearer token (digest SHA-256, comparación en tiempo constante,
+ver `internal/apitoken`), y la app iOS no puede completar un login de navegador
+—recibiría el HTML del formulario en lugar de JSON—. Si se quiere doble capa,
+la alternativa es un **service token** de Access en esa aplicación y que la app
+mande `CF-Access-Client-Id` / `CF-Access-Client-Secret`; cuesta dos secretos más
+en el Keychain.
+
+Lo que Access **no** hace: el origen sigue sin autenticación. Sólo sirve si el
+túnel es la única puerta — nada de abrir además el `:8090` en el router, porque
+eso saltea Access por completo. Holocron tampoco valida el JWT
+`Cf-Access-Jwt-Assertion` que Cloudflare inyecta: no haría falta mientras el
+único camino sea el túnel, y validarlo sumaría una dependencia de red al
+arranque.
+
+El plan Zero Trust gratuito cubre 50 usuarios, así que esto entra en el
+presupuesto de siempre (ver las reglas del proyecto: nada que cueste plata).
+
 ## 9. Errores y logging
 
 Convenciones (stdlib, sin dependencias extra):
