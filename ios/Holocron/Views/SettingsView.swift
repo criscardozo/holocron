@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Where the server address and API token are entered, plus a connection test
-/// so setup problems surface here instead of as failures on every other tab.
+/// Where the server address, API token and (when the server is published
+/// through Cloudflare Access) the service token are entered, plus a connection
+/// test so setup problems surface here instead of as failures on every tab.
 struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
 
+    @State private var editingSecret = false
     @State private var testResult: String?
     @State private var testOK = false
     @State private var testing = false
@@ -35,6 +37,36 @@ struct SettingsView: View {
                 Text("Token de la API")
             } footer: {
                 Text("Generalo en la web de Holocron: Ajustes → App iOS. Se muestra una sola vez y queda guardado en el Keychain.")
+            }
+            .listRowBackground(Noir.surface)
+
+            Section {
+                TextField("algo.access", text: $settings.accessClientID)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .font(.system(.callout, design: .monospaced))
+                if settings.accessClientSecret.isEmpty || editingSecret {
+                    SecureField("Client Secret", text: $settings.accessClientSecret)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.system(.callout, design: .monospaced))
+                } else {
+                    // Once saved it is only shown by its tail: enough to tell
+                    // which secret is loaded, not enough to leak in a
+                    // screenshot or over someone's shoulder.
+                    HStack {
+                        Text(Self.masked(settings.accessClientSecret))
+                            .font(.system(.callout, design: .monospaced))
+                            .foregroundStyle(Noir.muted)
+                        Spacer()
+                        Button("Cambiar") { editingSecret = true }
+                            .font(.footnote)
+                    }
+                }
+            } header: {
+                Text("Cloudflare Access")
+            } footer: {
+                Text("Sólo si entrás por el dominio público. Access exige estos dos y Holocron sigue exigiendo el token: dos capas. En la red local dejalos vacíos.")
             }
             .listRowBackground(Noir.surface)
 
@@ -81,6 +113,13 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
         .background(Noir.bg)
         .navigationTitle("Ajustes")
+    }
+
+    /// Shows only the tail of a stored secret: enough to tell which one is
+    /// loaded, not enough to leak in a screenshot.
+    private static func masked(_ secret: String) -> String {
+        let tail = secret.suffix(4)
+        return tail.isEmpty ? "" : "••••••••" + tail
     }
 
     private var appVersion: String {

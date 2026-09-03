@@ -196,27 +196,45 @@ Dos niveles, igual criterio que `diskusage-pi`:
 
 ### Exponerlo fuera de la LAN (Cloudflare Access)
 
-La decisión de no tener login vale **sólo dentro de la LAN**. Si el dashboard se
-publica en internet —acá con un túnel de Cloudflare en `holocron.merli.store`—
-esa decisión deja de sostenerse: cualquiera que dé con la URL puede borrar
-torrents o carpetas vigiladas. La autenticación la pone **Cloudflare Access**
-adelante, no Holocron: sigue sin haber usuarios ni sesiones en el código.
+La decisión de no tener login vale **sólo dentro de la LAN**. Este dashboard se
+publica además por un túnel de Cloudflare, y ahí esa premisa no alcanza. La
+autenticación la pone **Cloudflare Access** adelante, no Holocron: sigue sin
+haber usuarios ni sesiones en el código.
 
 Van **dos aplicaciones** de Access, no una, y el orden importa porque Access
 resuelve por ruta y gana la más específica:
 
 | Aplicación | Ruta | Política |
 |---|---|---|
-| Holocron API | `holocron.merli.store/api` | **Bypass** (Everyone) |
-| Holocron | `holocron.merli.store` | **Allow** — email del dueño, One-time PIN |
+| Holocron API | `holocron.merli.store/api` | **Service Auth** con un service token |
+| Holocron | `holocron.merli.store` | **Allow** — login con Google, lista de emails permitidos |
 
-El bypass de `/api` no es un descuido: **esa parte ya está autenticada** por
-Holocron con un bearer token (digest SHA-256, comparación en tiempo constante,
-ver `internal/apitoken`), y la app iOS no puede completar un login de navegador
-—recibiría el HTML del formulario en lugar de JSON—. Si se quiere doble capa,
-la alternativa es un **service token** de Access en esa aplicación y que la app
-mande `CF-Access-Client-Id` / `CF-Access-Client-Secret`; cuesta dos secretos más
-en el Keychain.
+Son dos porque la app iOS **no puede completar un login de navegador**: con una
+sola aplicación cubriendo todo el dominio, la app recibiría el HTML del
+formulario de Access en lugar de JSON.
+
+La aplicación de la raíz **ya está aplicada** (política `Hogar`, sesión de 24 h
+para que cerrar sesión signifique algo). Se verifica sin credenciales: un `GET`
+a cualquier ruta responde `302` a `merlines.cloudflareaccess.com` con
+`auth_status: NONE` en el JWT de meta.
+
+En `/api` la política es **Service Auth**, no Bypass. Bypass dejaría esa ruta
+abierta a internet con una sola capa (el bearer token de Holocron); Service Auth
+exige además los headers `CF-Access-Client-Id` / `CF-Access-Client-Secret`, que
+la app manda en cada request y guarda en el Keychain (el secreto) y en
+`UserDefaults` (el id, que no es secreto). Holocron **sigue** validando su
+bearer token detrás: dos capas, a propósito.
+
+La app iOS reconoce el rechazo de Access como tal. Hace falta porque no se
+parece a un error de la API: `URLSession` sigue el redirect y devuelve la página
+de login con status 200, así que decodificar fallaría con «el servidor respondió
+algo inesperado» y mandaría a buscar el problema al lugar equivocado. Se detecta
+por el host final (`*.cloudflareaccess.com`) o por un 401/403 con cuerpo HTML
+donde la API sólo contesta JSON.
+
+Mientras la aplicación de `/api` no exista, la de la raíz cubre **todo** el
+dominio, `/api` incluido: la app iOS sólo puede entrar por la LAN, porque por el
+dominio público recibe el `302` al login.
 
 Lo que Access **no** hace: el origen sigue sin autenticación. Sólo sirve si el
 túnel es la única puerta — nada de abrir además el `:8090` en el router, porque
@@ -224,6 +242,11 @@ eso saltea Access por completo. Holocron tampoco valida el JWT
 `Cf-Access-Jwt-Assertion` que Cloudflare inyecta: no haría falta mientras el
 único camino sea el túnel, y validarlo sumaría una dependencia de red al
 arranque.
+
+El túnel apunta a **`http://127.0.0.1:8090`**, con la IP explícita y no
+`localhost`: `localhost` puede resolver a IPv6 y, si el servicio no escucha en
+`::1`, falla de forma intermitente. Si se toca la config del túnel, mantener la
+IP.
 
 El plan Zero Trust gratuito cubre 50 usuarios, así que esto entra en el
 presupuesto de siempre (ver las reglas del proyecto: nada que cueste plata).

@@ -1,8 +1,9 @@
 import Foundation
 import Security
 
-/// Minimal Keychain wrapper for the API token. The token is the only credential
-/// the app holds, and it does not belong in UserDefaults.
+/// Minimal Keychain wrapper for the credentials the app holds: the Holocron API
+/// token and, when the server sits behind Cloudflare Access, the service token
+/// secret. Neither belongs in UserDefaults.
 enum Keychain {
     private static let service = "ar.com.criscardozo.holocron"
 

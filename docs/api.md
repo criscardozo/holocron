@@ -32,6 +32,37 @@ Respuestas de error de auth:
 Los errores siempre son `{"error": "mensaje"}`, genéricos hacia afuera; el
 detalle queda en el log del servidor.
 
+### Detrás de Cloudflare Access
+
+Cuando el servidor se publica por un túnel con **Access** adelante, la API pide
+además el service token, en dos headers:
+
+```
+CF-Access-Client-Id: <algo>.access
+CF-Access-Client-Secret: <secreto>
+```
+
+Los valida Cloudflare antes de que el pedido llegue a la Pi; el bearer token se
+sigue validando después. Ver la sección de seguridad en
+[arquitectura.md](arquitectura.md) para las dos aplicaciones de Access que hacen
+falta y por qué son dos.
+
+Un rechazo de Access **no** se parece a un error de la API, y el código de
+estado no sirve para reconocerlo. Medido contra el despliegue real:
+
+| Situación | Respuesta de Access |
+|---|---|
+| Sin credenciales, pedido tipo API | `401` + HTML + `WWW-Authenticate: Cloudflare-Access …` |
+| Headers de service token inválidos | `302` + HTML (al login) |
+| Navegador sin sesión | `302` + HTML (al login) |
+
+Lo único constante es que **nunca devuelve JSON**, ni pidiéndoselo con
+`Accept: application/json`. Un cliente que siga redirects termina con un `200`
+y la página de login en el cuerpo. Se reconoce, en este orden: por el host final
+(`*.cloudflareaccess.com`), por el header `WWW-Authenticate: Cloudflare-Access`
+—inequívoco y sin depender del código— y como último recurso por un cuerpo HTML
+con `401`, `403` o `3xx`.
+
 ## Endpoints
 
 ### Sistema

@@ -101,3 +101,17 @@ La app necesita alcanzar la Pi. Adentro de casa, la IP local alcanza. Para usarl
 afuera, lo razonable es una VPN tipo [Tailscale](https://tailscale.com) o
 WireGuard en la Pi, y poner la IP de la VPN como dirección del servidor: el
 servidor nunca queda expuesto a internet.
+
+## Detrás de Cloudflare Access
+
+Si el servidor se entra por el dominio público en vez de por la LAN, Access está
+adelante y la app necesita además un **service token**: los dos campos de
+Ajustes → *Cloudflare Access*. El id va a `UserDefaults` (no es secreto) y el
+secreto al Keychain, que una vez guardado se muestra sólo por sus últimos
+caracteres.
+
+El rechazo de Access se reconoce y se reporta como tal. Hace falta porque no se
+parece a un error de la API: `URLSession` sigue el redirect y devuelve la página
+de login con status `200`, así que sin esto el mensaje sería «el servidor
+respondió algo inesperado». Ver la sección de Access en
+[`../docs/api.md`](../docs/api.md) para las tres formas que toma el rechazo.

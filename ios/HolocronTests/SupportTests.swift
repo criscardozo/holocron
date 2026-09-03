@@ -59,7 +59,7 @@ struct FormatTests {
 struct APIErrorTests {
     @Test func everyCaseExplainsItselfInSpanish() {
         let cases: [APIError] = [
-            .notConfigured, .unauthorized, .noToken, .notReachable,
+            .notConfigured, .unauthorized, .noToken, .notReachable, .accessDenied,
             .server(status: 500, message: ""), .decoding,
         ]
         for error in cases {
@@ -71,5 +71,70 @@ struct APIErrorTests {
     @Test func serverErrorPrefersTheServersOwnMessage() {
         #expect(APIError.server(status: 400, message: "not a magnet link").localizedDescription
                 == "not a magnet link")
+    }
+}
+
+
+/// Cloudflare Access does not fail like the API does: URLSession follows its
+/// redirect and hands back the login page with status 200, so without this the
+/// user would see "el servidor respondió algo inesperado" and go looking in the
+/// wrong place.
+struct AccessChallengeTests {
+    private func response(_ url: String, _ status: Int, contentType: String?,
+                          challenge: String? = nil) -> HTTPURLResponse {
+        var headers: [String: String] = [:]
+        if let contentType { headers["Content-Type"] = contentType }
+        if let challenge { headers["WWW-Authenticate"] = challenge }
+        return HTTPURLResponse(url: URL(string: url)!, statusCode: status,
+                               httpVersion: nil, headerFields: headers)!
+    }
+
+    @Test func theLoginHostIsAChallenge() {
+        let http = response("https://merlines.cloudflareaccess.com/cdn-cgi/access/login/x", 200,
+                            contentType: "text/html; charset=utf-8")
+        #expect(APIClient.isAccessChallenge(http))
+    }
+
+    @Test func theChallengeHeaderIsEnoughOnItsOwn() {
+        // What Access actually answers to an API-shaped request with no
+        // credentials: 401, HTML, and this header. Measured, not assumed.
+        let http = response("https://holocron.merli.store/api/v1/system", 401,
+                            contentType: "text/html; charset=UTF-8",
+                            challenge: #"Cloudflare-Access resource_metadata="https://holocron.merli.store/.well-known""#)
+        #expect(APIClient.isAccessChallenge(http))
+    }
+
+    @Test func aRedirectToTheLoginIsAChallenge() {
+        // And this is what it answers when the service token headers are wrong
+        // — the likely case in practice, someone mis-pasting the secret. The
+        // status is 302, which is why the rule cannot be a list of codes.
+        let http = response("https://holocron.merli.store/api/v1/system", 302,
+                            contentType: "text/html; charset=UTF-8")
+        #expect(APIClient.isAccessChallenge(http))
+    }
+
+    @Test func htmlOnAForbiddenIsAChallenge() {
+        let http = response("https://holocron.merli.store/api/v1/system", 403,
+                            contentType: "text/html")
+        #expect(APIClient.isAccessChallenge(http))
+    }
+
+    @Test func holocronsOwnUnauthorizedIsNot() {
+        // Holocron answers 401 as JSON when the bearer token is wrong. Calling
+        // that an Access problem would send the user to fix the wrong setting.
+        let http = response("https://holocron.merli.store/api/v1/system", 401,
+                            contentType: "application/json")
+        #expect(!APIClient.isAccessChallenge(http))
+    }
+
+    @Test func aNormalResponseIsNot() {
+        let http = response("https://holocron.merli.store/api/v1/system", 200,
+                            contentType: "application/json")
+        #expect(!APIClient.isAccessChallenge(http))
+    }
+
+    @Test func aResponseWithoutAContentTypeIsNot() {
+        let http = response("https://holocron.merli.store/api/v1/media/sync", 202, contentType: nil)
+        #expect(!APIClient.isAccessChallenge(http))
     }
 }

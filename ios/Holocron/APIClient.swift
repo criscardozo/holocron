@@ -7,6 +7,7 @@ enum APIError: LocalizedError, Equatable {
     case unauthorized
     case noToken
     case notReachable
+    case accessDenied
     case server(status: Int, message: String)
     case decoding
 
@@ -20,6 +21,8 @@ enum APIError: LocalizedError, Equatable {
             "El servidor todavía no tiene un token. Generalo en Ajustes de la web."
         case .notReachable:
             "No se pudo conectar con el servidor. ¿Estás en la misma red?"
+        case .accessDenied:
+            "Cloudflare Access rechazó el pedido. Revisá el service token en Ajustes."
         case let .server(status, message):
             message.isEmpty ? "El servidor respondió \(status)." : message
         case .decoding:
@@ -33,6 +36,18 @@ enum APIError: LocalizedError, Equatable {
 struct APIClient: Sendable {
     let baseURL: URL
     let token: String
+    /// Cloudflare Access service token, for when the server is published
+    /// through a tunnel with Access in front. Empty on a LAN install, where
+    /// there is nothing in the way.
+    let accessClientID: String
+    let accessClientSecret: String
+
+    init(baseURL: URL, token: String, accessClientID: String = "", accessClientSecret: String = "") {
+        self.baseURL = baseURL
+        self.token = token
+        self.accessClientID = accessClientID
+        self.accessClientSecret = accessClientSecret
+    }
 
     private static let decoder = JSONDecoder()
 
@@ -187,6 +202,12 @@ struct APIClient: Sendable {
         var req = URLRequest(url: url)
         req.httpMethod = method
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        // Access checks these before the request ever reaches the Pi. Holocron
+        // still checks the bearer token afterwards: two layers, on purpose.
+        if !accessClientID.isEmpty, !accessClientSecret.isEmpty {
+            req.setValue(accessClientID, forHTTPHeaderField: "CF-Access-Client-Id")
+            req.setValue(accessClientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
+        }
         req.timeoutInterval = 20
         if let body {
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -202,6 +223,15 @@ struct APIClient: Sendable {
         }
 
         guard let http = response as? HTTPURLResponse else { throw APIError.decoding }
+
+        // An Access challenge does not look like an API error: URLSession
+        // follows the redirect and hands back the login page with status 200,
+        // so decoding would fail with "el servidor respondió algo inesperado"
+        // and send the user looking in the wrong place.
+        if Self.isAccessChallenge(http) {
+            throw APIError.accessDenied
+        }
+
         switch http.statusCode {
         case 200..<300:
             return data
@@ -212,6 +242,26 @@ struct APIClient: Sendable {
         default:
             throw APIError.server(status: http.statusCode, message: Self.serverMessage(data))
         }
+    }
+
+    /// Recognises Cloudflare Access getting in the way. Three signals, in order
+    /// of how much they can be trusted, because the status code turned out not
+    /// to be one: measured against the real deployment, Access answers 401 to a
+    /// request that looks like AJAX and 302 when the service token headers are
+    /// wrong — and that second one is the likely case in practice, someone
+    /// mis-pasting the id or the secret.
+    ///
+    /// What it never does is answer JSON, not even when asked for it.
+    static func isAccessChallenge(_ http: HTTPURLResponse) -> Bool {
+        // 1. The redirect was followed and we ended up on the login host.
+        if http.url?.host()?.hasSuffix(".cloudflareaccess.com") == true { return true }
+        // 2. Unambiguous, and independent of the status code.
+        let challenge = http.value(forHTTPHeaderField: "WWW-Authenticate")?.lowercased() ?? ""
+        if challenge.contains("cloudflare-access") { return true }
+        // 3. Last resort: HTML where this API only ever speaks JSON.
+        let contentType = http.value(forHTTPHeaderField: "Content-Type")?.lowercased() ?? ""
+        guard contentType.contains("text/html") else { return false }
+        return http.statusCode == 401 || http.statusCode == 403 || (300..<400).contains(http.statusCode)
     }
 
     /// Pulls the `error` field out of an error response, if present.
