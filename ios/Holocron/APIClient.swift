@@ -273,6 +273,11 @@ struct APIClient: Sendable {
     }
 
     /// Pulls the `error` field out of an error response, if present.
+    ///
+    /// Only that field, never the whole body, and the body is never logged: an
+    /// error from Cloudflare Access carries `ip_address` with the caller's
+    /// public IP, along with `ray_id` and `aud`. None of it belongs on screen
+    /// or in a log file.
     private static func serverMessage(_ data: Data) -> String {
         struct Payload: Decodable { let error: String }
         return (try? decoder.decode(Payload.self, from: data))?.error ?? ""

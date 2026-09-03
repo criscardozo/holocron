@@ -51,20 +51,36 @@ Un rechazo de Access **no** se parece a un error de la API, y ni el código de
 estado ni el formato del cuerpo sirven para reconocerlo. Medido contra el
 despliegue real:
 
-| Situación | Código | `Content-Type` | Señal presente |
-|---|---|---|---|
-| `/api` sin headers, `Accept: application/json` | `403` | **`application/json`** | `cf-access-aud`, `cf-access-domain` |
-| `/api` sin headers, `Accept: */*` o ninguno | `403` | `text/html` | `cf-access-aud`, `cf-access-domain` |
-| `/api` con headers inválidos | `403` | `text/html` | `cf-access-aud`, `cf-access-domain` |
-| Raíz, pedido tipo AJAX sin sesión | `401` | `text/html` | `WWW-Authenticate: Cloudflare-Access` |
-| Raíz, navegación sin sesión | `302` | `text/html` | `location` a `*.cloudflareaccess.com` |
+| Ruta | Cómo se pide | Código | `Content-Type` | Señales |
+|---|---|---|---|---|
+| `/api` | `Accept: application/json` | `403` | **`application/json`** | `cf-access-aud`, `cf-access-domain` |
+| `/api` | `Accept: */*`, o sin `Accept` | `403` | `text/html` | `cf-access-aud`, `cf-access-domain` |
+| `/api` | con headers de service token inválidos | `403` | `text/html` | `cf-access-aud`, `cf-access-domain` |
+| raíz | navegación normal, o `Accept: application/json` | `302` | `text/html` | `location` a `*.cloudflareaccess.com`, `WWW-Authenticate` |
+| raíz | con `X-Requested-With: XMLHttpRequest` | `401` | `text/html` | `WWW-Authenticate: Cloudflare-Access` |
 
-Cuidado con la tentación de asumir que **Access nunca devuelve JSON**: es falso.
-Pidiéndoselo con `Accept: application/json` responde `403` con
-`{"message":"Forbidden. You don't have permission to view this…"}` — y ojo, usa
-`message`, no el `error` de Holocron, así que un cliente que sólo lea `error`
-muestra un mensaje vacío. Tampoco hay redirect que seguir en el `403`, ni
-`WWW-Authenticate`.
+Dos asimetrías medidas que conviene no razonar por analogía:
+
+- **La negociación de contenido existe sólo en la app de Service Auth.** En la
+  raíz el `Accept` no cambia nada: siempre redirige con HTML.
+- **Lo que dispara el `401` en lugar del `302` es `X-Requested-With`**, no el
+  `Accept`. Y `WWW-Authenticate` está en **todas** las respuestas de la raíz,
+  también en el `302`, pero en **ninguna** de `/api`.
+
+Cuidado con la tentación de asumir que **Access nunca devuelve JSON**: es falso,
+y el esquema no se parece en nada al de Holocron:
+
+```json
+{"message": "Forbidden. You don't have permission to view this…",
+ "status_code": 403, "aud": "ddb3…", "ray_id": "a353…",
+ "ip_address": "…", "is_warp": false, "is_gateway": false, "mtls_status": "NONE"}
+```
+
+Usa `message`, no el `error` de Holocron, así que un cliente que sólo lea
+`error` muestra un mensaje vacío. Y **trae `ip_address` con la IP pública de
+quien llamó**: no loguear el cuerpo crudo de un error ni mostrarlo en pantalla.
+El `aud` del cuerpo repite el header, así que en el caso JSON la señal viene
+duplicada.
 
 Lo único presente en **todos** los rechazos son los headers propios de Access
 (`cf-access-aud`, `cf-access-domain`), que no dependen del código, del cuerpo ni
