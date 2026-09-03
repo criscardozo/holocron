@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 
 @testable import Holocron
 
@@ -158,5 +159,25 @@ struct AccessChallengeTests {
     @Test func aResponseWithoutAContentTypeIsNot() {
         let http = response("https://holocron.merli.store/api/v1/media/sync", 202, contentType: nil)
         #expect(!APIClient.isAccessChallenge(http))
+    }
+}
+
+/// Every SF Symbol the app names has to resolve. A misspelt symbol renders as
+/// nothing at all — no crash, no warning, just a gap where an icon should be,
+/// which is easy to ship and hard to notice.
+@MainActor
+struct SymbolTests {
+    @Test func everySymbolResolves() {
+        let symbols = [
+            "arrow.clockwise", "arrow.down", "arrow.down.circle",
+            "arrow.triangle.2.circlepath", "arrow.up", "captions.bubble",
+            "checkmark.circle", "diamond", "exclamationmark.triangle",
+            "exclamationmark.triangle.fill", "film", "gearshape",
+            "internaldrive", "plus.circle", "powerplug", "trash",
+            "waveform.path.ecg",
+        ]
+        for name in symbols {
+            #expect(UIImage(systemName: name) != nil, "SF Symbol \(name) does not exist")
+        }
     }
 }

@@ -89,6 +89,20 @@ teléfono. **No corren en CI**: la app se compila y testea a mano, así que
 acordate de `make ios-test` después de tocar la API. Para regenerar los fixtures, ver
 [`HolocronTests/Fixtures/README.md`](HolocronTests/Fixtures/README.md).
 
+## El ícono
+
+`Holocron/Assets.xcassets/AppIcon.appiconset/icon-1024.png`, un solo tamaño de
+1024 px del que Xcode deriva el resto. Es la misma marca que la web
+(`web/static/favicon.svg`): diamante naranja `#ff6a2b` sobre `#121110`.
+
+Dos cosas a respetar si se rehace:
+
+- **Sin canal alfa y sin esquinas redondeadas.** iOS rechaza el alfa y aplica su
+  propia máscara; venir con esquinas propias se ve mal.
+- **Las puntas del diamante van en los puntos medios de los lados**, que es la
+  parte del lienzo que la máscara nunca recorta. Un logo cuadrado tendría que
+  quedar bastante más chico para sobrevivir al recorte.
+
 ## Instalarla en el teléfono
 
 No hay distribución por App Store: es una app personal. Con el iPhone conectado,
