@@ -36,6 +36,13 @@ Para valores dinámicos se usan clases precomputadas:
 
 Si hace falta un ancho nuevo, se agrega la clase al CSS; no se vuelve al `style`.
 
+**htmx también pisa esta regla.** Por defecto inyecta su CSS de indicadores
+como un `<style>` inline, que la CSP descarta (`Applying inline style violates…`
+en la consola) y deja los `hx-indicator` sin efecto. Por eso el layout lleva
+`<meta name="htmx-config" content='{"includeIndicatorStyles":false}'>` —por meta
+y no por script, que también estaría bloqueado— y las reglas `.htmx-indicator`
+viven en `styles.css`.
+
 ### Cuidado con `.card` y flex
 
 `.card` fija `flex-direction: column`. Un modificador que quiera una fila sobre el

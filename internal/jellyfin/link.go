@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cristian/holocron/internal/settings"
+	"github.com/cristian/holocron/internal/version"
 )
 
 // codeTTL is how long a pending code is considered usable. Jellyfin expires
@@ -68,7 +69,9 @@ func NewLinkService(st *settings.Store) *LinkService {
 	return &LinkService{
 		settings: st,
 		newClient: func(base, token, device string) *Client {
-			return New(base, token, device, "")
+			// The running version, not a blank: Jellyfin rejects an
+			// Authorization header with an empty Version outright.
+			return New(base, token, device, version.Current())
 		},
 	}
 }

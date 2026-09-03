@@ -340,6 +340,13 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .sub-top .t { font-size: 15px; }
 .sub-top .p { font-family: var(--mono); font-size: 11px; color: color-mix(in srgb, var(--color-text) 45%, transparent); word-break: break-all; }
 .sub-top .act { margin-left: auto; }
+/* htmx indicators. htmx would inject these itself as an inline <style>, which
+   the CSP drops, so they live here and htmx's copy is switched off in Layout. */
+.htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator { opacity: 1; }
+/* Whatever a request targets reads as busy while it is in flight. */
+.card.htmx-request { opacity: .6; }
 .sub-results.htmx-request { opacity: .5; }
 .results { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-divider); }
 .results h3 { margin: 0 0 var(--space-3); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); }

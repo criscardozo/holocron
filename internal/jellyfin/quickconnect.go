@@ -87,14 +87,18 @@ type authResponse struct {
 
 // RedeemQuickConnect exchanges an approved secret for an access token.
 //
+// The secret goes in a JSON body, not the query string: Jellyfin 10.11 answers
+// 400 "A non-empty request body is required." to the query-string form, which
+// left linking failing on the last step after the user had already approved
+// the code.
+//
 // Admin is reported because asking Jellyfin to write metadata requires an
 // administrator: linking with a regular account succeeds but leaves that action
 // returning 403, and saying so up front beats failing later.
 func (c *Client) RedeemQuickConnect(ctx context.Context, secret string) (Authentication, error) {
-	q := url.Values{"secret": {secret}}
 	var out authResponse
-	if err := c.do(ctx, http.MethodPost,
-		"/Users/AuthenticateWithQuickConnect?"+q.Encode(), &out); err != nil {
+	if err := c.doWithBody(ctx, http.MethodPost, "/Users/AuthenticateWithQuickConnect",
+		map[string]string{"Secret": secret}, &out); err != nil {
 		return Authentication{}, err
 	}
 	if out.AccessToken == "" {

@@ -11,6 +11,12 @@ templ Layout(title string) {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>{ title } · Holocron</title>
+			// htmx injects its indicator CSS as an inline <style>, which the
+			// strict CSP drops with "Applying inline style violates ...".
+			// Turning it off and shipping those rules in styles.css keeps the
+			// indicators working and the console clean. It goes in a meta tag
+			// because an inline <script> would be blocked too.
+			<meta name="htmx-config" content="{&#34;includeIndicatorStyles&#34;:false}"/>
 			<link rel="icon" href="/static/favicon.svg"/>
 			<link rel="stylesheet" href="/static/styles.css"/>
 			<script src="/static/htmx.min.js" defer></script>

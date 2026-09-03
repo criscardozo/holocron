@@ -10,6 +10,7 @@
 package jellyfin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,6 +30,12 @@ const maxJSONBody = 64 << 20
 // product and version identify Holocron in Jellyfin's device list.
 const product = "Holocron"
 
+// fallbackVersion stands in when the caller has no version to report. It must
+// not be empty: Jellyfin 10.11 answers 400 "Error processing request." to an
+// Authorization header carrying Version="", which is a 400 with nothing in it
+// to work from. Measured against the real server.
+const fallbackVersion = "0"
+
 // Client talks to one Jellyfin server.
 type Client struct {
 	base     string
@@ -46,6 +53,9 @@ type Client struct {
 // already stored a bare host:port starts working on upgrade instead of waiting
 // for someone to re-save the form.
 func New(baseURL, token, deviceID, version string) *Client {
+	if strings.TrimSpace(version) == "" {
+		version = fallbackVersion
+	}
 	return &Client{
 		base:     netaddr.Repair(baseURL),
 		token:    token,
@@ -68,12 +78,31 @@ func (c *Client) authHeader() string {
 }
 
 func (c *Client) do(ctx context.Context, method, path string, out any) error {
-	req, err := http.NewRequestWithContext(ctx, method, c.base+path, nil)
+	return c.doWithBody(ctx, method, path, nil, out)
+}
+
+// doWithBody sends payload as a JSON request body. Quick Connect redemption
+// needs one: with the secret in the query string instead, Jellyfin 10.11
+// answers 400 "A non-empty request body is required." Measured, not guessed.
+func (c *Client) doWithBody(ctx context.Context, method, path string, payload, out any) error {
+	var body io.Reader
+	if payload != nil {
+		encoded, err := json.Marshal(payload)
+		if err != nil {
+			return fmt.Errorf("encode %s body: %w", path, err)
+		}
+		body = bytes.NewReader(encoded)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, c.base+path, body)
 	if err != nil {
 		return fmt.Errorf("build request %s: %w", path, err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", c.authHeader())
+	if payload != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	resp, err := c.hc.Do(req)
 	if err != nil {

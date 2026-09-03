@@ -1,11 +1,28 @@
 package jellyfin
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/cristian/holocron/internal/db"
+	"github.com/cristian/holocron/internal/settings"
 )
+
+// newSettingsStore backs the link service with a real store: the device id it
+// persists is part of what the header carries.
+func newSettingsStore(t *testing.T) *settings.Store {
+	t.Helper()
+	database, err := db.Open(t.Context(), filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	return settings.NewStore(database)
+}
 
 func sub(lang string, external bool) MediaStream {
 	return MediaStream{Type: "Subtitle", Language: lang, IsExternal: external}
@@ -211,5 +228,87 @@ func TestClientRepairsStoredAddress(t *testing.T) {
 	}
 	if gotPath != "/System/Info" {
 		t.Errorf("path = %q, want /System/Info", gotPath)
+	}
+}
+
+// TestAuthHeaderNeverSendsAnEmptyVersion pins the bug that broke linking on a
+// real server: Jellyfin 10.11 answers 400 "Error processing request." to an
+// Authorization header with Version="", and the link service used to build its
+// client with exactly that.
+func TestAuthHeaderNeverSendsAnEmptyVersion(t *testing.T) {
+	t.Parallel()
+	for _, version := range []string{"", "   "} {
+		got := New("http://obiwan:8096", "", "dev-1", version).authHeader()
+		if strings.Contains(got, `Version=""`) {
+			t.Errorf("version %q produced %q", version, got)
+		}
+	}
+	if got := New("http://obiwan:8096", "", "dev-1", "v0.5.2").authHeader(); !strings.Contains(got, `Version="v0.5.2"`) {
+		t.Errorf("a real version must survive: %q", got)
+	}
+}
+
+// TestLinkServiceSendsTheRunningVersion covers the wiring rather than the
+// header: the link service is the one client that was built without a version.
+func TestLinkServiceSendsTheRunningVersion(t *testing.T) {
+	t.Parallel()
+	var gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		switch r.URL.Path {
+		case "/QuickConnect/Enabled":
+			_, _ = w.Write([]byte("true"))
+		case "/QuickConnect/Initiate":
+			_, _ = w.Write([]byte(`{"Secret":"s","Code":"123456"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	store := newSettingsStore(t)
+	if err := store.Set(t.Context(), settings.KeyJellyfinURL, srv.URL); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewLinkService(store).Start(t.Context()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if strings.Contains(gotAuth, `Version=""`) || !strings.Contains(gotAuth, "Version=") {
+		t.Errorf("Authorization = %q", gotAuth)
+	}
+}
+
+// TestRedeemSendsTheSecretInTheBody pins the second half of the linking bug:
+// Jellyfin 10.11 answers 400 "A non-empty request body is required." when the
+// secret is passed in the query string, so the flow failed on its last step,
+// after the user had already approved the code.
+func TestRedeemSendsTheSecretInTheBody(t *testing.T) {
+	t.Parallel()
+	var gotBody, gotType, gotQuery string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		gotBody, gotType, gotQuery = string(body), r.Header.Get("Content-Type"), r.URL.RawQuery
+		_, _ = w.Write([]byte(`{"AccessToken":"tok","User":{"Id":"u1","Name":"cris","Policy":{"IsAdministrator":true}}}`))
+	}))
+	defer srv.Close()
+
+	auth, err := New(srv.URL, "", "dev-1", "v0.5.2").RedeemQuickConnect(t.Context(), "S3CR3T")
+	if err != nil {
+		t.Fatalf("RedeemQuickConnect: %v", err)
+	}
+	if !strings.Contains(gotBody, `"Secret":"S3CR3T"`) {
+		t.Errorf("body = %q, want the secret in it", gotBody)
+	}
+	if gotType != "application/json" {
+		t.Errorf("Content-Type = %q", gotType)
+	}
+	if gotQuery != "" {
+		t.Errorf("query = %q, want the secret out of the URL", gotQuery)
+	}
+	if auth.Token != "tok" || auth.User != "cris" || !auth.Admin {
+		t.Errorf("auth = %+v", auth)
 	}
 }
