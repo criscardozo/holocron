@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/cristian/holocron/internal/jellyfin"
+	"github.com/cristian/holocron/internal/netaddr"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/web/templates"
 )
@@ -57,32 +57,65 @@ func (s *Server) handleJellyfinUnlink(w http.ResponseWriter, r *http.Request) {
 
 // handleSaveJellyfinURL stores the server address, which has to come before the
 // code: unlike Plex there is no cloud service to discover the server through.
+//
+// The address is normalised rather than stored as typed: "192.168.0.2:8096" is
+// what anyone writes down and is not a URL, and storing it that way makes every
+// later call fail with a generic "could not talk to Jellyfin".
 func (s *Server) handleSaveJellyfinURL(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	if err := s.deps.Settings.Set(r.Context(), settings.KeyJellyfinURL,
-		strings.TrimSpace(r.PostFormValue("url"))); err != nil {
+	address, err := netaddr.Normalise(r.PostFormValue("url"))
+	if err != nil {
+		s.log.Warn("save jellyfin url", "error", err)
+		s.redirect(w, r, "/settings?notice="+url.QueryEscape(
+			"Esa dirección no se entiende. Va algo como 192.168.0.2:8096 o http://obiwan:8096."))
+		return
+	}
+	if err := s.deps.Settings.Set(r.Context(), settings.KeyJellyfinURL, address); err != nil {
 		s.serverError(w, r, err)
 		return
 	}
 	s.redirect(w, r, "/settings")
 }
 
+// handleJellyfinTest answers two different questions depending on how far the
+// setup has got, because "the address is wrong" and "you have not linked yet"
+// used to produce the same failure and are fixed in different places.
 func (s *Server) handleJellyfinTest(w http.ResponseWriter, r *http.Request) {
-	info, err := s.deps.Library.TestConnection(r.Context())
-	if err != nil {
-		s.log.Warn("jellyfin test", "error", err)
-		s.render(w, r, templates.JellyfinTest(false,
-			"No se pudo conectar con Jellyfin. Revisá la dirección y la vinculación."))
+	ctx := r.Context()
+	if s.deps.Library.Configured(ctx) {
+		info, err := s.deps.Library.TestConnection(ctx)
+		if err != nil {
+			s.log.Warn("jellyfin test", "error", err)
+			s.render(w, r, templates.JellyfinTest(false,
+				"No se pudo conectar. Revisá que Jellyfin esté prendido y que el token siga válido."))
+			return
+		}
+		s.render(w, r, templates.JellyfinTest(true, "Conectado a "+serverName(info)+" "+info.Version))
 		return
 	}
-	name := info.Name
-	if name == "" {
-		name = "Jellyfin"
+
+	info, err := s.deps.Library.Reachable(ctx)
+	switch {
+	case errors.Is(err, jellyfin.ErrNoServerURL):
+		s.render(w, r, templates.JellyfinTest(false, "Cargá primero la dirección de Jellyfin."))
+	case err != nil:
+		s.log.Warn("jellyfin reach", "error", err)
+		s.render(w, r, templates.JellyfinTest(false,
+			"No se llega a esa dirección. Revisá la IP y el puerto (el de Jellyfin suele ser 8096)."))
+	default:
+		s.render(w, r, templates.JellyfinTest(true,
+			"Se llega a "+serverName(info)+" "+info.Version+", falta vincular con Quick Connect."))
 	}
-	s.render(w, r, templates.JellyfinTest(true, "Conectado a "+name+" "+info.Version))
+}
+
+func serverName(info jellyfin.ServerInfo) string {
+	if info.Name == "" {
+		return "Jellyfin"
+	}
+	return info.Name
 }
 
 // linkErrorMessage keeps server detail out of the page while still telling the

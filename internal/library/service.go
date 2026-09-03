@@ -63,13 +63,26 @@ func (s *Service) client(ctx context.Context) (*jellyfin.Client, error) {
 	return jellyfin.FromSettings(ctx, s.settings, version.Current())
 }
 
-// TestConnection asks the server to identify itself, to verify the connection.
+// TestConnection asks the server to identify itself, which needs the token and
+// so verifies the whole configuration.
 func (s *Service) TestConnection(ctx context.Context) (jellyfin.ServerInfo, error) {
 	c, err := s.client(ctx)
 	if err != nil {
 		return jellyfin.ServerInfo{}, err
 	}
 	return c.Info(ctx)
+}
+
+// Reachable checks the address on its own, before there is a token. Without it
+// the test button fails identically whether the address is wrong or the server
+// simply has not been linked yet, which is the harder of the two to guess.
+func (s *Service) Reachable(ctx context.Context) (jellyfin.ServerInfo, error) {
+	base := s.settings.GetDefault(ctx, settings.KeyJellyfinURL, "")
+	if base == "" {
+		return jellyfin.ServerInfo{}, jellyfin.ErrNoServerURL
+	}
+	device := s.settings.GetDefault(ctx, settings.KeyJellyfinDeviceID, "")
+	return jellyfin.New(base, "", device, version.Current()).PublicInfo(ctx)
 }
 
 // Syncing reports whether a sync is currently running.

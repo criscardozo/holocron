@@ -17,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/cristian/holocron/internal/netaddr"
 )
 
 // maxResponse caps how much of a qBittorrent response is read into memory.
@@ -56,7 +58,7 @@ func New(baseURL, user, pass string) (*Client, error) {
 		return nil, fmt.Errorf("cookie jar: %w", err)
 	}
 	return &Client{
-		base: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
+		base: netaddr.Repair(baseURL),
 		user: user,
 		pass: pass,
 		hc:   &http.Client{Timeout: 30 * time.Second, Jar: jar},

@@ -53,6 +53,7 @@ holocron/
     folders/                # store de carpetas vigiladas (disk | movies | tv)
     naming/                 # validador de convención "Título (Año)" + service
     settings/               # store key/value de credenciales de servicios
+    netaddr/                # normaliza las direcciones que se escriben en Ajustes
     jellyfin/               # cliente de Jellyfin: Quick Connect, inventario, subtítulos
     library/                # sync de inventario Jellyfin→media_items
     quality/                # informe de calidad de la biblioteca (huérfanos, metadata, numeración)

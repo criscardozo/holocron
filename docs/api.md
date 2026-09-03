@@ -119,7 +119,12 @@ Cuando queda vinculado, `user` trae quién autorizó y `admin` si esa cuenta es
 administradora — pedirle a Jellyfin que escriba metadata requiere serlo, así que
 conviene avisarlo antes que fallar después.
 
-La dirección del servidor se carga **antes** del código (`POST /settings/jellyfin`
+La dirección se **normaliza** al guardarla: `192.168.0.2:8096` se guarda como
+`http://192.168.0.2:8096`. Sin esquema no es una URL —`net/url` lee los dos
+puntos como separador de esquema— y el request no se llega a armar, así que
+todas las llamadas fallaban con un «no se pudo conectar» genérico.
+
+La dirección se carga **antes** del código (`POST /settings/jellyfin`
 en la web): a diferencia de Plex no hay un servicio en la nube por el que
 descubrir servidores. Si Quick Connect está desactivado en Jellyfin, el `POST`
 responde con ese motivo — es un toggle del panel del servidor.

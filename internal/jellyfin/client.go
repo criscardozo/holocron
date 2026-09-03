@@ -18,6 +18,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/cristian/holocron/internal/netaddr"
 )
 
 // maxJSONBody caps how much of a response is read into memory. The full library
@@ -39,9 +41,13 @@ type Client struct {
 // New builds a client. token may be empty for the Quick Connect handshake,
 // which authenticates the device rather than using an existing token. deviceID
 // must be stable across restarts so Jellyfin keeps one entry per install.
+//
+// The address is normalised here as well as on the way in, so an install that
+// already stored a bare host:port starts working on upgrade instead of waiting
+// for someone to re-save the form.
 func New(baseURL, token, deviceID, version string) *Client {
 	return &Client{
-		base:     strings.TrimRight(strings.TrimSpace(baseURL), "/"),
+		base:     netaddr.Repair(baseURL),
 		token:    token,
 		deviceID: deviceID,
 		version:  version,
@@ -116,10 +122,22 @@ type ServerInfo struct {
 	ID      string `json:"Id"`
 }
 
-// Info returns the server's identity, for the "test connection" button.
+// Info returns the server's identity. Requires a token, so reaching it proves
+// the whole configuration works, not just the address.
 func (c *Client) Info(ctx context.Context) (ServerInfo, error) {
 	var out ServerInfo
 	if err := c.do(ctx, http.MethodGet, "/System/Info", &out); err != nil {
+		return ServerInfo{}, err
+	}
+	return out, nil
+}
+
+// PublicInfo answers without a token. That is the point: it tells "the address
+// is wrong" apart from "you have not linked yet", which are the two ways the
+// setup fails and used to look identical.
+func (c *Client) PublicInfo(ctx context.Context) (ServerInfo, error) {
+	var out ServerInfo
+	if err := c.do(ctx, http.MethodGet, "/System/Info/Public", &out); err != nil {
 		return ServerInfo{}, err
 	}
 	return out, nil

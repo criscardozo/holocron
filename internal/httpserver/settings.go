@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cristian/holocron/internal/folders"
+	"github.com/cristian/holocron/internal/netaddr"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/web/templates"
 )
@@ -114,7 +115,16 @@ func (s *Server) handleSaveQbit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	if err := s.deps.Settings.Set(ctx, settings.KeyQbitURL, strings.TrimSpace(r.PostFormValue("url"))); err != nil {
+	// Normalised, not stored as typed: a bare "192.168.0.2:8080" is not a URL
+	// and would fail every later call. Same trap as the Jellyfin address.
+	address, err := netaddr.Normalise(r.PostFormValue("url"))
+	if err != nil {
+		s.log.Warn("save qbittorrent url", "error", err)
+		s.redirect(w, r, "/settings?notice="+url.QueryEscape(
+			"Esa dirección de qBittorrent no se entiende. Va algo como 127.0.0.1:8080."))
+		return
+	}
+	if err := s.deps.Settings.Set(ctx, settings.KeyQbitURL, address); err != nil {
 		s.serverError(w, r, err)
 		return
 	}

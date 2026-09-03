@@ -1,6 +1,11 @@
 package jellyfin
 
-import "testing"
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
 
 func sub(lang string, external bool) MediaStream {
 	return MediaStream{Type: "Subtitle", Language: lang, IsExternal: external}
@@ -176,5 +181,35 @@ func TestSubtitlePaths(t *testing.T) {
 	got := it.SubtitlePaths()
 	if len(got) != 1 || got[0] != "/m/a.es.srt" {
 		t.Errorf("SubtitlePaths = %v, want just the external one", got)
+	}
+}
+
+// TestClientRepairsStoredAddress covers the install that already saved a bare
+// host:port: it must start working on upgrade, without anyone re-saving the
+// form.
+func TestClientRepairsStoredAddress(t *testing.T) {
+	t.Parallel()
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		_, _ = w.Write([]byte(`{"ServerName":"ObiWan","Version":"10.11.11"}`))
+	}))
+	defer srv.Close()
+
+	// Strip the scheme the test server hands us, to look like what was stored.
+	bare := strings.TrimPrefix(srv.URL, "http://")
+	if bare == srv.URL {
+		t.Fatalf("expected an http test server, got %q", srv.URL)
+	}
+
+	info, err := New(bare, "tok", "dev", "test").Info(t.Context())
+	if err != nil {
+		t.Fatalf("Info against %q: %v", bare, err)
+	}
+	if info.Name != "ObiWan" {
+		t.Errorf("server name = %q", info.Name)
+	}
+	if gotPath != "/System/Info" {
+		t.Errorf("path = %q, want /System/Info", gotPath)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -249,5 +250,36 @@ func TestExpiredSessionIsRetriedOnGet(t *testing.T) {
 	}
 	if logins != 2 {
 		t.Errorf("logged in %d times, want 2 (initial + refresh)", logins)
+	}
+}
+
+// TestClientRepairsStoredAddress covers the install that saved a bare
+// host:port in the settings form: it has to work, because net/url cannot parse
+// that as a URL and the failure would look like qBittorrent being down.
+func TestClientRepairsStoredAddress(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/auth/login":
+			_, _ = w.Write([]byte("Ok."))
+		case "/api/v2/torrents/info":
+			_, _ = w.Write([]byte("[]"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	bare := strings.TrimPrefix(srv.URL, "http://")
+	if bare == srv.URL {
+		t.Fatalf("expected an http test server, got %q", srv.URL)
+	}
+
+	c, err := New(bare, "admin", "pass")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if _, err := c.Torrents(t.Context()); err != nil {
+		t.Fatalf("Torrents against %q: %v", bare, err)
 	}
 }
