@@ -1,4 +1,9 @@
-# Plan de mejoras — para ejecutar por un agente
+# Plan de mejoras — ejecutado
+
+**Estado: T1 a T12 hechas**, publicadas en v0.6.0. Este documento se conserva
+como registro de qué se cambió y por qué; las mediciones que justifican cada
+tarea siguen siendo la parte útil. Lo que queda abierto son las decisiones
+D1–D5 del final, que son del dueño.
 
 Fecha del análisis: 2026-09-04, sobre `main` en `b9cbfeb` (server v0.5.2).
 Este documento es el **plan de trabajo**; el análisis que lo justifica está en
