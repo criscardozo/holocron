@@ -64,6 +64,19 @@ check: vet lint test vulncheck sast
 clean:
 	rm -rf $(DIST)
 
+## ios-install: build Release and install on a connected iPhone
+## (usage: make ios-install IOS_TEAM=XXXXXXXXXX IOS_DEVICE=00008150-...)
+## Neither value is hardcoded: this repository is public, and an Apple team id
+## and a device udid identify the account and the phone.
+ios-install: ios-project
+	@test -n "$(IOS_TEAM)" || (echo "set IOS_TEAM=<team id>  (security find-identity -v -p codesigning)" && exit 1)
+	@test -n "$(IOS_DEVICE)" || (echo "set IOS_DEVICE=<udid>  (xcrun xctrace list devices)" && exit 1)
+	cd ios && xcodebuild -project Holocron.xcodeproj -scheme Holocron -configuration Release \
+		-destination "id=$(IOS_DEVICE)" -derivedDataPath $(CURDIR)/$(DIST)/ios \
+		DEVELOPMENT_TEAM=$(IOS_TEAM) CODE_SIGN_STYLE=Automatic -allowProvisioningUpdates build
+	xcrun devicectl device install app --device "$(IOS_DEVICE)" \
+		$(DIST)/ios/Build/Products/Release-iphoneos/Holocron.app
+
 ## deploy: build the arm64 binary and copy it to the Pi (usage: make deploy PI=user@host)
 deploy: build-pi
 	@test -n "$(PI)" || (echo "set PI=user@host" && exit 1)

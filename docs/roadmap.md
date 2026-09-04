@@ -108,4 +108,7 @@ dashboard vacío que arranca en la Pi.
 - Renombrado asistido de carpetas mal nombradas (Fase 2).
 - Control del servicio de Jellyfin (reiniciar, refrescar bibliotecas).
 - Notificaciones (descargas terminadas, disco casi lleno).
-- Basic Auth opcional (con comparación constant-time).
+- Validar el JWT `Cf-Access-Jwt-Assertion` en el origen. Hoy no hace falta
+  porque el túnel es la única puerta y Cloudflare Access valida antes; serviría
+  el día que el `:8090` quede expuesto por otro camino. (Antes acá decía «Basic
+  Auth opcional»; con Access adelante eso dejó de ser la respuesta.)

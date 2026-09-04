@@ -105,9 +105,25 @@ Dos cosas a respetar si se rehace:
 
 ## Instalarla en el teléfono
 
-No hay distribución por App Store: es una app personal. Con el iPhone conectado,
-elegilo como destino en Xcode y dale Run. Con una cuenta gratuita de Apple
-Developer el perfil caduca cada 7 días; con una cuenta paga, cada año.
+No hay distribución por App Store: es una app personal. Con el iPhone conectado
+y desbloqueado, desde la raíz del repo:
+
+```sh
+make ios-install IOS_TEAM=XXXXXXXXXX IOS_DEVICE=00008150-XXXXXXXXXXXX
+```
+
+- `IOS_TEAM`: el `OU` del certificado de desarrollo —
+  `security find-identity -v -p codesigning` y después
+  `security find-certificate -c "Apple Development: …" -p | openssl x509 -noout -subject`.
+- `IOS_DEVICE`: el UDID que lista `xcrun xctrace list devices`.
+
+Ninguno de los dos está en el repo a propósito: es público, y los dos
+identifican la cuenta y el teléfono. Xcode crea el perfil solo con
+`-allowProvisioningUpdates`.
+
+También sirve abrir el proyecto en Xcode, elegir el teléfono y darle Run. Con
+una cuenta gratuita de Apple Developer el perfil caduca **cada 7 días** y hay
+que reinstalar; con una cuenta paga, cada año.
 
 ## Fuera de la LAN
 
