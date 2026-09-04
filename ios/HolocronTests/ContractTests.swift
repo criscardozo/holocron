@@ -119,20 +119,21 @@ struct ContractTests {
         #expect(failed.status == .failed)
     }
 
-    @Test func plexLinkPending() throws {
-        let status = try decode(PlexLinkStatus.self, "plex_link_pending")
+    @Test func jellyfinLinkPending() throws {
+        let status = try decode(JellyfinLinkStatus.self, "jellyfin_link_pending")
         #expect(status.isPending)
         #expect(!status.isLinked)
-        #expect(status.code == "QWER")
-        #expect(status.authUrl?.contains("app.plex.tv") == true)
+        #expect(status.code == "640045")
+        // Nobody has approved it yet, so there is no user to name.
+        #expect(status.user?.isEmpty == true)
     }
 
-    @Test func plexLinkLinked() throws {
-        let status = try decode(PlexLinkStatus.self, "plex_link_linked")
+    @Test func jellyfinLinkLinked() throws {
+        let status = try decode(JellyfinLinkStatus.self, "jellyfin_link_linked")
         #expect(status.isLinked)
-        let server = try #require(status.servers?.first)
-        #expect(server.name == "Pi de casa")
-        #expect(server.baseUrl == "http://192.168.1.20:32400")
+        #expect(status.user == "cris")
+        // Admin decides whether the metadata refresh can be offered at all.
+        #expect(status.admin == true)
     }
 }
 

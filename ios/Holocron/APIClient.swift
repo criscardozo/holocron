@@ -20,7 +20,10 @@ enum APIError: LocalizedError, Equatable {
         case .noToken:
             "El servidor todavía no tiene un token. Generalo en Ajustes de la web."
         case .notReachable:
-            "No se pudo conectar con el servidor. ¿Estás en la misma red?"
+            // No longer "are you on the same network?": the server is also
+            // reachable through the public domain, where the answer would be no
+            // and the advice wrong.
+            "No se pudo conectar con el servidor. Revisá la dirección en Ajustes."
         case .accessDenied:
             "Cloudflare Access rechazó el pedido. Revisá el service token en Ajustes."
         case let .server(status, message):
@@ -90,19 +93,14 @@ struct APIClient: Sendable {
         try await request("naming/scan", method: "POST")
     }
 
-    // MARK: - Plex device link
+    // MARK: - Jellyfin Quick Connect
 
-    func startPlexLink() async throws -> PlexLinkStatus {
-        try await request("plex/link", method: "POST")
+    func startJellyfinLink() async throws -> JellyfinLinkStatus {
+        try await request("jellyfin/link", method: "POST")
     }
 
-    func plexLinkStatus() async throws -> PlexLinkStatus {
-        try await get("plex/link")
-    }
-
-    func selectPlexServer(baseURL: String) async throws {
-        struct Body: Encodable { let baseUrl: String }
-        try await send("plex/link/server", method: "POST", body: Body(baseUrl: baseURL))
+    func jellyfinLinkStatus() async throws -> JellyfinLinkStatus {
+        try await get("jellyfin/link")
     }
 
     // MARK: - Media

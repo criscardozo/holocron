@@ -107,15 +107,15 @@ struct SettingsView: View {
 
             Section {
                 NavigationLink {
-                    PlexLinkView()
+                    JellyfinLinkView()
                 } label: {
-                    Label("Conectar con Plex", systemImage: "powerplug")
+                    Label("Conectar con Jellyfin", systemImage: "powerplug")
                 }
                 .disabled(!settings.isConfigured)
             } header: {
-                Text("Plex")
+                Text("Jellyfin")
             } footer: {
-                Text("Vincula tu cuenta por plex.tv y guarda el token en el servidor, sin buscarlo a mano.")
+                Text("Aprobás un código en Jellyfin y el token queda guardado en el servidor, sin buscar API keys a mano. La dirección se carga desde la web.")
             }
             .listRowBackground(Noir.surface)
 

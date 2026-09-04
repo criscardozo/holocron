@@ -176,21 +176,20 @@ struct TorrentList: Codable {
     var torrents: [Torrent]
 }
 
-// MARK: - Plex device link
+// MARK: - Jellyfin Quick Connect
 
-struct PlexServer: Codable, Identifiable, Hashable {
-    var name: String
-    var baseUrl: String
-
-    var id: String { baseUrl }
-}
-
-/// Where the plex.tv device-link flow stands. Mirrors `plexauth.State`.
-struct PlexLinkStatus: Codable {
+/// Where the Quick Connect flow stands. Mirrors `jellyfin.Status`.
+///
+/// There is no server to choose, unlike the Plex flow this replaced: Jellyfin
+/// has no cloud service to discover servers through, so the address is set in
+/// the web UI first and only the code is handled here.
+struct JellyfinLinkStatus: Codable {
     var state: String
     var code: String?
-    var authUrl: String?
-    var servers: [PlexServer]?
+    var user: String?
+    /// Whether the account that authorised is a Jellyfin administrator. Worth
+    /// surfacing: asking the server to re-read metadata requires one.
+    var admin: Bool?
 
     var isPending: Bool { state == "pending" }
     var isLinked: Bool { state == "linked" }

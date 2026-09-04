@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The Plex inventory: counters, the two long-running jobs, and the item list.
+/// The Jellyfin inventory: counters, the sync job, and the item list.
 struct MediaView: View {
     @Environment(AppSettings.self) private var settings
 
@@ -11,14 +11,14 @@ struct MediaView: View {
     var body: some View {
         LoadableView(state: state, reload: load) { library in
             if !library.configured {
-                // Plex is the one service the app can configure by itself, via
-                // the device-link flow.
+                // Jellyfin is the one service the app can configure by itself,
+                // through Quick Connect.
                 ContentUnavailableView {
-                    Label("Plex no configurado", systemImage: "gearshape")
+                    Label("Jellyfin no vinculado", systemImage: "gearshape")
                 } description: {
-                    Text("Vinculá tu cuenta para que Holocron obtenga el token solo.")
+                    Text("Aprobá un código en Jellyfin y Holocron guarda el token solo.")
                 } actions: {
-                    NavigationLink("Conectar con Plex") { PlexLinkView() }
+                    NavigationLink("Conectar con Jellyfin") { JellyfinLinkView() }
                         .buttonStyle(.borderedProminent)
                 }
             } else {
@@ -65,7 +65,7 @@ struct MediaView: View {
 
             if library.items.isEmpty {
                 Section {
-                    Text("Sin inventario. Tocá «Sincronizar desde Plex».")
+                    Text("Sin inventario. Tocá «Sincronizar».")
                         .foregroundStyle(Noir.muted)
                 }
                 .listRowBackground(Noir.surface)
