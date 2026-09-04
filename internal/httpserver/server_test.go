@@ -84,8 +84,17 @@ func newTestServer(t *testing.T) *testServer {
 	return &testServer{Server: srv, deps: deps, logs: logs}
 }
 
+// response is the whole answer, already read and closed. Returning this rather
+// than an *http.Response means no test can leak a body, and the assertions read
+// better for it.
+type response struct {
+	Status int
+	Header http.Header
+	Body   string
+}
+
 // do sends a request without following redirects, so a 303 is observable.
-func (ts *testServer) do(t *testing.T, req *http.Request) *http.Response {
+func (ts *testServer) do(t *testing.T, req *http.Request) response {
 	t.Helper()
 	client := &http.Client{
 		CheckRedirect: func(*http.Request, []*http.Request) error {
@@ -96,11 +105,16 @@ func (ts *testServer) do(t *testing.T, req *http.Request) *http.Response {
 	if err != nil {
 		t.Fatalf("%s %s: %v", req.Method, req.URL.Path, err)
 	}
-	t.Cleanup(func() { _ = resp.Body.Close() })
-	return resp
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body of %s %s: %v", req.Method, req.URL.Path, err)
+	}
+	return response{Status: resp.StatusCode, Header: resp.Header, Body: string(body)}
 }
 
-func (ts *testServer) post(t *testing.T, path string, form url.Values, headers map[string]string) *http.Response {
+func (ts *testServer) post(t *testing.T, path string, form url.Values, headers map[string]string) response {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost,
 		ts.URL+path, strings.NewReader(form.Encode()))
@@ -114,7 +128,7 @@ func (ts *testServer) post(t *testing.T, path string, form url.Values, headers m
 	return ts.do(t, req)
 }
 
-func (ts *testServer) get(t *testing.T, path string, headers map[string]string) *http.Response {
+func (ts *testServer) get(t *testing.T, path string, headers map[string]string) response {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+path, nil)
 	if err != nil {
@@ -124,15 +138,6 @@ func (ts *testServer) get(t *testing.T, path string, headers map[string]string) 
 		req.Header.Set(k, v)
 	}
 	return ts.do(t, req)
-}
-
-func body(t *testing.T, resp *http.Response) string {
-	t.Helper()
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read body: %v", err)
-	}
-	return string(b)
 }
 
 func (ts *testServer) folderCount(t *testing.T) int {

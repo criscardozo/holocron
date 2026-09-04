@@ -19,11 +19,11 @@ func TestAPIRequiresABearerToken(t *testing.T) {
 		// 503 rather than 401: the caller did nothing wrong, the server has no
 		// token yet, and the app needs to tell those apart.
 		resp := ts.get(t, "/api/v1/system", map[string]string{"Authorization": "Bearer whatever"})
-		if resp.StatusCode != http.StatusServiceUnavailable {
-			t.Fatalf("status = %d, want 503", resp.StatusCode)
+		if resp.Status != http.StatusServiceUnavailable {
+			t.Fatalf("status = %d, want 503", resp.Status)
 		}
 		var payload map[string]string
-		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		if err := json.Unmarshal([]byte(resp.Body), &payload); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
 		if payload["error"] == "" {
@@ -54,8 +54,8 @@ func TestAPIRequiresABearerToken(t *testing.T) {
 				headers["Authorization"] = tc.header
 			}
 			resp := ts.get(t, "/api/v1/system", headers)
-			if resp.StatusCode != tc.want {
-				t.Errorf("%s: status = %d, want %d", tc.name, resp.StatusCode, tc.want)
+			if resp.Status != tc.want {
+				t.Errorf("%s: status = %d, want %d", tc.name, resp.Status, tc.want)
 			}
 		}
 	})
@@ -71,7 +71,7 @@ func TestAPIRequiresABearerToken(t *testing.T) {
 			t.Fatal(err)
 		}
 		resp := ts.get(t, "/api/v1/system", map[string]string{"Authorization": "Bearer " + token})
-		if resp.StatusCode == http.StatusOK {
+		if resp.Status == http.StatusOK {
 			t.Error("a revoked token was accepted")
 		}
 	})
@@ -90,7 +90,7 @@ func TestUpdateInstallNeedsTheAPIToken(t *testing.T) {
 			t.Fatal(err)
 		}
 		resp := ts.post(t, "/settings/updates/install", url.Values{"token": {""}}, nil)
-		if got := body(t, resp); !strings.Contains(got, "Pegá el token") {
+		if got := resp.Body; !strings.Contains(got, "Pegá el token") {
 			t.Errorf("expected the paste-the-token message, got %q", got)
 		}
 	})
@@ -102,7 +102,7 @@ func TestUpdateInstallNeedsTheAPIToken(t *testing.T) {
 			t.Fatal(err)
 		}
 		resp := ts.post(t, "/settings/updates/install", url.Values{"token": {"nope"}}, nil)
-		if got := body(t, resp); !strings.Contains(got, "no coincide") {
+		if got := resp.Body; !strings.Contains(got, "no coincide") {
 			t.Errorf("expected the mismatch message, got %q", got)
 		}
 		if !strings.Contains(ts.logs.String(), "rejected update request") {
@@ -114,7 +114,7 @@ func TestUpdateInstallNeedsTheAPIToken(t *testing.T) {
 		t.Parallel()
 		ts := newTestServer(t)
 		resp := ts.post(t, "/settings/updates/install", url.Values{"token": {"anything"}}, nil)
-		if got := body(t, resp); !strings.Contains(got, "No hay token generado") {
+		if got := resp.Body; !strings.Contains(got, "No hay token generado") {
 			t.Errorf("expected the no-token-yet message, got %q", got)
 		}
 	})
@@ -129,7 +129,7 @@ func TestUpdateInstallNeedsTheAPIToken(t *testing.T) {
 		resp := ts.post(t, "/settings/updates/install", url.Values{"token": {token}}, nil)
 		// The helper is not installed in a test environment, so the request
 		// fails at that point — which is proof it got past the token gate.
-		got := body(t, resp)
+		got := resp.Body
 		if strings.Contains(got, "no coincide") || strings.Contains(got, "Pegá el token") {
 			t.Errorf("a valid token was refused: %q", got)
 		}
@@ -182,7 +182,7 @@ func TestJellyfinTestButtonTellsTheTwoFailuresApart(t *testing.T) {
 		t.Parallel()
 		ts := newTestServer(t)
 		resp := ts.get(t, "/settings/jellyfin/test", nil)
-		if got := body(t, resp); !strings.Contains(got, "Cargá primero la dirección") {
+		if got := resp.Body; !strings.Contains(got, "Cargá primero la dirección") {
 			t.Errorf("got %q", got)
 		}
 	})
@@ -195,7 +195,7 @@ func TestJellyfinTestButtonTellsTheTwoFailuresApart(t *testing.T) {
 			t.Fatal(err)
 		}
 		resp := ts.get(t, "/settings/jellyfin/test", nil)
-		if got := body(t, resp); !strings.Contains(got, "No se llega a esa dirección") {
+		if got := resp.Body; !strings.Contains(got, "No se llega a esa dirección") {
 			t.Errorf("got %q", got)
 		}
 	})
@@ -219,7 +219,7 @@ func TestQualityRefreshRejectsUnknownItems(t *testing.T) {
 	}
 
 	resp := ts.post(t, "/quality/refresh", url.Values{"item": {"../../System/Shutdown"}}, nil)
-	if got := body(t, resp); !strings.Contains(got, "Volvé a analizar") {
+	if got := resp.Body; !strings.Contains(got, "Volvé a analizar") {
 		t.Errorf("an id the report never saw should be refused, got %q", got)
 	}
 }
@@ -238,7 +238,7 @@ func TestQualityRefreshNeedsAnAdministrator(t *testing.T) {
 	}
 
 	resp := ts.post(t, "/quality/refresh", url.Values{"item": {"whatever"}}, nil)
-	if got := body(t, resp); !strings.Contains(got, "Requiere admin") {
+	if got := resp.Body; !strings.Contains(got, "Requiere admin") {
 		t.Errorf("got %q", got)
 	}
 }

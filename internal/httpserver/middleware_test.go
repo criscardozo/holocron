@@ -21,8 +21,8 @@ func TestCrossSitePostsAreRejected(t *testing.T) {
 		"Referer": "https://evil.example/x",
 	})
 
-	if resp.StatusCode != http.StatusForbidden {
-		t.Errorf("status = %d, want 403", resp.StatusCode)
+	if resp.Status != http.StatusForbidden {
+		t.Errorf("status = %d, want 403", resp.Status)
 	}
 	if n := ts.folderCount(t); n != 0 {
 		t.Errorf("%d folder(s) were written by a cross-site POST", n)
@@ -86,8 +86,8 @@ func TestSecFetchSiteDecidesBeforeOrigin(t *testing.T) {
 			ts := newTestServer(t)
 			form := url.Values{"label": {"Discos"}, "path": {t.TempDir()}, "purpose": {"disk"}}
 			resp := ts.post(t, "/settings/folders", form, tc.headers)
-			if resp.StatusCode != tc.want {
-				t.Errorf("status = %d, want %d", resp.StatusCode, tc.want)
+			if resp.Status != tc.want {
+				t.Errorf("status = %d, want %d", resp.Status, tc.want)
 			}
 		})
 	}
@@ -104,7 +104,7 @@ func TestOriginIsComparedByHostOnly(t *testing.T) {
 	for _, origin := range []string{"http://" + host, "https://" + host} {
 		form := url.Values{"label": {"Discos"}, "path": {t.TempDir()}, "purpose": {"disk"}}
 		resp := ts.post(t, "/settings/folders", form, map[string]string{"Origin": origin})
-		if resp.StatusCode == http.StatusForbidden {
+		if resp.Status == http.StatusForbidden {
 			t.Errorf("Origin %q was refused; only the host should be compared", origin)
 		}
 	}
@@ -116,8 +116,8 @@ func TestReadsAreNotBlocked(t *testing.T) {
 	t.Parallel()
 	ts := newTestServer(t)
 	resp := ts.get(t, "/", map[string]string{"Sec-Fetch-Site": "cross-site"})
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("cross-site GET = %d, want 200", resp.StatusCode)
+	if resp.Status != http.StatusOK {
+		t.Errorf("cross-site GET = %d, want 200", resp.Status)
 	}
 }
 
@@ -131,8 +131,8 @@ func TestAPIIsExemptFromTheOriginCheck(t *testing.T) {
 	})
 	// 401 rather than 403: it got past the origin check and was stopped by the
 	// token check, which is the layer that guards the API.
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("status = %d, want 401 (rejected by the token, not the origin)", resp.StatusCode)
+	if resp.Status != http.StatusUnauthorized {
+		t.Errorf("status = %d, want 401 (rejected by the token, not the origin)", resp.Status)
 	}
 }
 
@@ -166,11 +166,11 @@ func TestNoInlineStylesAnywhere(t *testing.T) {
 		"/subtitles", "/torrents", "/settings",
 	} {
 		resp := ts.get(t, path, nil)
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("GET %s = %d, want 200", path, resp.StatusCode)
+		if resp.Status != http.StatusOK {
+			t.Errorf("GET %s = %d, want 200", path, resp.Status)
 			continue
 		}
-		if page := body(t, resp); strings.Contains(page, `style="`) {
+		if strings.Contains(resp.Body, `style="`) {
 			t.Errorf("%s has an inline style, which the CSP silently drops", path)
 		}
 	}
