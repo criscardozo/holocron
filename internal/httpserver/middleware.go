@@ -3,6 +3,7 @@ package httpserver
 import (
 	"compress/gzip"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -59,6 +60,74 @@ func limitBody(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// sameOrigin rejects state-changing requests that a browser tells us came from
+// somewhere else.
+//
+// The web UI has no session, so there is nothing for a request to prove: every
+// POST that reaches a handler is acted on. That makes any page open in a
+// browser on the LAN able to drive Holocron — measured before this existed, a
+// POST to /settings/folders carrying Origin: https://evil.example returned 303
+// and the folder was written. Cloudflare Access does not help: the request
+// comes from a browser that already holds a valid session, or straight to
+// :8090 on the LAN.
+//
+// The check is on the two headers a browser attaches and a page cannot forge.
+// Sec-Fetch-Site is preferred because it is unambiguous; Origin is the fallback
+// for anything that omits it. A request with neither is not from a browser
+// — curl, the installer, a script — and is left alone, which is also what keeps
+// the API usable: it authenticates with a bearer token instead.
+func (s *Server) sameOrigin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !changesState(r.Method) || strings.HasPrefix(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if site := r.Header.Get("Sec-Fetch-Site"); site != "" {
+			// "none" is a direct navigation, e.g. a bookmarked POST target.
+			if site != "same-origin" && site != "none" {
+				s.rejectCrossSite(w, r, "sec-fetch-site", site)
+				return
+			}
+			next.ServeHTTP(w, r)
+			return
+		}
+		if origin := r.Header.Get("Origin"); origin != "" && !sameHost(origin, r.Host) {
+			s.rejectCrossSite(w, r, "origin", origin)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func changesState(method string) bool {
+	switch method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+		return true
+	default:
+		return false
+	}
+}
+
+// sameHost compares an Origin header against the host the request was sent to.
+// Only the host is compared, never the scheme: behind the Cloudflare tunnel the
+// browser sends https while the origin server speaks http, and requiring them
+// to match would reject every request that arrives through it.
+func sameHost(origin, host string) bool {
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	return u.Host == host
+}
+
+func (s *Server) rejectCrossSite(w http.ResponseWriter, r *http.Request, header, value string) {
+	// Logged as a warning with the value as an attribute: this is either a
+	// misconfigured proxy or someone trying, and both are worth seeing.
+	s.log.Warn("rejected cross-site request",
+		"method", r.Method, "path", r.URL.Path, header, value)
+	http.Error(w, "cross-site requests are not accepted", http.StatusForbidden)
 }
 
 // securityHeaders sets a strict, same-origin security policy. Everything the

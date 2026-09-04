@@ -121,7 +121,7 @@ func (s *Server) Handler() http.Handler {
 	// JSON API for the iOS app (authenticated; see api.go).
 	s.apiRoutes(mux)
 
-	return chain(mux, s.recoverer, s.logRequests, securityHeaders, limitBody, gzipMW)
+	return chain(mux, s.recoverer, s.logRequests, securityHeaders, s.sameOrigin, limitBody, gzipMW)
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
