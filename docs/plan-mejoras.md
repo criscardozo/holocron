@@ -344,8 +344,11 @@ Cloudflare Access adelante ya no es la respuesta; cambiarlo por «validar el JWT
 
 ## Decisiones que son del usuario (NO ejecutar sin que confirme)
 
-**D1 · HTMX y el vencimiento de la sesión de Access (24 h).** Comportamiento
-esperado, **a verificar**: cuando la sesión vence, un click con `hx-boost`
+**D1 · HTMX y el vencimiento de la sesión de Access (24 h). RESUELTO:
+reproducido y aceptado**; el síntoma y el motivo quedaron en `docs/ui.md`. La
+predicción de abajo acertó el síntoma y erró el mecanismo: no lo bloquea CORS
+sino la CSP propia, y agregar `connect-src` no alcanza porque después lo tapa
+CORS igual. Texto original: cuando la sesión vence, un click con `hx-boost`
 recibe un `302` a `*.cloudflareaccess.com`; `XMLHttpRequest` sigue el redirect,
 la respuesta cross-origin queda bloqueada por CORS y HTMX dispara
 `htmx:sendError` **sin mostrar nada** — la página parece muerta hasta que se
@@ -358,15 +361,15 @@ haga `location.reload()` — **viola la regla «sin JavaScript propio»** de
 silencio. Primero **reproducir** (esperar el vencimiento o revocar la sesión
 desde el panel de Access) y después proponer.
 
-**D2 · Perfil de firma de 7 días.** La app está firmada con la cuenta personal
+**D2 · Perfil de firma de 7 días. RESUELTO: sigue la cuenta personal.** La app está firmada con la cuenta personal
 gratuita; el perfil vence cada 7 días y hay que reinstalar. Hay un team pago
 disponible en el llavero pero es de una empresa. Él decide.
 
-**D3 · `/healthz` detrás de Access.** Hoy responde 302. Si quiere un chequeo
+**D3 · `/healthz` detrás de Access. RESUELTO: queda detrás.** Hoy responde 302. Si quiere un chequeo
 externo de vida, esa ruta necesita su propia aplicación de Access con Bypass;
 sólo devuelve `ok`. Nada lo monitorea hoy.
 
-**D4 · CI adicional.** Como el repo es público, un job de build de iOS en
+**D4 · CI adicional. RESUELTO: nada por ahora.** Como el repo es público, un job de build de iOS en
 `workflow_dispatch` (macOS) y un `dependabot.yml` para módulos Go y Actions no
 cuestan minutos, pero **la regla es preguntar antes de agregar workflows**.
 Proponer, no agregar.

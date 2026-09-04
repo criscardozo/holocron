@@ -107,6 +107,36 @@ El dashboard tiene que dejar leer de un vistazo qué necesita atención:
 
 Lo que está bien queda tranquilo de fondo; lo que falta, salta.
 
+### Cuando vence la sesión de Cloudflare Access
+
+**Síntoma: la página deja de responder y no dice nada.** No se rompió nada; la
+sesión de Access venció (dura 24 h) y hay que volver a entrar.
+
+**La salida es recargar.** Una navegación normal sigue el redirect y te deja en
+el login de Cloudflare; volvés y sigue todo igual.
+
+Medido con un 302 hacia otro origen, que es lo que hace Access:
+
+| Acción con la sesión vencida | Qué pasa |
+|---|---|
+| Clic en el nav (`hx-boost`) | Nada: mismo título, misma URL, mismo contenido |
+| Enviar un formulario (`hx-post`) | Nada, ni un cartel de error |
+| Recargar a mano | **Funciona**: lleva al login |
+
+En la consola queda `htmx:sendError`, precedido de un error de CSP.
+
+**Por qué se decidió dejarlo así.** Lo bloquea nuestra propia CSP
+(`default-src 'self'`, sin `connect-src`) antes de que CORS entre en juego, así
+que HTMX no recibe respuesta y no swapea nada. Hay dos barreras, no una:
+**agregar el origen de Access a `connect-src` no lo arregla** —el pedido llega
+más lejos y ahí lo rechaza CORS, porque el host del login no manda
+`Access-Control-Allow-Origin`—. O sea que aflojar la CSP costaría seguridad sin
+comprar nada.
+
+Lo único que lo arreglaría de verdad es un `.js` propio que escuche
+`htmx:sendError` y recargue, y eso rompe la restricción 2 de arriba. Se eligió
+convivir con el síntoma: pasa una vez por día de uso y la salida es recargar.
+
 ## Responsive
 
 Breakpoints de la grilla del dashboard y de Ajustes:
