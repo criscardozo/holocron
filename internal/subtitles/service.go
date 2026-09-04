@@ -24,6 +24,10 @@ var ErrNotConfigured = errors.New("opensubtitles is not configured")
 type Service struct {
 	db       *sql.DB
 	settings *settings.Store
+	// baseURL overrides the OpenSubtitles endpoint. Empty in production; set in
+	// tests so the download path — the only place Holocron writes into the
+	// media library — can be exercised end to end.
+	baseURL string
 }
 
 // NewService creates a Service.
@@ -125,7 +129,11 @@ func (s *Service) client(ctx context.Context) (*opensubtitles.Client, error) {
 	if key == "" {
 		return nil, ErrNotConfigured
 	}
-	return opensubtitles.New(key), nil
+	c := opensubtitles.New(key)
+	if s.baseURL != "" {
+		c = c.WithBaseURL(s.baseURL)
+	}
+	return c, nil
 }
 
 // Search queries OpenSubtitles for Spanish subtitles matching title/year.

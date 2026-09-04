@@ -1,5 +1,5 @@
 // Package naming validates that media folders follow the "Title (Year)"
-// convention used by Plex and other scrapers.
+// convention Jellyfin and other scrapers expect.
 package naming
 
 import (
@@ -27,7 +27,10 @@ type Issue struct {
 // Validate reports whether name follows the convention. When it does not, it
 // returns a suggested corrected name (best-effort).
 func Validate(name string) (ok bool, expected string) {
-	if validRe.MatchString(name) {
+	// Surrounding whitespace is invisible in most file managers and sorts the
+	// folder somewhere unexpected, so it counts as a name to fix even when the
+	// rest of the pattern holds. The suggestion below trims it.
+	if name == strings.TrimSpace(name) && validRe.MatchString(name) {
 		return true, ""
 	}
 	if year := yearRe.FindString(name); year != "" {
