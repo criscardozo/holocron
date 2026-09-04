@@ -3,6 +3,7 @@ package library
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/cristian/holocron/internal/db"
+	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/settings"
 )
@@ -161,3 +163,55 @@ func waitForJob(t *testing.T, svc *Service, id string) {
 }
 
 func waitTick() { time.Sleep(10 * time.Millisecond) }
+
+// TestRejectedTokenIsDistinguishable covers the difference between "Jellyfin is
+// unreachable" and "Jellyfin refused the token". They are fixed in different
+// places, and reporting both as "the job failed" sends the user to check their
+// network when the answer is to link again.
+func TestRejectedTokenIsDistinguishable(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	dir := t.TempDir()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "Access token is invalid or expired.", http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	database, err := db.Open(ctx, filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer func() { _ = database.Close() }()
+
+	store := settings.NewStore(database)
+	for k, v := range map[string]string{
+		settings.KeyJellyfinURL:   srv.URL,
+		settings.KeyJellyfinToken: "revoked",
+	} {
+		if err := store.Set(ctx, k, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	svc := NewService(database, store, jobs.NewManager())
+
+	if _, err := svc.TestConnection(ctx); !errors.Is(err, jellyfin.ErrTokenRejected) {
+		t.Errorf("TestConnection = %v, want ErrTokenRejected", err)
+	}
+
+	job, err := svc.StartSync(ctx)
+	if err != nil {
+		t.Fatalf("StartSync: %v", err)
+	}
+	for range 200 {
+		if got, ok := svc.jobs.Get(job.ID); ok && got.Status != jobs.StatusRunning {
+			if !errors.Is(got.Cause, jellyfin.ErrTokenRejected) {
+				t.Fatalf("job cause = %v, want ErrTokenRejected", got.Cause)
+			}
+			return
+		}
+		waitTick()
+	}
+	t.Fatal("the sync did not finish")
+}

@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/cristian/holocron/internal/jellyfin"
+	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/netaddr"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/web/templates"
@@ -89,8 +90,11 @@ func (s *Server) handleJellyfinTest(w http.ResponseWriter, r *http.Request) {
 		info, err := s.deps.Library.TestConnection(ctx)
 		if err != nil {
 			s.log.Warn("jellyfin test", "error", err)
-			s.render(w, r, templates.JellyfinTest(false,
-				"No se pudo conectar. Revisá que Jellyfin esté prendido y que el token siga válido."))
+			message := "No se pudo conectar. Revisá que Jellyfin esté prendido."
+			if errors.Is(err, jellyfin.ErrTokenRejected) {
+				message = "Jellyfin rechazó el token. Volvé a vincular con Quick Connect."
+			}
+			s.render(w, r, templates.JellyfinTest(false, message))
 			return
 		}
 		s.render(w, r, templates.JellyfinTest(true, "Conectado a "+serverName(info)+" "+info.Version))
@@ -116,6 +120,17 @@ func serverName(info jellyfin.ServerInfo) string {
 		return "Jellyfin"
 	}
 	return info.Name
+}
+
+// jobFailureMessage turns a failed job into something the user can act on.
+// A rejected token is called out by name because the fix is specific — link
+// again — and because the generic message sends people to check their network,
+// which has already cost a couple of rounds of debugging.
+func jobFailureMessage(job jobs.Job, fallback string) string {
+	if errors.Is(job.Cause, jellyfin.ErrTokenRejected) {
+		return "Jellyfin rechazó el token. Volvé a vincular desde Ajustes."
+	}
+	return fallback
 }
 
 // linkErrorMessage keeps server detail out of the page while still telling the

@@ -79,7 +79,7 @@ func (s *Service) scan(ctx context.Context, c *jellyfin.Client, p *jobs.Progress
 		}
 	})
 	if err != nil {
-		return "", fmt.Errorf("audit items: %w", err)
+		return "", fmt.Errorf("audit items: %w", jellyfin.Rejected(err))
 	}
 
 	report := Analyse(items)
@@ -166,7 +166,7 @@ func (s *Service) Refresh(ctx context.Context, itemID string) error {
 		return err
 	}
 	if err := c.RefreshItem(ctx, itemID); err != nil {
-		return fmt.Errorf("refresh item: %w", err)
+		return fmt.Errorf("refresh item: %w", jellyfin.Rejected(err))
 	}
 	return nil
 }

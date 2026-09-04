@@ -70,7 +70,8 @@ func (s *Service) TestConnection(ctx context.Context) (jellyfin.ServerInfo, erro
 	if err != nil {
 		return jellyfin.ServerInfo{}, err
 	}
-	return c.Info(ctx)
+	info, err := c.Info(ctx)
+	return info, jellyfin.Rejected(err)
 }
 
 // Reachable checks the address on its own, before there is a token. Without it
@@ -105,7 +106,7 @@ func (s *Service) StartSync(ctx context.Context) (jobs.Job, error) {
 func (s *Service) sync(ctx context.Context, c *jellyfin.Client, p *jobs.Progress) (string, error) {
 	items, err := c.Items(ctx)
 	if err != nil {
-		return "", fmt.Errorf("list items: %w", err)
+		return "", fmt.Errorf("list items: %w", jellyfin.Rejected(err))
 	}
 	p.Set(60)
 

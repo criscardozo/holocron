@@ -77,7 +77,7 @@ func (s *Server) handleMediaStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if job, ok := s.deps.Library.LastJob(); ok {
 		if job.Status == jobs.StatusError {
-			view.Error = "El trabajo falló."
+			view.Error = jobFailureMessage(job, "El trabajo falló.")
 		} else {
 			view.Summary = job.Result
 		}

@@ -56,7 +56,7 @@ func (s *Server) handleQualityStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if job, ok := s.deps.Quality.LastJob(); ok {
 		if job.Status == jobs.StatusError {
-			view.Error = "El análisis falló."
+			view.Error = jobFailureMessage(job, "El análisis falló.")
 		} else {
 			view.Summary = job.Result
 		}

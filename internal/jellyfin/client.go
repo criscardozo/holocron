@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -143,6 +144,25 @@ func (e *StatusError) Error() string {
 
 // Forbidden reports whether the server refused for lack of permission.
 func (e *StatusError) Forbidden() bool { return e.Status == http.StatusForbidden }
+
+// Unauthorized reports whether the server rejected the token itself.
+func (e *StatusError) Unauthorized() bool { return e.Status == http.StatusUnauthorized }
+
+// ErrTokenRejected means Jellyfin refused the stored token: it was revoked, the
+// user was deleted, or Quick Connect was re-run somewhere else. Distinguished
+// from every other failure because the fix is specific — link again — and
+// because "the job failed" sends the user looking at their network instead.
+var ErrTokenRejected = errors.New("jellyfin rejected the stored token")
+
+// Rejected wraps err with ErrTokenRejected when the server answered 401, so a
+// caller can branch on errors.Is without inspecting status codes itself.
+func Rejected(err error) error {
+	var status *StatusError
+	if errors.As(err, &status) && status.Unauthorized() {
+		return fmt.Errorf("%w: %w", ErrTokenRejected, err)
+	}
+	return err
+}
 
 // ServerInfo is the handshake used to verify a configured connection.
 type ServerInfo struct {

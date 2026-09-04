@@ -27,11 +27,15 @@ const (
 // Job is an immutable snapshot of a job's state. Retrieve fresh copies via
 // Manager.Get; do not hold references across time.
 type Job struct {
-	ID         string
-	Kind       string
-	Status     Status
-	Progress   int // 0..100
-	Err        string
+	ID       string
+	Kind     string
+	Status   Status
+	Progress int // 0..100
+	Err      string
+	// Cause is the error itself, kept alongside its message so a caller can
+	// tell one failure from another with errors.Is. Without it the only thing
+	// a handler has is a string, and every failure reads the same to the user.
+	Cause      error
 	Result     string
 	StartedAt  time.Time
 	FinishedAt time.Time
@@ -69,6 +73,7 @@ type jobState struct {
 	status     Status
 	progress   int
 	err        string
+	cause      error
 	result     string
 	startedAt  time.Time
 	finishedAt time.Time
@@ -83,6 +88,7 @@ func (s *jobState) snapshot() Job {
 		Status:     s.status,
 		Progress:   s.progress,
 		Err:        s.err,
+		Cause:      s.cause,
 		Result:     s.result,
 		StartedAt:  s.startedAt,
 		FinishedAt: s.finishedAt,
@@ -206,6 +212,7 @@ func (m *Manager) finish(st *jobState, result string, err error) {
 	if err != nil {
 		st.status = StatusError
 		st.err = err.Error()
+		st.cause = err
 	} else {
 		st.status = StatusDone
 		st.progress = 100
