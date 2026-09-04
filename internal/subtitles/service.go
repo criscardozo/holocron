@@ -169,6 +169,8 @@ func (s *Service) Download(ctx context.Context, fileID int, folder string) (stri
 		return "", fmt.Errorf("media folder not accessible: %s", folder)
 	}
 	dest := filepath.Join(folder, subtitleBaseName(folder)+".es.srt")
+	//#nosec G306 -- world-readable on purpose: Jellyfin runs as another user
+	// and has to read the subtitle for it to be of any use.
 	if err := os.WriteFile(dest, content, 0o644); err != nil {
 		return "", fmt.Errorf("write subtitle: %w", err)
 	}

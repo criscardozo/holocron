@@ -571,7 +571,7 @@ func allocatedBytes(info fs.FileInfo) uint64 {
 	if info.Size() <= 0 {
 		return 0
 	}
-	return uint64(info.Size())
+	return uint64(info.Size()) //#nosec G115 -- guarded by the check above
 }
 
 func deviceID(info fs.FileInfo) (uint64, bool) {
@@ -579,6 +579,8 @@ func deviceID(info fs.FileInfo) (uint64, bool) {
 	if !ok {
 		return 0, false
 	}
+	//#nosec G115 -- a device number is an identifier, never negative; its type
+	// differs by platform (int32 on Darwin, uint64 on Linux).
 	return uint64(stat.Dev), true
 }
 

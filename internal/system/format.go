@@ -5,6 +5,16 @@ import (
 	"time"
 )
 
+// HumanSignedBytes formats a count that arrived from somewhere that may report
+// a negative. qBittorrent uses -1 for "unknown" on sizes and speeds, and
+// converting that straight to uint64 renders it as sixteen exabytes.
+func HumanSignedBytes(b int64) string {
+	if b <= 0 {
+		return "0 B"
+	}
+	return HumanBytes(uint64(b))
+}
+
 // HumanBytes formats a byte count using binary (IEC) units.
 func HumanBytes(b uint64) string {
 	const unit = 1024

@@ -31,7 +31,11 @@ ASSET="holocron-linux-arm64"
 UPDATER_PATH="/usr/local/bin/holocron-update"
 UPDATER_UNIT="/etc/systemd/system/holocron-update.path"
 UPDATER_SERVICE="/etc/systemd/system/holocron-update.service"
-RAW_URL="https://raw.githubusercontent.com/$REPO/main/scripts/install.sh"
+# Where the privileged updater re-fetches this script from. A release asset,
+# not raw main: the updater runs as root, so pulling from a branch means running
+# whatever is on that branch at the moment the button is pressed. The asset is
+# pinned to a tag and comes with a checksum.
+INSTALLER_URL="https://github.com/$REPO/releases/latest/download/install.sh"
 
 VERSION="${HOLOCRON_VERSION:-latest}"
 # Left empty on purpose: an existing install's settings are reused when these
@@ -210,8 +214,25 @@ install_updater() {
 # settings are carried over from the existing unit.
 set -euo pipefail
 script="\$(mktemp)"
-trap 'rm -f "\$script"' EXIT
-curl -fsSL "$RAW_URL" -o "\$script"
+sums="\$(mktemp)"
+trap 'rm -f "\$script" "\$sums"' EXIT
+
+curl -fsSL --retry 3 "$INSTALLER_URL" -o "\$script"
+
+# Verify before running: this runs as root, so an installer that arrived
+# corrupted or altered would run with everything.
+if curl -fsSL --retry 2 "$INSTALLER_URL.sha256" -o "\$sums" 2>/dev/null; then
+	expected="\$(awk '{print \$1}' "\$sums" | head -n1)"
+	actual="\$(sha256sum "\$script" | awk '{print \$1}')"
+	if [ "\$expected" != "\$actual" ]; then
+		echo "holocron-update: installer checksum mismatch, refusing to run" >&2
+		exit 1
+	fi
+else
+	echo "holocron-update: no checksum published for the installer, refusing to run" >&2
+	exit 1
+fi
+
 bash "\$script"
 EOF
 	chmod 0755 "$UPDATER_PATH"

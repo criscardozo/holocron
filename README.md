@@ -57,7 +57,7 @@ En la Raspberry Pi (headless, por terminal). Descarga el último binario `arm64`
 publicado, crea el usuario de servicio, instala la unit de systemd y arranca todo:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/criscardozo/holocron/main/scripts/install.sh | sudo bash
+curl -fsSL https://github.com/criscardozo/holocron/releases/latest/download/install.sh | sudo bash
 ```
 
 Cuando termina, imprime la URL de acceso (por defecto `http://<ip-de-la-pi>:8090`).
@@ -97,7 +97,7 @@ También podés volver a correr el instalador; es idempotente y **conserva** el 
 y las carpetas de medios que ya tenías configuradas:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/criscardozo/holocron/main/scripts/install.sh | sudo bash
+curl -fsSL https://github.com/criscardozo/holocron/releases/latest/download/install.sh | sudo bash
 ```
 
 > **Cómo funciona el botón.** El servicio corre sin privilegios y con

@@ -29,6 +29,7 @@ const (
 	KeyQbitPass          = "qbittorrent.password"
 	// KeyAPITokenHash holds the SHA-256 digest of the JSON API bearer token
 	// (never the token itself). See internal/apitoken.
+	//#nosec G101 -- the name of a settings key, not a credential
 	KeyAPITokenHash = "api.token_hash"
 )
 

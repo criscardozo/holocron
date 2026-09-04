@@ -53,8 +53,12 @@ vulncheck:
 tidy:
 	go mod tidy && git diff --exit-code go.mod go.sum
 
+## sast: static application security testing
+sast:
+	go run github.com/securego/gosec/v2/cmd/gosec@latest -quiet ./...
+
 ## check: full quality gate before shipping a binary
-check: vet lint test vulncheck
+check: vet lint test vulncheck sast
 
 ## clean: remove build output
 clean:

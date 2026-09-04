@@ -67,6 +67,12 @@ jobs:
       - name: Run golangci-lint
         run: golangci-lint run ./...
 
+      # SAST, in the lint job rather than a new one: the repo policy is to ask
+      # before adding workflows or jobs, and this needs the same checkout and
+      # Go toolchain that is already set up here.
+      - name: Run gosec
+        run: go run github.com/securego/gosec/v2/cmd/gosec@latest -quiet ./...
+
   vulncheck:
     name: Govulncheck
     runs-on: ubuntu-latest

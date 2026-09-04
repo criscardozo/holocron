@@ -30,8 +30,8 @@ func (w TorrentsWidget) Card(ctx context.Context) templ.Component {
 		} else {
 			view.Total = sum.Total
 			view.Active = sum.Active
-			view.DlHuman = system.HumanBytes(uint64(sum.DlSpeed)) + "/s"
-			view.UpHuman = system.HumanBytes(uint64(sum.UpSpeed)) + "/s"
+			view.DlHuman = system.HumanSignedBytes(sum.DlSpeed) + "/s"
+			view.UpHuman = system.HumanSignedBytes(sum.UpSpeed) + "/s"
 		}
 	}
 	chrome := templates.WidgetChrome{ID: w.ID(), Title: w.Title(), Icon: "adown", Span: "span-4"}

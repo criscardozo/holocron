@@ -320,10 +320,11 @@ En lugar de copiar el binario a mano, el flujo normal es:
    (`make release VERSION=vX.Y.Z` hace lo mismo desde la Mac con el CLI `gh`.)
 2. **Instalar o actualizar en la Pi**, por terminal:
    ```
-   curl -fsSL https://raw.githubusercontent.com/criscardozo/holocron/main/scripts/install.sh | sudo bash
+   curl -fsSL https://github.com/criscardozo/holocron/releases/latest/download/install.sh | sudo bash
    ```
-   `scripts/install.sh` baja el binario de la última release, **verifica el
-   checksum**, crea el usuario de servicio, escribe la unit de systemd y arranca
+   El instalador se baja **de la release**, no de `main`: corre como root, y
+   bajarlo de una rama significa ejecutar lo que haya en esa rama en ese
+   momento. Baja el binario de la última release, **verifica el checksum**, crea el usuario de servicio, escribe la unit de systemd y arranca
    el servicio. Es idempotente: el mismo comando actualiza. Acepta
    `HOLOCRON_VERSION`, `HOLOCRON_ADDR` y `HOLOCRON_MEDIA_PATHS`, y tiene
    `--uninstall` (que conserva la base de datos).

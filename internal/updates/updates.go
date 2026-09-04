@@ -201,7 +201,9 @@ func (s *Service) RequestInstall() error {
 		return fmt.Errorf("the update helper is not installed")
 	}
 	path := filepath.Join(s.stateDir, triggerName)
-	if err := os.WriteFile(path, []byte(time.Now().UTC().Format(time.RFC3339)+"\n"), 0o644); err != nil {
+	// Owner-only: the only reader is the systemd path unit, which runs as root
+	// and can read it regardless. Nothing else has business seeing it.
+	if err := os.WriteFile(path, []byte(time.Now().UTC().Format(time.RFC3339)+"\n"), 0o600); err != nil {
 		return fmt.Errorf("request update: %w", err)
 	}
 	return nil
