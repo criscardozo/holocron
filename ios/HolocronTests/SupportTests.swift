@@ -173,7 +173,8 @@ struct SymbolTests {
             "arrow.triangle.2.circlepath", "arrow.up", "captions.bubble",
             "checkmark.circle", "diamond", "exclamationmark.triangle",
             "exclamationmark.triangle.fill", "film", "gearshape",
-            "internaldrive", "plus.circle", "powerplug", "trash",
+            "gauge.with.dots.needle.bottom.50percent", "internaldrive",
+            "magnifyingglass", "plus.circle", "powerplug", "trash",
             "waveform.path.ecg",
         ]
         for name in symbols {

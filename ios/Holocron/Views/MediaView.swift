@@ -119,6 +119,11 @@ struct MediaView: View {
             }
             .buttonStyle(.borderless)
             .disabled(library.syncing == true)
+
+            NavigationLink { QualityView() } label: {
+                Label("Calidad", systemImage: "gauge.with.dots.needle.bottom.50percent")
+            }
+            .buttonStyle(.borderless)
         }
     }
 

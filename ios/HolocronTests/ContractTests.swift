@@ -119,6 +119,30 @@ struct ContractTests {
         #expect(failed.status == .failed)
     }
 
+    @Test func quality() throws {
+        let report = try decode(QualityReport.self, "quality")
+        #expect(report.configured)
+        #expect(report.hasReport == true)
+        #expect(report.scanning == false)
+        #expect(report.scanned == 2336)
+
+        // The counters are the real totals; the findings list is capped at 200
+        // per category by the server, so they do not have to agree.
+        #expect(report.count(.subsMissing) == 1225)
+        #expect(report.count(.collision) == 4)
+        #expect(report.truncated(.subsMissing))
+        #expect(report.findings(in: .collision).count == 1)
+
+        // Refreshing is only offered where metadata is the actual problem.
+        #expect(QualityCategory.noSynopsis.refreshable)
+        #expect(!QualityCategory.subsMissing.refreshable)
+        #expect(!QualityCategory.collision.refreshable)
+
+        let finding = try #require(report.findings(in: .collision).first)
+        #expect(finding.title.contains("S01E01"))
+        #expect(finding.kind == "episodio")
+    }
+
     @Test func jellyfinLinkPending() throws {
         let status = try decode(JellyfinLinkStatus.self, "jellyfin_link_pending")
         #expect(status.isPending)

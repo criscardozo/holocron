@@ -93,6 +93,24 @@ struct APIClient: Sendable {
         try await request("naming/scan", method: "POST")
     }
 
+    // MARK: - Library quality
+
+    func quality() async throws -> QualityReport {
+        try await get("quality")
+    }
+
+    @discardableResult
+    func startQualityScan() async throws -> Bool {
+        try await send("quality/scan", method: "POST")
+        return true
+    }
+
+    /// Asks Jellyfin to re-read one item. Form-encoded rather than JSON: it is
+    /// what the web posts, and the handler reads a form value.
+    func refreshQualityItem(_ itemID: String) async throws {
+        try await sendForm("quality/refresh", fields: ["item": itemID])
+    }
+
     // MARK: - Jellyfin Quick Connect
 
     func startJellyfinLink() async throws -> JellyfinLinkStatus {
@@ -184,12 +202,9 @@ struct APIClient: Sendable {
         }
     }
 
-    private func perform(
-        _ path: String,
-        method: String,
-        query: [URLQueryItem],
-        body: (some Encodable)?
-    ) async throws -> Data {
+    /// Builds an authenticated request. Everything the client sends goes
+    /// through here, so the credentials are attached in exactly one place.
+    func makeRequest(_ path: String, method: String, query: [URLQueryItem] = []) throws -> URLRequest {
         guard var components = URLComponents(url: baseURL.appending(path: "api/v1/\(path)"),
                                              resolvingAgainstBaseURL: false) else {
             throw APIError.notConfigured
@@ -207,10 +222,35 @@ struct APIClient: Sendable {
             req.setValue(accessClientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
         }
         req.timeoutInterval = 20
+        return req
+    }
+
+    /// Posts a form, which is what the handlers written for the web UI read.
+    private func sendForm(_ path: String, fields: [String: String]) async throws {
+        var req = try makeRequest(path, method: "POST")
+        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        var components = URLComponents()
+        components.queryItems = fields.map { URLQueryItem(name: $0.key, value: $0.value) }
+        req.httpBody = components.percentEncodedQuery?.data(using: .utf8)
+        _ = try await run(req)
+    }
+
+    private func perform(
+        _ path: String,
+        method: String,
+        query: [URLQueryItem],
+        body: (some Encodable)?
+    ) async throws -> Data {
+        var req = try makeRequest(path, method: method, query: query)
         if let body {
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.httpBody = try JSONEncoder().encode(body)
         }
+        return try await run(req)
+    }
+
+    /// Sends a prepared request and maps the response onto APIError.
+    private func run(_ req: URLRequest) async throws -> Data {
 
         let data: Data
         let response: URLResponse

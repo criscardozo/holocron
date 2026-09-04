@@ -195,3 +195,81 @@ struct JellyfinLinkStatus: Codable {
     var isLinked: Bool { state == "linked" }
     var isExpired: Bool { state == "expired" }
 }
+
+// MARK: - Library quality
+
+/// One problem with one item. `category` is the server's key, not a display
+/// label, so the app decides how to name it — see `QualityCategory`.
+struct QualityFinding: Codable, Identifiable, Hashable {
+    var category: String
+    var itemId: String
+    var title: String
+    var detail: String
+    var path: String
+    var kind: String
+
+    var id: String { category + "\u{0}" + itemId + "\u{0}" + path }
+}
+
+struct QualityReport: Codable {
+    var configured: Bool
+    var hasReport: Bool?
+    var scanning: Bool?
+    /// Whether the linked Jellyfin account may ask the server to re-read
+    /// metadata. Without it the refresh action is not offered at all.
+    var admin: Bool?
+    var generatedAt: String?
+    var scanned: Int?
+    var total: Int?
+    /// Real totals, which can exceed the findings returned: the server caps the
+    /// list at 200 per category.
+    var counts: [String: Int]?
+    var findings: [QualityFinding]
+
+    func count(_ category: QualityCategory) -> Int { counts?[category.rawValue] ?? 0 }
+
+    func findings(in category: QualityCategory) -> [QualityFinding] {
+        findings.filter { $0.category == category.rawValue }
+    }
+
+    /// True when the category holds more than the server sent.
+    func truncated(_ category: QualityCategory) -> Bool {
+        count(category) > findings(in: category).count
+    }
+}
+
+/// The five categories, in the order the web panel shows them.
+enum QualityCategory: String, CaseIterable, Identifiable {
+    case subsMissing = "subs-missing"
+    case noSynopsis = "no-synopsis"
+    case genericTitle = "generic-title"
+    case ghost
+    case collision
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .subsMissing: "Sin subtítulos ES"
+        case .noSynopsis: "Sin sinopsis"
+        case .genericTitle: "Título genérico"
+        case .ghost: "Fantasmas"
+        case .collision: "Numeración repetida"
+        }
+    }
+
+    var hint: String {
+        switch self {
+        case .subsMissing: "Buscalos en Subtítulos, o dejá el .srt junto al archivo."
+        case .noSynopsis: "Casi siempre alcanza con que Jellyfin vuelva a leer la metadata."
+        case .genericTitle: "Jellyfin no pudo identificar el archivo. Revisá el nombre y refrescá."
+        case .ghost: "El archivo ya no está: se limpian desde Jellyfin."
+        case .collision: "Dos archivos con el mismo SxxEyy. Se arregla renombrando."
+        }
+    }
+
+    /// Whether re-reading the metadata is a plausible fix. Missing subtitles and
+    /// a duplicated episode number are not metadata problems, so offering the
+    /// button there would spend a call on the provider for nothing.
+    var refreshable: Bool { self == .noSynopsis || self == .genericTitle }
+}
