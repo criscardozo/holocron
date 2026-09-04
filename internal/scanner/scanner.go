@@ -555,7 +555,10 @@ func filesystemStat(path string) (diskStat, error) {
 	if err := syscall.Statfs(path, &stat); err != nil {
 		return diskStat{}, err
 	}
-	blockSize := uint64(stat.Bsize)
+	// Bsize is int64 on Linux and uint32 on Darwin, so this conversion only
+	// exists on one of them — which is why it took a CI run on Linux to see it.
+	// A block size is a positive quantity in every filesystem there is.
+	blockSize := uint64(stat.Bsize) //#nosec G115 -- a block size is never negative
 	total := stat.Blocks * blockSize
 	free := stat.Bfree * blockSize
 	available := stat.Bavail * blockSize
