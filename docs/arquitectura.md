@@ -337,6 +337,29 @@ manual; si se cambia el hardening, hay que tocar los dos lugares.
 > (el instalador lo hace con `HOLOCRON_MEDIA_PATHS`). Sin eso, esos trabajos fallan
 > y ahora lo informan explícitamente en la UI en vez de quedarse en silencio.
 
+> **Dónde conviene poner ese permiso.** `HOLOCRON_MEDIA_PATHS` lo escribe en la
+> unit que genera el instalador, y ahí es frágil: desaparece **en silencio** el
+> día que alguien reinstala sin la variable. Un **drop-in** propio
+> (`/etc/systemd/system/holocron.service.d/20-media-paths.conf`) vive fuera del
+> instalador y sobrevive a cualquier reinstalación, incluida la que dispara el
+> botón de actualizar. Es lo que se usa en esta instalación.
+>
+> Por eso el aviso del instalador consulta `systemctl show -p ReadWritePaths`
+> en vez de mirar la plantilla que acaba de escribir: la plantilla dice lo que
+> el instalador configuró, systemd dice lo que realmente se aplica.
+>
+> **Y para comprobarlo, no sirve `sudo -u holocron touch`**: eso corre fuera
+> del sandbox, que es el único lugar donde `ReadWritePaths` existe. Sobre un
+> exFAT montado con todo en 777, ese test escribe en cualquier lado y da un
+> falso negativo. La forma correcta es levantar un proceso transitorio con el
+> mismo sandbox:
+>
+> ```sh
+> sudo systemd-run --uid=holocron --gid=holocron -p ProtectSystem=strict \
+>   -p "ReadWritePaths=/mnt/grande/Peliculas /mnt/grande/Series" \
+>   --wait --pipe touch /mnt/grande/Peliculas/.test
+> ```
+
 > **Target confirmado:** Raspberry Pi 4/5 con SO de 64 bits → `GOARCH=arm64`.
 
 ## Convención de commits

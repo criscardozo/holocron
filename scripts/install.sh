@@ -200,6 +200,18 @@ install_binary() {
 # button. Holocron runs unprivileged and read-only, so it cannot replace its own
 # binary; it drops a trigger file that this path unit watches, and the oneshot
 # service re-runs this installer as root. Skip it with HOLOCRON_NO_UPDATER=1.
+# effective_media_paths reports the ReadWritePaths systemd actually applies,
+# which is not the same as what this script just wrote: a drop-in under
+# <unit>.d/ can grant them too, and that is the sturdier place for it — a
+# permission kept only in the generated template disappears the day someone
+# reinstalls without the environment variable, silently.
+#
+# Asking systemd instead of grepping our own template is the difference between
+# reporting the configuration and reporting the effect.
+effective_media_paths() {
+	systemctl show "$SERVICE_NAME" -p ReadWritePaths --value 2>/dev/null | tr -d '\n'
+}
+
 install_updater() {
 	if [ -n "${HOLOCRON_NO_UPDATER:-}" ]; then
 		log "Skipping the update helper (HOLOCRON_NO_UPDATER is set)"
@@ -316,11 +328,12 @@ do_install() {
 	systemctl --no-pager status "$SERVICE_NAME" | head -n 4 || true
 	echo
 	log "Open $(access_url) from another machine on the LAN."
-	if [ -z "$MEDIA_PATHS" ]; then
+	if [ -z "$(effective_media_paths)" ]; then
 		echo
 		warn "The service is hardened with ProtectSystem=strict: it cannot write"
 		warn "subtitles outside its state dir until you grant access to the media"
-		warn "folders. Re-run with HOLOCRON_MEDIA_PATHS=\"/path/one /path/two\"."
+		warn "folders. Re-run with HOLOCRON_MEDIA_PATHS=\"/path/one /path/two\","
+		warn "or add a drop-in under $SERVICE_NAME.d/ (which survives reinstalls)."
 	fi
 }
 
