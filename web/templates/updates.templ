@@ -68,6 +68,13 @@ templ Updates(v UpdatesView) {
 				<p class="muted link-step">
 					Pide el token porque esta acción reinicia el servicio, y la web no tiene contraseña. Está en «App iOS», más abajo.
 				</p>
+			} else if !v.Checked {
+				// Never looked, so nothing can be claimed. The check is a button
+				// rather than automatic because the panel has to render offline
+				// and instantly.
+				<p class="muted">
+					Sin chequear todavía. Tocá «Buscar actualizaciones» para comparar con GitHub.
+				</p>
 			} else {
 				<span class="w-ok">
 					@IconSm("check")
@@ -93,5 +100,5 @@ templ Updates(v UpdatesView) {
 // be run by hand over SSH.
 templ manualUpdate() {
 	<p class="muted link-step">Actualizá desde una terminal en la Pi:</p>
-	<p class="mono token-box">curl -fsSL https://raw.githubusercontent.com/criscardozo/holocron/main/scripts/install.sh | sudo bash</p>
+	<p class="mono token-box">curl -fsSL https://github.com/criscardozo/holocron/releases/latest/download/install.sh | sudo bash</p>
 }

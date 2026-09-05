@@ -17,4 +17,9 @@ type UpdatesView struct {
 	Requested string
 	Error     string
 	CheckedAt string
+	// Checked is false until GitHub has actually been consulted. Without it the
+	// panel said "estás al día" while never having looked, which is how a Pi
+	// sat three releases behind — including the one that fixed its Jellyfin
+	// connection — with the page reporting it was current.
+	Checked bool
 }

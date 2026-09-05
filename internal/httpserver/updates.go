@@ -83,6 +83,7 @@ func (s *Server) updatesView(ctx context.Context, fetch bool) templates.UpdatesV
 		Error:       st.Error,
 	}
 	if !st.CheckedAt.IsZero() {
+		v.Checked = true
 		v.CheckedAt = "a las " + st.CheckedAt.Local().Format("15:04")
 	}
 	return v

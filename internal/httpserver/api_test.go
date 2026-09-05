@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cristian/holocron/internal/settings"
+	"github.com/cristian/holocron/internal/version"
 )
 
 func TestAPIRequiresABearerToken(t *testing.T) {
@@ -240,5 +241,30 @@ func TestQualityRefreshNeedsAnAdministrator(t *testing.T) {
 	resp := ts.post(t, "/quality/refresh", url.Values{"item": {"whatever"}}, nil)
 	if got := resp.Body; !strings.Contains(got, "Requiere admin") {
 		t.Errorf("got %q", got)
+	}
+}
+
+// TestUpdatePanelDoesNotClaimToBeCurrentBeforeChecking pins the bug that let a
+// Pi sit three releases behind — including the one that fixed its Jellyfin
+// connection — while the settings page said it was up to date. The panel
+// renders from cache and never fetches on load, so with nothing cached it
+// knows nothing and has to say so.
+//
+// Not parallel: it stamps the version, which is package-level state, to get a
+// build that is comparable against GitHub at all. A dev build takes a
+// different branch and would never exercise this one.
+func TestUpdatePanelDoesNotClaimToBeCurrentBeforeChecking(t *testing.T) {
+	original := version.Version
+	version.Version = "v0.0.1"
+	t.Cleanup(func() { version.Version = original })
+
+	ts := newTestServer(t)
+	page := ts.get(t, "/settings", nil).Body
+
+	if strings.Contains(page, "Estás al día") {
+		t.Error("the panel claimed to be current without ever consulting GitHub")
+	}
+	if !strings.Contains(page, "Sin chequear") {
+		t.Error("it should say it has not checked, and point at the button")
 	}
 }
