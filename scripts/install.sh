@@ -251,8 +251,15 @@ install_power_helpers() {
 	cat >"$POWER_RESET_SERVICE" <<EOF
 [Unit]
 Description=Clear stale Holocron action triggers
+# Ordering that took a reboot to get right. With the default dependencies this
+# unit inherits After=basic.target, which runs *after* paths.target; the .path
+# units depend on it, so systemd finds a cycle and breaks it by dropping the
+# .path units. Everything then looks fine until the next boot, when all of them
+# come up "inactive (dead)" and no button works. Verified on the machine: 8 of 8
+# active after boot with this ordering, and 0 cycles in the journal.
 DefaultDependencies=no
 After=local-fs.target
+Before=paths.target
 $(power_actions | while IFS="$(printf '\t')" read -r name _ _; do
 	printf 'Before=holocron-%s.path\n' "$name"
 done)
@@ -263,7 +270,7 @@ ExecStart=/bin/sh -c 'rm -f $STATE_DIR/.*-requested'
 RemainAfterExit=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=sysinit.target
 EOF
 
 	power_actions | while IFS="$(printf '\t')" read -r name command kills; do

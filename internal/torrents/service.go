@@ -162,13 +162,29 @@ func (s *Service) act(ctx context.Context, fn func(*qbittorrent.Client) error) e
 	return fn(c)
 }
 
-// ActiveTorrents reports how many torrents are downloading or seeding.
-// Implements power.TorrentProbe, so the management screen can warn before the
-// machine goes away mid-transfer.
+// busyStates are the qBittorrent states that would be harmed by the machine
+// going away. Deliberately wider than "transferring": a torrent being moved or
+// rechecked has no speed at all, and interrupting one of those is the case that
+// actually risks data rather than just costing time.
+var busyStates = map[string]bool{
+	"downloading": true, "uploading": true,
+	"stalledDL": true, "forcedDL": true, "forcedUP": true,
+	"checkingDL": true, "checkingUP": true,
+	"moving": true, "metaDL": true,
+}
+
+// ActiveTorrents reports how many torrents are in a state that stopping the
+// machine would interrupt. Implements power.TorrentProbe.
 func (s *Service) ActiveTorrents(ctx context.Context) (int, error) {
-	sum, err := s.Summary(ctx)
+	list, err := s.List(ctx)
 	if err != nil {
 		return 0, err
 	}
-	return sum.Active, nil
+	n := 0
+	for _, t := range list {
+		if busyStates[t.State] {
+			n++
+		}
+	}
+	return n, nil
 }

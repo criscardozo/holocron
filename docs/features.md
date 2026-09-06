@@ -189,6 +189,19 @@ el patrón evita. Con un unit por acción, el conjunto de cosas que pueden pasar
 **es** el conjunto de units instalados, auditable desde afuera con
 `systemctl list-units 'holocron-*'`.
 
+### El ciclo de dependencias que sólo aparece al reiniciar
+
+La unit de limpieza necesita `DefaultDependencies=no`, `After=local-fs.target`,
+**`Before=paths.target`** y **`WantedBy=sysinit.target`**. Con las dependencias
+por defecto hereda `After=basic.target`, que corre *después* de `paths.target`;
+como las `.path` dependen de ella, systemd encuentra un ciclo y lo rompe
+**descartando las `.path`**.
+
+Lo peligroso es cuándo se nota: en la sesión donde se instala funciona todo, y
+recién al reiniciar aparecen todas las `.path` en `loaded / inactive (dead)` y
+ningún botón anda. El chequeo barato tras un arranque es
+`journalctl -b | grep -c 'Found dependency on'`, que tiene que dar 0.
+
 ### El bucle de apagado
 
 Si un trigger de `poweroff` sobrevive a un reinicio —un corte de luz entre que
