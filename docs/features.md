@@ -211,6 +211,36 @@ teclado y monitor. Por eso hay una oneshot al arranque
 (`holocron-action-reset.service`) que borra los triggers residuales, ordenada
 `Before=` todas las `.path`.
 
+### Cómo probar el mecanismo sin apagar la máquina
+
+**Escribir un disparador lo ejecuta en el acto.** Las `.path` están vigilando, así
+que un `touch .poweroff-requested` apaga la Pi antes de que corra la línea
+siguiente del procedimiento. Esto ya causó un apagado accidental de otro
+disparador durante el desarrollo.
+
+Para verificar la limpieza de disparadores hay que **parar antes las dos `.path`
+peligrosas**, y el motivo va escrito al lado del paso porque un paso sin
+explicación es el primero que alguien saltea por ir rápido:
+
+```sh
+# Sin esto, la línea siguiente apaga la máquina.
+sudo systemctl stop holocron-poweroff.path holocron-reboot.path
+
+sudo -u holocron touch /var/lib/holocron/.poweroff-requested
+sudo systemctl restart holocron-action-reset.service
+sudo ls -a /var/lib/holocron | grep -- '-requested'   # ls SIN -a no ve dotfiles
+
+# Devolver la vigilancia, o los botones quedan muertos.
+sudo systemctl start holocron-poweroff.path holocron-reboot.path
+```
+
+Dos trampas medidas: `ls` sin `-a` no lista archivos ocultos, así que una
+verificación descuidada informa «0 residuales» sin haber mirado nada; y si el
+nombre de prueba no termina exactamente en `-requested`, el glob no lo toca.
+
+Para probar el mecanismo entero sin riesgo, usar `restart-jellyfin`: recorre el
+mismo camino y lo peor que pasa es que se corte una reproducción.
+
 ### Fricción despareja, a propósito
 
 Apagar es lo único que pide el **token de la API**; reiniciar no. La línea es la
