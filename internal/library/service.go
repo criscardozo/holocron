@@ -239,3 +239,44 @@ func boolToInt(b bool) int {
 	}
 	return 0
 }
+
+// NowPlaying names what Jellyfin is currently showing, one line per session.
+// Implements power.MediaProbe so the management screen can say what stopping
+// the machine would interrupt.
+func (s *Service) NowPlaying(ctx context.Context) ([]string, error) {
+	c, err := s.client(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sessions, err := c.NowPlaying(ctx)
+	if err != nil {
+		return nil, jellyfin.Rejected(err)
+	}
+	out := make([]string, 0, len(sessions))
+	for _, session := range sessions {
+		line := session.Playing()
+		if session.UserName != "" {
+			line += " (" + session.UserName + ")"
+		}
+		out = append(out, line)
+	}
+	return out, nil
+}
+
+// RunningTasks names Jellyfin's background jobs in progress. Implements
+// power.MediaProbe.
+func (s *Service) RunningTasks(ctx context.Context) ([]string, error) {
+	c, err := s.client(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tasks, err := c.RunningTasks(ctx)
+	if err != nil {
+		return nil, jellyfin.Rejected(err)
+	}
+	out := make([]string, 0, len(tasks))
+	for _, t := range tasks {
+		out = append(out, t.Name)
+	}
+	return out, nil
+}

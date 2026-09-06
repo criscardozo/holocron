@@ -66,6 +66,7 @@ holocron/
     apitoken/               # token de la API JSON (genera, revoca, verifica)
     version/                # versión estampada en el build (ldflags)
     updates/                # chequeo de releases en GitHub + pedido de instalación
+    power/                  # apagar/reiniciar la Pi y sus servicios, vía units de root
     httpserver/             # rutas, middleware, handlers por feature, API JSON
   ios/                      # app iOS en SwiftUI (proyecto generado con xcodegen)
   web/

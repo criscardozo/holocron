@@ -312,3 +312,56 @@ func TestRedeemSendsTheSecretInTheBody(t *testing.T) {
 		t.Errorf("auth = %+v", auth)
 	}
 }
+
+// TestNowPlayingIgnoresIdleSessions: Jellyfin reports a session for every
+// connected client, so counting sessions would say "someone is watching"
+// whenever an app is merely open. NowPlayingItem is the difference.
+func TestNowPlayingIgnoresIdleSessions(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`[
+			{"UserName":"cris","DeviceName":"TV","NowPlayingItem":{"Name":"1:23:45","SeriesName":"Chernobyl"}},
+			{"UserName":"nati","DeviceName":"iPhone"},
+			{"UserName":"cris","DeviceName":"Web","NowPlayingItem":{"Name":"Dune"}}
+		]`))
+	}))
+	defer srv.Close()
+
+	playing, err := New(srv.URL, "tok", "dev", "v1").NowPlaying(t.Context())
+	if err != nil {
+		t.Fatalf("NowPlaying: %v", err)
+	}
+	if len(playing) != 2 {
+		t.Fatalf("got %d playing, want 2 (the idle app does not count)", len(playing))
+	}
+	// A series is named by both parts: "Chernobyl" alone would not say which
+	// episode someone is in the middle of.
+	if got := playing[0].Playing(); got != "Chernobyl · 1:23:45" {
+		t.Errorf("playing = %q", got)
+	}
+	if got := playing[1].Playing(); got != "Dune" {
+		t.Errorf("film = %q", got)
+	}
+}
+
+func TestRunningTasksOnlyReportsRunningOnes(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`[
+			{"Name":"Escanear biblioteca","State":"Running"},
+			{"Name":"Limpiar caché","State":"Idle"},
+			{"Name":"Miniaturas","State":"running"}
+		]`))
+	}))
+	defer srv.Close()
+
+	tasks, err := New(srv.URL, "tok", "dev", "v1").RunningTasks(t.Context())
+	if err != nil {
+		t.Fatalf("RunningTasks: %v", err)
+	}
+	// Case-insensitive on purpose: the state is a string from another codebase
+	// and its capitalisation is not ours to rely on.
+	if len(tasks) != 2 {
+		t.Fatalf("got %d running, want 2: %+v", len(tasks), tasks)
+	}
+}

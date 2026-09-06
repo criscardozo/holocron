@@ -213,6 +213,46 @@ y `items` viene vacío. La lista se corta en 500 ítems; `truncated` lo indica.
 Los dos `POST` devuelven `202` tanto si arrancaron el trabajo como si ya había
 uno corriendo, y `412` si Jellyfin no está vinculado.
 
+### Gestión de la máquina
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/api/v1/manage` | Acciones disponibles y qué se interrumpiría |
+| `POST` | `/api/v1/manage/action` | Pide una acción (202) |
+
+```json
+{
+  "available": true,
+  "actions": [
+    {"key": "restart-jellyfin", "label": "Reiniciar Jellyfin",
+     "detail": "…", "needsToken": false, "interrupts": false},
+    {"key": "poweroff", "label": "Apagar la Pi",
+     "detail": "…", "needsToken": true, "interrupts": true}
+  ],
+  "warnings": ["Se está reproduciendo Chernobyl · S01E01 (cris)"],
+  "checked": true
+}
+```
+
+`warnings` es lo que se interrumpiría ahora mismo. **`checked` distingue «no hay
+nada en curso» de «no se pudo preguntar»**: los dos dan una lista vacía y sólo
+uno significa que es seguro apagar.
+
+`interrupts` marca las que se llevan la máquina entera. `needsToken` marca la
+única irreversible: la API ya está autenticada por bearer, así que el campo no
+cambia lo que valida el server — **le dice al cliente que esa acción merece
+ceremonia propia**. La app la pide manteniendo apretado y no la ofrece cuando la
+dirección configurada no es de la red local, porque un Pi 4 no se enciende a
+distancia.
+
+`action=<key>` va form-encoded. El `202` llega **antes** de que la máquina
+actúe: la unit espera un par de segundos justamente para que la respuesta
+salga, porque un cliente que ve caer la conexión sin respuesta no puede
+distinguir un rechazo de un éxito. Después de ese acuse, **perder contacto es la
+confirmación del éxito**, no un error.
+
+Responde `412` si el ayudante con privilegios no está instalado.
+
 ### Calidad de biblioteca
 
 | Método | Ruta | Qué hace |

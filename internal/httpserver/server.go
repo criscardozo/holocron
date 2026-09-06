@@ -16,6 +16,7 @@ import (
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
+	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
@@ -42,6 +43,7 @@ type Deps struct {
 	APIToken     *apitoken.Store
 	JellyfinLink *jellyfin.LinkService
 	Updates      *updates.Service
+	Power        *power.Service
 }
 
 // Server serves the Holocron web UI.
@@ -89,6 +91,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /quality/scan", s.handleQualityScan)
 	mux.HandleFunc("GET /quality/status", s.handleQualityStatus)
 	mux.HandleFunc("POST /quality/refresh", s.handleQualityRefresh)
+
+	// Machine management: restart services, reboot, power off.
+	mux.HandleFunc("GET /manage", s.handleManagePage)
+	mux.HandleFunc("POST /manage/action", s.handleManageAction)
 
 	// Phase 4: subtitles (OpenSubtitles).
 	mux.HandleFunc("GET /subtitles", s.handleSubtitlesPage)

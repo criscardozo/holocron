@@ -119,6 +119,29 @@ struct ContractTests {
         #expect(failed.status == .failed)
     }
 
+    @Test func manage() throws {
+        let status = try decode(ManageStatus.self, "manage")
+        #expect(status.available)
+        #expect(status.checked)
+        #expect(status.pending == nil)
+
+        // The warnings are what makes the screen worth having: naming the
+        // episode someone is in the middle of, not "está ocupado".
+        #expect(status.warnings.count == 2)
+        #expect(status.warnings[0].contains("Chernobyl"))
+
+        // Only powering off carries the extra ceremony. Reboot interrupts just
+        // as much but comes back on its own, and giving both the same friction
+        // would train one gesture for the two.
+        let off = try #require(status.actions.first { $0.key == "poweroff" })
+        let reboot = try #require(status.actions.first { $0.key == "reboot" })
+        let restart = try #require(status.actions.first { $0.key == "restart-jellyfin" })
+        #expect(off.needsToken)
+        #expect(!reboot.needsToken)
+        #expect(reboot.interrupts)
+        #expect(!restart.interrupts)
+    }
+
     @Test func quality() throws {
         let report = try decode(QualityReport.self, "quality")
         #expect(report.configured)

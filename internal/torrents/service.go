@@ -161,3 +161,14 @@ func (s *Service) act(ctx context.Context, fn func(*qbittorrent.Client) error) e
 	}
 	return fn(c)
 }
+
+// ActiveTorrents reports how many torrents are downloading or seeding.
+// Implements power.TorrentProbe, so the management screen can warn before the
+// machine goes away mid-transfer.
+func (s *Service) ActiveTorrents(ctx context.Context) (int, error) {
+	sum, err := s.Summary(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return sum.Active, nil
+}

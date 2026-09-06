@@ -79,9 +79,10 @@ Espaciado `--space-1..8` (4→32 px), radios `--radius-sm/md/lg`, elevación
 En `web/templates/`. Los principales:
 
 - **`Layout(title)`** — shell común: topbar sticky con blur, marca (diamante
-  naranja), 8 links. El link activo se marca solo: se compara el label con el
+  naranja), 9 links. El link activo se marca solo: se compara el label con el
   título de la página, así que **el título debe coincidir** con el label del nav
-  (`Disco`, `Nombres`, `Medios`, `Calidad`, `Subtítulos`, `Torrents`, `Ajustes`).
+  (`Disco`, `Nombres`, `Medios`, `Calidad`, `Subtítulos`, `Torrents`, `ObiWan`,
+  `Ajustes`).
 - **`Icon(id)` / `IconSm(id)`** — íconos del sprite SVG embebido en el layout.
   Para sumar uno, se agrega un `<symbol>` en `iconSprite()`. No se usan emojis.
 - **`Widget(chrome, body)`** — tarjeta del dashboard. `WidgetChrome` lleva el

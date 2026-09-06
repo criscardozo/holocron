@@ -273,3 +273,31 @@ enum QualityCategory: String, CaseIterable, Identifiable {
     /// button there would spend a call on the provider for nothing.
     var refreshable: Bool { self == .noSynopsis || self == .genericTitle }
 }
+
+// MARK: - Machine management
+
+struct ManageAction: Codable, Identifiable, Hashable {
+    var key: String
+    var label: String
+    var detail: String
+    /// True for the action that cannot be undone from anywhere but the room the
+    /// machine is in. The app holds the API token, so sending it would be no
+    /// friction at all — this is what tells the UI to ask for something
+    /// deliberate instead.
+    var needsToken: Bool
+    /// True when the whole machine goes away rather than one service.
+    var interrupts: Bool
+
+    var id: String { key }
+}
+
+struct ManageStatus: Codable {
+    var available: Bool
+    var actions: [ManageAction]
+    /// What is going on right now and would be interrupted.
+    var warnings: [String]
+    /// False when none of it could be consulted, which is not the same as an
+    /// all-clear and must not be shown as one.
+    var checked: Bool
+    var pending: String?
+}

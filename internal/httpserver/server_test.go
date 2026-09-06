@@ -19,6 +19,7 @@ import (
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
+	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
@@ -68,6 +69,7 @@ func newTestServer(t *testing.T) *testServer {
 		APIToken:     apitoken.NewStore(settingsStore),
 		JellyfinLink: jellyfin.NewLinkService(settingsStore),
 		Updates:      updates.NewService(t.TempDir()),
+		Power:        power.NewService(t.TempDir()),
 	}
 	deps.Widgets = widgets.NewRegistry(
 		widgets.SystemWidget{},

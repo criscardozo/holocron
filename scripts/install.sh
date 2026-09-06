@@ -31,6 +31,7 @@ ASSET="holocron-linux-arm64"
 UPDATER_PATH="/usr/local/bin/holocron-update"
 UPDATER_UNIT="/etc/systemd/system/holocron-update.path"
 UPDATER_SERVICE="/etc/systemd/system/holocron-update.service"
+POWER_RESET_SERVICE="/etc/systemd/system/holocron-action-reset.service"
 # Where the privileged updater re-fetches this script from. A release asset,
 # not raw main: the updater runs as root, so pulling from a branch means running
 # whatever is on that branch at the moment the button is pressed. The asset is
@@ -212,6 +213,105 @@ effective_media_paths() {
 	systemctl show "$SERVICE_NAME" -p ReadWritePaths --value 2>/dev/null | tr -d '\n'
 }
 
+# POWER_ACTIONS maps an action name to the command its unit runs. The name is
+# the only thing Holocron ever writes, and it writes it as a *filename*, never
+# as content: each action gets its own trigger and its own pair of units, so no
+# root process ever parses anything the web server produced. The set of things
+# that can happen is the set of units installed here, auditable from outside
+# Holocron with `systemctl list-units 'holocron-*'`.
+#
+# KILLS_RESPONDER lists the ones that take down the process serving the request
+# that asked for them. Those get a couple of seconds so the HTTP response gets
+# out first, otherwise the browser sees a connection reset and cannot tell a
+# refusal from a success.
+power_actions() {
+	cat <<-'ACTIONS'
+	restart-jellyfin	/usr/bin/systemctl restart jellyfin	no
+	restart-qbittorrent	/usr/bin/systemctl restart qbittorrent	no
+	restart-cloudflared	/usr/bin/systemctl restart cloudflared	yes
+	restart-holocron	/usr/bin/systemctl restart holocron	yes
+	reboot	/usr/bin/systemctl reboot	yes
+	poweroff	/usr/bin/systemctl poweroff	yes
+	ACTIONS
+}
+
+install_power_helpers() {
+	if [ -n "${HOLOCRON_NO_POWER:-}" ]; then
+		log "Skipping the machine controls (HOLOCRON_NO_POWER is set)"
+		remove_power_helpers
+		return
+	fi
+
+	log "Installing the machine controls"
+
+	# A stale trigger surviving a reboot would be read at boot and acted on
+	# again. For a restart that is a nuisance; for poweroff it means the machine
+	# shuts itself down every time it starts, recoverable only with a keyboard
+	# and a monitor attached. This clears them before any path unit is watching.
+	cat >"$POWER_RESET_SERVICE" <<EOF
+[Unit]
+Description=Clear stale Holocron action triggers
+DefaultDependencies=no
+After=local-fs.target
+$(power_actions | while IFS="$(printf '\t')" read -r name _ _; do
+	printf 'Before=holocron-%s.path\n' "$name"
+done)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'rm -f $STATE_DIR/.*-requested'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+	power_actions | while IFS="$(printf '\t')" read -r name command kills; do
+		[ -n "$name" ] || continue
+		delay=""
+		if [ "$kills" = "yes" ]; then
+			delay="ExecStartPre=/bin/sleep 2"
+		fi
+
+		cat >"/etc/systemd/system/holocron-$name.service" <<EOF
+[Unit]
+Description=Holocron: $name
+
+[Service]
+Type=oneshot
+# Clear the trigger first: the path unit re-arms only once the file is gone, so
+# a failed run cannot loop.
+ExecStartPre=/bin/rm -f $STATE_DIR/.$name-requested
+$delay
+ExecStart=$command
+EOF
+
+		cat >"/etc/systemd/system/holocron-$name.path" <<EOF
+[Unit]
+Description=Watch for a Holocron $name request
+After=holocron-action-reset.service
+
+[Path]
+PathExists=$STATE_DIR/.$name-requested
+Unit=holocron-$name.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+	done
+}
+
+remove_power_helpers() {
+	power_actions | while IFS="$(printf '\t')" read -r name _ _; do
+		[ -n "$name" ] || continue
+		systemctl disable --now "holocron-$name.path" >/dev/null 2>&1 || true
+		rm -f "/etc/systemd/system/holocron-$name.service" \
+			"/etc/systemd/system/holocron-$name.path"
+	done
+	systemctl disable --now holocron-action-reset.service >/dev/null 2>&1 || true
+	rm -f "$POWER_RESET_SERVICE"
+}
+
 install_updater() {
 	if [ -n "${HOLOCRON_NO_UPDATER:-}" ]; then
 		log "Skipping the update helper (HOLOCRON_NO_UPDATER is set)"
@@ -284,6 +384,15 @@ start_service() {
 	if [ -f "$UPDATER_UNIT" ]; then
 		systemctl enable --now holocron-update.path >/dev/null 2>&1 || true
 	fi
+	if [ -f "$POWER_RESET_SERVICE" ]; then
+		# Enabled but deliberately not started now: its job is to clear stale
+		# triggers at boot, before any path unit watches for them.
+		systemctl enable holocron-action-reset.service >/dev/null 2>&1 || true
+		power_actions | while IFS="$(printf '\t')" read -r name _ _; do
+			[ -n "$name" ] || continue
+			systemctl enable --now "holocron-$name.path" >/dev/null 2>&1 || true
+		done
+	fi
 	# When run by the updater this restarts the very service that asked for it,
 	# which is fine: systemd owns both, and the updater runs independently.
 	systemctl restart "$SERVICE_NAME"
@@ -317,6 +426,7 @@ do_install() {
 	[ -n "$ADDR" ] || ADDR="$DEFAULT_ADDR"
 	write_service
 	install_updater
+	install_power_helpers
 	start_service
 
 	echo
@@ -346,7 +456,9 @@ do_uninstall() {
 
 	log "Removing units and binaries"
 	systemctl disable --now holocron-update.path >/dev/null 2>&1 || true
+	remove_power_helpers
 	rm -f "$SERVICE_PATH" "$INSTALL_PATH" "$UPDATER_UNIT" "$UPDATER_SERVICE" "$UPDATER_PATH"
+	rm -f "$STATE_DIR"/.*-requested
 	systemctl daemon-reload
 
 	if id "$SERVICE_USER" >/dev/null 2>&1; then

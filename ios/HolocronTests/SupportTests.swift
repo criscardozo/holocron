@@ -174,11 +174,50 @@ struct SymbolTests {
             "checkmark.circle", "diamond", "exclamationmark.triangle",
             "exclamationmark.triangle.fill", "film", "gearshape",
             "gauge.with.dots.needle.bottom.50percent", "internaldrive",
+            "power", "slider.horizontal.3",
             "magnifyingglass", "plus.circle", "powerplug", "trash",
             "waveform.path.ecg",
         ]
         for name in symbols {
             #expect(UIImage(systemName: name) != nil, "SF Symbol \(name) does not exist")
+        }
+    }
+}
+
+/// The power-off button is withheld when the app is not on the home network.
+/// A Raspberry Pi 4 has no wake-on-LAN, so pressing it from outside the house
+/// means no server until somebody gets home — a mistake the app can see coming,
+/// unlike a dialog, which only works if it is read.
+struct HomeNetworkTests {
+    @Test func recognisesTheLocalAddresses() {
+        for host in [
+            "192.168.0.2", "192.168.1.10",
+            "10.0.0.5",
+            "172.16.0.1", "172.31.255.254",   // the /12 people forget
+            "obiwan.local", "localhost",
+        ] {
+            #expect(AppSettings.isPrivateHost(host), "\(host) should count as home")
+        }
+    }
+
+    @Test func treatsEverythingElseAsAway() {
+        for host in [
+            "holocron.merli.store",           // the real public address
+            "172.32.0.1", "172.15.0.1",       // just outside the private /12
+            "192.169.0.1",                    // one off from 192.168
+            "8.8.8.8",
+            "example.com",
+            "",
+        ] {
+            #expect(!AppSettings.isPrivateHost(host), "\(host) should count as away")
+        }
+    }
+
+    @Test func aMalformedAddressIsNotHome() {
+        // Conservative on purpose: being wrong this way withholds a button,
+        // being wrong the other way loses the server.
+        for host in ["192.168.0", "192.168.0.1.5", "1.2.3.x", "192.168.0.doscientos"] {
+            #expect(!AppSettings.isPrivateHost(host), "\(host) should not count as home")
         }
     }
 }

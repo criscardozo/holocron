@@ -93,6 +93,16 @@ struct APIClient: Sendable {
         try await request("naming/scan", method: "POST")
     }
 
+    // MARK: - Machine management
+
+    func manage() async throws -> ManageStatus {
+        try await get("manage")
+    }
+
+    func runManageAction(_ key: String) async throws {
+        try await sendForm("manage/action", fields: ["action": key])
+    }
+
     // MARK: - Library quality
 
     func quality() async throws -> QualityReport {

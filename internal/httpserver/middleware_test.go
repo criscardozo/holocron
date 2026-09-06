@@ -163,7 +163,7 @@ func TestNoInlineStylesAnywhere(t *testing.T) {
 
 	for _, path := range []string{
 		"/", "/disk", "/naming", "/media", "/quality",
-		"/subtitles", "/torrents", "/settings",
+		"/subtitles", "/torrents", "/manage", "/settings",
 	} {
 		resp := ts.get(t, path, nil)
 		if resp.Status != http.StatusOK {

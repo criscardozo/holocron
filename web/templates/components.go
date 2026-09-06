@@ -19,6 +19,7 @@ var navItems = []struct{ Label, Href string }{
 	{"Calidad", "/quality"},
 	{"Subtítulos", "/subtitles"},
 	{"Torrents", "/torrents"},
+	{"ObiWan", "/manage"},
 	{"Ajustes", "/settings"},
 }
 

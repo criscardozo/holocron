@@ -158,3 +158,66 @@ Agregar descargas por magnet-link desde la UI.
 - **UI**: un input para pegar el magnet (validación básica del esquema `magnet:?`),
   opción de categoría/carpeta de destino.
 - **Endpoint**: `POST /torrents/add`.
+
+---
+
+## Feature 7 — Gestión de la máquina (`/manage`)
+
+**Pantalla** con el estado de la Pi y los botones que actúan sobre ella:
+reiniciar Jellyfin, qBittorrent, el túnel o Holocron; reiniciar la Pi; apagarla.
+
+### Por qué no puede hacerlo Holocron solo
+
+El servicio corre sin privilegios, con `NoNewPrivileges=true` y
+`ProtectSystem=strict`. Eso **descarta `sudo` de entrada**: con esa bandera el
+kernel ignora el bit setuid, así que `sudo` no funciona desde ese proceso ni
+agregando al usuario a sudoers. Habría que aflojar el endurecimiento.
+
+Se usa el mismo patrón que la actualización: Holocron deja un archivo, una
+`.path` unit de root lo ve y actúa.
+
+### Un trigger por acción, y vacío
+
+Cada acción tiene **su propio archivo y su propio par de units**, y el archivo
+no tiene contenido: es una señal, no un mensaje. El `ExecStart` de cada unit
+queda fijo al instalar y nunca lee lo que Holocron escribió.
+
+Poner el nombre de la acción **adentro** de un trigger compartido pondría a un
+proceso root a parsear datos escritos por un servidor web, y la seguridad
+pasaría a depender de una lista blanca en el código de Holocron — justo lo que
+el patrón evita. Con un unit por acción, el conjunto de cosas que pueden pasar
+**es** el conjunto de units instalados, auditable desde afuera con
+`systemctl list-units 'holocron-*'`.
+
+### El bucle de apagado
+
+Si un trigger de `poweroff` sobrevive a un reinicio —un corte de luz entre que
+se escribe el archivo y que el `rm` llega al disco—, la `.path` unit lo ve al
+arrancar y **la Pi se apaga sola cada vez que enciende**, recuperable sólo con
+teclado y monitor. Por eso hay una oneshot al arranque
+(`holocron-action-reset.service`) que borra los triggers residuales, ordenada
+`Before=` todas las `.path`.
+
+### Fricción despareja, a propósito
+
+Apagar es lo único que pide el **token de la API**; reiniciar no. La línea es la
+irreversibilidad, no el trastorno: un Pi 4 no tiene wake-on-LAN, así que apagarlo
+es de ida salvo que haya alguien al lado. Darle a reiniciar la misma fricción
+entrenaría el mismo gesto para los dos, y el que muerde es el que no vuelve.
+
+En iOS la misma idea toma otra forma, porque la app **tiene** el token guardado
+y mandarlo sería fricción cero: apagar se confirma **manteniendo apretado**, y
+**no se ofrece** cuando la dirección configurada no es de la red de casa.
+
+### El chequeo previo
+
+Antes de los botones, la pantalla dice qué se interrumpiría: quién está
+reproduciendo qué, si Jellyfin tiene una tarea corriendo y cuántos torrents
+están activos. Es la mitad del valor de la pantalla — la pregunta antes de
+apagar nunca es «¿estás seguro?», es «¿hay alguien mirando algo?», y eso se
+puede consultar.
+
+Los sondeos son *best effort*: uno que no contesta no aporta advertencia en vez
+de bloquear la página. `Checked` distingue **«no hay nada en curso»** de **«no
+se pudo preguntar»**, que se ven iguales y sólo uno de los dos significa que es
+seguro apagar.

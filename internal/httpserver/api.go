@@ -15,6 +15,7 @@ import (
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
+	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/scanner"
 	"github.com/cristian/holocron/internal/system"
@@ -44,6 +45,9 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 
 	api.HandleFunc("GET /v1/media", s.apiMedia)
 	api.HandleFunc("POST /v1/media/sync", s.apiMediaSync)
+
+	api.HandleFunc("GET /v1/manage", s.apiManage)
+	api.HandleFunc("POST /v1/manage/action", s.apiManageAction)
 
 	api.HandleFunc("GET /v1/quality", s.apiQuality)
 	api.HandleFunc("POST /v1/quality/scan", s.apiQualityScan)
@@ -348,6 +352,78 @@ func (s *Server) apiStartJob(w http.ResponseWriter, r *http.Request, start func(
 	default:
 		s.apiFailure(w, r, err)
 	}
+}
+
+// ── machine management ──────────────────────────────────────────────────
+
+type apiManageAction struct {
+	Key    string `json:"key"`
+	Label  string `json:"label"`
+	Detail string `json:"detail"`
+	// NeedsToken marks the action that cannot be undone remotely. The app has
+	// the token in its Keychain and could send it invisibly, which would be no
+	// friction at all — so it uses this to ask for something deliberate first.
+	NeedsToken bool `json:"needsToken"`
+	// Interrupts marks the ones that take the whole machine away.
+	Interrupts bool `json:"interrupts"`
+}
+
+func (s *Server) apiManage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	actions := make([]apiManageAction, 0, len(power.Actions))
+	for _, a := range power.Actions {
+		if !s.deps.Power.Available(a) {
+			continue
+		}
+		actions = append(actions, apiManageAction{
+			Key: string(a), Label: a.Label(), Detail: a.Detail(),
+			NeedsToken: a.NeedsToken(), Interrupts: a.Interrupts(),
+		})
+	}
+
+	pre := power.Check(ctx, s.deps.Library, s.deps.Torrents)
+	payload := map[string]any{
+		"available": s.deps.Power.Installed(),
+		"actions":   actions,
+		"warnings":  pre.Warnings,
+		"checked":   pre.Checked,
+	}
+	if pre.Warnings == nil {
+		payload["warnings"] = []string{}
+	}
+	if pending, ok := s.deps.Power.Pending(); ok {
+		payload["pending"] = string(pending)
+	}
+	s.writeJSON(w, http.StatusOK, payload)
+}
+
+// apiManageAction acknowledges before the machine acts on it. The unit waits a
+// couple of seconds precisely so this response gets out: a client that saw the
+// connection drop with no answer could not tell a refusal from a success.
+func (s *Server) apiManageAction(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		s.apiError(w, http.StatusBadRequest, "Malformed form")
+		return
+	}
+	action, ok := power.Valid(strings.TrimSpace(r.PostFormValue("action")))
+	if !ok {
+		s.apiError(w, http.StatusBadRequest, "Unknown action")
+		return
+	}
+	if err := s.deps.Power.Request(action); err != nil {
+		if errors.Is(err, power.ErrNoHelper) {
+			s.apiError(w, http.StatusPreconditionFailed,
+				"The privileged helper is not installed")
+			return
+		}
+		s.apiFailure(w, r, err)
+		return
+	}
+	s.log.Info("machine action requested", "action", string(action), "via", "api")
+	s.writeJSON(w, http.StatusAccepted, map[string]any{
+		"requested": string(action),
+	})
 }
 
 // ── library quality ─────────────────────────────────────────────────────

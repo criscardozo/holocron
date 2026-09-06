@@ -19,16 +19,21 @@ func (SystemWidget) Title() string { return "Sistema" }
 // Card reads a fresh snapshot and renders it. Unavailable metrics (e.g. when
 // running off-device) render as "—".
 func (w SystemWidget) Card(_ context.Context) templ.Component {
-	s := system.Read()
-	v := templates.SystemView{
+	chrome := templates.WidgetChrome{ID: w.ID(), Title: w.Title(), Icon: "activity", Span: "span-2"}
+	return templates.Widget(chrome, templates.SystemBody(SystemViewOf(system.Read())))
+}
+
+// SystemViewOf formats a snapshot for display. Exported because the machine
+// management screen shows the same figures, and two formatters would drift:
+// one page would say "—" where the other said "0%".
+func SystemViewOf(s system.Stats) templates.SystemView {
+	return templates.SystemView{
 		CPU:    percentOrDash(s.HasCPU, s.CPUPercent),
 		RAM:    ramOrDash(s),
 		Temp:   tempOrDash(s),
 		Uptime: dash(s.HasUptime, system.HumanDuration(s.Uptime)),
 		Load:   dash(s.HasLoad, fmt.Sprintf("%.2f", s.Load1)),
 	}
-	chrome := templates.WidgetChrome{ID: w.ID(), Title: w.Title(), Icon: "activity", Span: "span-2"}
-	return templates.Widget(chrome, templates.SystemBody(v))
 }
 
 func percentOrDash(ok bool, pct float64) string {

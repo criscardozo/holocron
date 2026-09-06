@@ -337,3 +337,72 @@ func CleanDisplayTitle(s string) string {
 		return r
 	}, s)
 }
+
+// Session is one client connected to Jellyfin. Only the parts that answer
+// "would powering off interrupt somebody" are decoded.
+type Session struct {
+	UserName   string `json:"UserName"`
+	DeviceName string `json:"DeviceName"`
+	NowPlaying *struct {
+		Name       string `json:"Name"`
+		SeriesName string `json:"SeriesName"`
+	} `json:"NowPlayingItem"`
+}
+
+// Playing reports what this session is showing, or "" if it is idle. A session
+// exists for every connected client, so the presence of one means nothing on
+// its own — NowPlayingItem is what distinguishes an open app from a film in
+// progress.
+func (s Session) Playing() string {
+	if s.NowPlaying == nil {
+		return ""
+	}
+	if s.NowPlaying.SeriesName != "" && s.NowPlaying.Name != "" {
+		return s.NowPlaying.SeriesName + " · " + s.NowPlaying.Name
+	}
+	if s.NowPlaying.Name != "" {
+		return s.NowPlaying.Name
+	}
+	// Playing something Jellyfin will not name: still worth reporting as busy.
+	return "algo"
+}
+
+// NowPlaying lists the sessions currently playing something. Used before
+// stopping anything, so the person about to interrupt a film knows they are
+// about to interrupt a film.
+func (c *Client) NowPlaying(ctx context.Context) ([]Session, error) {
+	var all []Session
+	if err := c.do(ctx, http.MethodGet, "/Sessions", &all); err != nil {
+		return nil, err
+	}
+	var playing []Session
+	for _, s := range all {
+		if s.Playing() != "" {
+			playing = append(playing, s)
+		}
+	}
+	return playing, nil
+}
+
+// ScheduledTask is a Jellyfin background job, such as a library scan.
+type ScheduledTask struct {
+	Name  string `json:"Name"`
+	State string `json:"State"`
+}
+
+// RunningTasks lists the scheduled tasks in progress. Interrupting a library
+// scan halfway is not fatal but it is a mess, so it is worth naming before
+// pulling the machine out from under it.
+func (c *Client) RunningTasks(ctx context.Context) ([]ScheduledTask, error) {
+	var all []ScheduledTask
+	if err := c.do(ctx, http.MethodGet, "/ScheduledTasks", &all); err != nil {
+		return nil, err
+	}
+	var running []ScheduledTask
+	for _, t := range all {
+		if strings.EqualFold(t.State, "Running") {
+			running = append(running, t)
+		}
+	}
+	return running, nil
+}

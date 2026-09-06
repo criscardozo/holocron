@@ -22,6 +22,13 @@ struct DashboardView: View {
         }
         .background(Noir.bg)
         .navigationTitle("Estado")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink { ManagementView() } label: {
+                    Label("ObiWan", systemImage: "slider.horizontal.3")
+                }
+            }
+        }
         .refreshable { await load() }
         .task { if case .idle = system { await load() } }
     }

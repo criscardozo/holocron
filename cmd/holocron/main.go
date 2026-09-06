@@ -22,6 +22,7 @@ import (
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/internal/naming"
+	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
@@ -62,6 +63,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	apiTokenStore := apitoken.NewStore(settingsStore)
 	jellyfinLink := jellyfin.NewLinkService(settingsStore)
 	updatesService := updates.NewService(filepath.Dir(cfg.DBPath))
+	powerService := power.NewService(filepath.Dir(cfg.DBPath))
 
 	registry := widgets.NewRegistry(
 		widgets.SystemWidget{},
@@ -87,6 +89,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		APIToken:     apiTokenStore,
 		JellyfinLink: jellyfinLink,
 		Updates:      updatesService,
+		Power:        powerService,
 	})
 
 	httpSrv := &http.Server{

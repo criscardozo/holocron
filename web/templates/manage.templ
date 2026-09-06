@@ -1,0 +1,145 @@
+package templates
+
+// ManagePage is the machine management screen: what the Pi is doing, what
+// would be interrupted, and the buttons that act on it.
+templ ManagePage(v ManagePageView) {
+	@Layout("ObiWan") {
+		<div class="page-head">
+			<div>
+				<h1>ObiWan</h1>
+				<p class="sub">Estado de la Raspberry Pi y control de sus servicios</p>
+			</div>
+		</div>
+		@ManageSection(v)
+	}
+}
+
+// ManageSection is re-fetched after an action, and polls while one is in
+// flight.
+templ ManageSection(v ManagePageView) {
+	<section id="manage" class="manage">
+		if v.Notice != "" {
+			if v.NoticeErr {
+				<div class="notice error mb-6">
+					@IconSm("alert")
+					<span>{ v.Notice }</span>
+				</div>
+			} else {
+				<div class="notice mb-6">
+					@IconSm("check")
+					<span>{ v.Notice }</span>
+				</div>
+			}
+		}
+
+		<div class="card elev-sm">
+			<div class="stat-trio">
+				<div><div class="n">{ v.Host.CPU }</div><div class="cap">CPU</div></div>
+				<div><div class="n">{ v.Host.Temp }</div><div class="cap">temperatura</div></div>
+				<div><div class="n">{ v.Host.Uptime }</div><div class="cap">encendida</div></div>
+			</div>
+			<ul class="stat-list mb-6">
+				<li><span class="stat-key">RAM</span><span class="stat-val">{ v.Host.RAM }</span></li>
+				<li><span class="stat-key">Load</span><span class="stat-val">{ v.Host.Load }</span></li>
+				@serviceRow(v.Jellyfin)
+				@serviceRow(v.Torrents)
+			</ul>
+		</div>
+
+		@preflight(v)
+
+		if v.Pending != "" {
+			// Polls until the trigger is picked up. The action itself may take
+			// the server with it, which is why this fragment reloads the whole
+			// section rather than trusting a response that may never come.
+			<div class="job running" hx-get="/manage" hx-trigger="every 3s" hx-select="#manage" hx-target="#manage" hx-swap="outerHTML">
+				<span class="spinner"></span>
+				<span>{ v.Pending }</span>
+			</div>
+		} else if !v.Available {
+			<div class="notice mb-6">
+				@IconSm("alert")
+				<span>
+					El ayudante con privilegios no está instalado, así que Holocron no puede
+					reiniciar ni apagar nada. Se instala volviendo a correr el instalador.
+				</span>
+			</div>
+		} else {
+			<div class="manage-actions">
+				for _, a := range v.Actions {
+					@actionCard(a)
+				}
+			</div>
+		}
+	</section>
+}
+
+templ serviceRow(s ManageServiceRow) {
+	<li>
+		<span class="stat-key">{ s.Name }</span>
+		if !s.Configured {
+			<span class="stat-val muted">sin configurar</span>
+		} else if s.Reachable {
+			<span class="stat-val"><span class="badge badge-yes">responde</span></span>
+		} else {
+			<span class="stat-val"><span class="badge badge-no">no responde</span></span>
+		}
+	</li>
+}
+
+// preflight is the part that earns the screen: what is going on right now, so
+// the decision is informed rather than brave.
+templ preflight(v ManagePageView) {
+	if len(v.Warnings) > 0 {
+		<div class="notice mb-6">
+			@IconSm("alert")
+			<div>
+				<strong>Ahora mismo:</strong>
+				<ul class="warn-list">
+					for _, w := range v.Warnings {
+						<li>{ w }</li>
+					}
+				</ul>
+			</div>
+		</div>
+	} else if v.Checked {
+		<p class="muted mb-6">
+			@IconSm("check")
+			Nada en curso: no hay nadie reproduciendo ni torrents activos.
+		</p>
+	} else {
+		<p class="muted mb-6">
+			No se pudo consultar qué está en curso, así que no hay forma de saber si
+			esto interrumpe algo.
+		</p>
+	}
+}
+
+templ actionCard(a ManageActionRow) {
+	<div class="card elev-sm manage-action">
+		<div class="manage-action-text">
+			<strong>{ a.Label }</strong>
+			<span class="muted">{ a.Detail }</span>
+		</div>
+		if a.Destructive {
+			// The token is the friction that stops this being one more tap.
+			// Only the irreversible action asks for it; see internal/power.
+			<form class="token-gate" hx-post="/manage/action" hx-target="#manage" hx-swap="outerHTML" hx-confirm={ a.Confirm }>
+				<input type="hidden" name="action" value={ a.Key }/>
+				<input class="input" type="password" name="token" required placeholder="Token de la API" aria-label="Token de la API"/>
+				<button type="submit" class="btn btn-danger">
+					@IconSm(a.Icon)
+					{ a.Label }
+				</button>
+			</form>
+		} else {
+			<form hx-post="/manage/action" hx-target="#manage" hx-swap="outerHTML" hx-confirm={ a.Confirm }>
+				<input type="hidden" name="action" value={ a.Key }/>
+				<button type="submit" class="btn btn-secondary">
+					@IconSm(a.Icon)
+					{ a.Label }
+				</button>
+			</form>
+		}
+	</div>
+}
