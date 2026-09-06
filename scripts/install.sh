@@ -78,11 +78,28 @@ check_arch() {
 	esac
 }
 
+# resolve_latest_tag turns the "latest" alias into the tag it currently points
+# at, by following the redirect that /releases/latest performs. No jq, no API
+# token, no rate limit.
+#
+# It matters because "latest" is not atomic. While a release is being published,
+# the alias can serve one asset from the old release and another from the new
+# one, seconds apart — observed in the wild: an install.sh from one version
+# alongside the .sha256 of the next. Pinning both downloads to one resolved tag
+# makes them consistent by construction instead of by luck.
+resolve_latest_tag() {
+	local url
+	url="$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
+		"https://github.com/$REPO/releases/latest" 2>/dev/null)" || return 1
+	case "$url" in
+		*/releases/tag/*) printf '%s' "${url##*/}" ;;
+		*) return 1 ;;
+	esac
+}
+
 download_url() {
 	if [ -n "${HOLOCRON_BINARY_URL:-}" ]; then
 		printf '%s' "$HOLOCRON_BINARY_URL"
-	elif [ "$VERSION" = "latest" ]; then
-		printf 'https://github.com/%s/releases/latest/download/%s' "$REPO" "$ASSET"
 	else
 		printf 'https://github.com/%s/releases/download/%s/%s' "$REPO" "$VERSION" "$ASSET"
 	fi
@@ -100,8 +117,24 @@ fetch_binary() {
 		return
 	fi
 
+	if [ "$VERSION" = "latest" ] && [ -z "${HOLOCRON_BINARY_URL:-}" ]; then
+		local resolved
+		if resolved="$(resolve_latest_tag)"; then
+			VERSION="$resolved"
+			log "Latest release is $VERSION"
+		else
+			# Falling back keeps an install working when the redirect cannot be
+			# followed; the checksum still has to match.
+			warn "could not resolve the latest tag; falling back to the 'latest' alias"
+			VERSION="latest-alias"
+		fi
+	fi
+
 	local url
 	url="$(download_url)"
+	if [ "$VERSION" = "latest-alias" ]; then
+		url="https://github.com/$REPO/releases/latest/download/$ASSET"
+	fi
 	log "Downloading $url"
 	curl -fSL --retry 3 -o "$dest" "$url" \
 		|| die "download failed. Is there a published release? See 'make release' in the README."
@@ -114,7 +147,11 @@ fetch_binary() {
 		expected="$(awk '{print $1}' "$sumfile" | head -n1)"
 		actual="$(sha256sum "$dest" | awk '{print $1}')"
 		if [ -n "$expected" ] && [ "$expected" != "$actual" ]; then
-			die "checksum mismatch (expected $expected, got $actual). Aborting."
+			warn "checksum mismatch (expected $expected, got $actual)"
+			warn "If a release is being published right now, the binary and its"
+			warn "checksum can briefly come from different versions. Wait a"
+			warn "minute and try again. If it keeps failing, do not install."
+			die "Aborting without installing."
 		fi
 		log "Checksum verified"
 	else
@@ -260,6 +297,12 @@ Description=Clear stale Holocron action triggers
 DefaultDependencies=no
 After=local-fs.target
 Before=paths.target
+# The other half of the DefaultDependencies=no pattern: without it a oneshot
+# with RemainAfterExit can sit nominally active through a shutdown. Harmless
+# here, but half a pattern invites the next reader to wonder which half is the
+# mistake.
+Conflicts=shutdown.target
+Before=shutdown.target
 $(power_actions | while IFS="$(printf '\t')" read -r name _ _; do
 	printf 'Before=holocron-%s.path\n' "$name"
 done)
@@ -336,15 +379,29 @@ script="\$(mktemp)"
 sums="\$(mktemp)"
 trap 'rm -f "\$script" "\$sums"' EXIT
 
-curl -fsSL --retry 3 "$INSTALLER_URL" -o "\$script"
+# Resolve which tag "latest" points at, then take both files from that tag.
+# The alias is not atomic: during a publication it can serve the installer from
+# one release and the checksum from the next, which aborts the update with what
+# looks like corruption. Pinning both to one tag makes them consistent by
+# construction. Measured on this machine, not hypothetical.
+base="https://github.com/$REPO/releases/latest/download"
+resolved="\$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
+	"https://github.com/$REPO/releases/latest" 2>/dev/null || true)"
+case "\$resolved" in
+	*/releases/tag/*) base="https://github.com/$REPO/releases/download/\${resolved##*/}" ;;
+esac
+
+curl -fsSL --retry 3 "\$base/install.sh" -o "\$script"
 
 # Verify before running: this runs as root, so an installer that arrived
 # corrupted or altered would run with everything.
-if curl -fsSL --retry 2 "$INSTALLER_URL.sha256" -o "\$sums" 2>/dev/null; then
+if curl -fsSL --retry 2 "\$base/install.sh.sha256" -o "\$sums" 2>/dev/null; then
 	expected="\$(awk '{print \$1}' "\$sums" | head -n1)"
 	actual="\$(sha256sum "\$script" | awk '{print \$1}')"
 	if [ "\$expected" != "\$actual" ]; then
-		echo "holocron-update: installer checksum mismatch, refusing to run" >&2
+		echo "holocron-update: installer checksum mismatch." >&2
+		echo "holocron-update: if a release is being published right now, this" >&2
+		echo "holocron-update: clears up on its own. Try again in a minute." >&2
 		exit 1
 	fi
 else

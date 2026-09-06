@@ -245,6 +245,16 @@ eso saltea Access por completo. Holocron tampoco valida el JWT
 único camino sea el túnel, y validarlo sumaría una dependencia de red al
 arranque.
 
+> **`latest` no es atómico.** Durante una publicación, el alias
+> `releases/latest/download/` puede servir un asset de la versión vieja y otro
+> de la nueva con segundos de diferencia — medido: un `install.sh` de una
+> versión junto al `.sha256` de la siguiente. Por eso tanto el instalador como
+> el ayudante de actualización **resuelven primero a qué tag apunta `latest`**
+> (siguiendo el redirect de `/releases/latest`, sin `jq` ni token) y después
+> bajan todo de ese tag, con lo que la coherencia es por construcción y no por
+> suerte. El checksum lo detectaba igual, pero el síntoma era «apreté actualizar
+> y falló» justo cuando se acaba de publicar, que es cuando más gente lo aprieta.
+
 El túnel apunta a **`http://127.0.0.1:8090`**, con la IP explícita y no
 `localhost`: `localhost` puede resolver a IPv6 y, si el servicio no escucha en
 `::1`, falla de forma intermitente. Si se toca la config del túnel, mantener la
