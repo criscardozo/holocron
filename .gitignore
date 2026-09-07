@@ -22,3 +22,6 @@ CLAUDE.md
 /ios/*.xcworkspace
 /ios/DerivedData/
 /ios/Holocron/Info.plist
+
+# Herramientas locales (gstack): reportes y, sobre todo, un token de sesión
+/.gstack/
