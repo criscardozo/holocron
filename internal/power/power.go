@@ -115,6 +115,19 @@ func (a Action) NeedsToken() bool {
 	return a == ActionPowerOff
 }
 
+// Strands reports whether the action leaves the machine unreachable until
+// somebody is physically in front of it. This Pi has no wake-on-LAN and no
+// RTC alarm, so nothing on the network can bring it back.
+//
+// Distinct from NeedsToken even though both currently mean the same single
+// action. NeedsToken is about authority — proving you may. Strands is about
+// distance — whether you can undo it from where you are standing. They are
+// asked for at different moments and by different surfaces, and collapsing
+// them would leave no way to say "you may, but not from here".
+func (a Action) Strands() bool {
+	return a == ActionPowerOff
+}
+
 // Interrupts reports whether the whole machine goes away, rather than one
 // service.
 func (a Action) Interrupts() bool {

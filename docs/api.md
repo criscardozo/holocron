@@ -218,7 +218,7 @@ uno corriendo, y `412` si Jellyfin no está vinculado.
 | Método | Ruta | Qué hace |
 |---|---|---|
 | `GET` | `/api/v1/manage` | Acciones disponibles y qué se interrumpiría |
-| `POST` | `/api/v1/manage/action` | Pide una acción (202) |
+| `POST` | `/api/v1/manage/action` | Pide una acción (202). `action=<clave>`; `ack=1` es obligatorio para `poweroff` si el `Host` no es de la red local, si no responde 428 |
 
 ```json
 {

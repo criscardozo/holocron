@@ -1,12 +1,12 @@
 package httpserver
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/cristian/holocron/internal/apitoken"
+	"github.com/cristian/holocron/internal/netaddr"
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/internal/widgets"
@@ -18,7 +18,7 @@ import (
 // action. See internal/power for why the signal carries no content.
 
 func (s *Server) handleManagePage(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, templates.ManagePage(s.manageView(r.Context(), templates.ManagePageView{})))
+	s.render(w, r, templates.ManagePage(s.manageView(r, templates.ManagePageView{})))
 }
 
 // handleManageAction runs one action. The whole exchange is deliberately
@@ -32,7 +32,7 @@ func (s *Server) handleManageAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fail := func(message string) {
-		view := s.manageView(ctx, templates.ManagePageView{Notice: message, NoticeErr: true})
+		view := s.manageView(r, templates.ManagePageView{Notice: message, NoticeErr: true})
 		s.render(w, r, templates.ManageSection(view))
 	}
 
@@ -63,6 +63,11 @@ func (s *Server) handleManageAction(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if needsStrandAck(r, action) {
+		fail("Estás entrando por la dirección pública. Marcá que entendés que queda apagada hasta que alguien vaya hasta ella.")
+		return
+	}
+
 	if err := s.deps.Power.Request(action); err != nil {
 		s.log.Warn("machine action", "action", string(action), "error", err)
 		if errors.Is(err, power.ErrNoHelper) {
@@ -74,10 +79,27 @@ func (s *Server) handleManageAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.log.Info("machine action requested", "action", string(action))
-	view := s.manageView(ctx, templates.ManagePageView{
+	view := s.manageView(r, templates.ManagePageView{
 		Notice: "Pedido: " + action.Label() + ". " + afterword(action),
 	})
 	s.render(w, r, templates.ManageSection(view))
+}
+
+// needsStrandAck reports whether this request is asking to strand the machine
+// from somewhere other than the house, without saying so.
+//
+// Powering off cannot be undone over the network — no wake-on-LAN, no RTC
+// alarm — so from outside, the person is choosing to have nothing until they
+// get home. Asking them to state that is worth one checkbox.
+//
+// Friction, not authorisation. Whoever holds the token can send ack=1 by hand,
+// and the Host header this keys off is client-supplied, so neither proves
+// anything. What it buys is that a remote power-off is a decision rather than
+// a mis-tap, and checking it server-side rather than only rendering it means a
+// page loaded at home and submitted later from a train still gets asked.
+func needsStrandAck(r *http.Request, a power.Action) bool {
+	return a.Strands() && !netaddr.IsPrivateHost(r.Host) &&
+		strings.TrimSpace(r.PostFormValue("ack")) == ""
 }
 
 // afterword tells the user what to expect from a request whose result they may
@@ -99,9 +121,11 @@ func afterword(a power.Action) string {
 
 // manageView assembles the screen. base carries anything the caller already
 // decided, such as a notice.
-func (s *Server) manageView(ctx context.Context, base templates.ManagePageView) templates.ManagePageView {
+func (s *Server) manageView(r *http.Request, base templates.ManagePageView) templates.ManagePageView {
+	ctx := r.Context()
 	v := base
 	v.Available = s.deps.Power.Installed()
+	v.Remote = !netaddr.IsPrivateHost(r.Host)
 
 	v.Host = widgets.SystemViewOf(system.Read())
 
@@ -139,6 +163,7 @@ func (s *Server) manageView(ctx context.Context, base templates.ManagePageView) 
 			Confirm:     a.Confirm(),
 			Icon:        a.Icon(),
 			Destructive: a.NeedsToken(),
+			RequireAck:  v.Remote && a.Strands(),
 		})
 	}
 	return v

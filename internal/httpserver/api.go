@@ -411,6 +411,13 @@ func (s *Server) apiManageAction(w http.ResponseWriter, r *http.Request) {
 		s.apiError(w, http.StatusBadRequest, "Unknown action")
 		return
 	}
+	// Same rule as the web form, so the two surfaces cannot drift: powering
+	// off from the public address has to say so. See needsStrandAck.
+	if needsStrandAck(r, action) {
+		s.apiError(w, http.StatusPreconditionRequired,
+			"Powering off over the public address needs ack=1")
+		return
+	}
 	if err := s.deps.Power.Request(action); err != nil {
 		if errors.Is(err, power.ErrNoHelper) {
 			s.apiError(w, http.StatusPreconditionFailed,

@@ -126,6 +126,18 @@ templ actionCard(a ManageActionRow) {
 			// Only the irreversible action asks for it; see internal/power.
 			<form class="token-gate" hx-post="/manage/action" hx-target="#manage" hx-swap="outerHTML" hx-confirm={ a.Confirm }>
 				<input type="hidden" name="action" value={ a.Key }/>
+				if a.RequireAck {
+					// Reached from outside the house. `required` on a checkbox
+					// is enforced by the browser with no script of our own,
+					// and the server checks it again.
+					<label class="ack">
+						<input type="checkbox" name="ack" value="1" required/>
+						<span>
+							Entiendo que no se puede encender a distancia y que queda apagada
+							hasta que alguien vaya hasta ella.
+						</span>
+					</label>
+				}
 				<input class="input" type="password" name="token" required placeholder="Token de la API" aria-label="Token de la API"/>
 				<button type="submit" class="btn btn-danger">
 					@IconSm(a.Icon)

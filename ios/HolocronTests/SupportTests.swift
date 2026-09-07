@@ -207,6 +207,11 @@ struct HomeNetworkTests {
             "192.169.0.1",                    // one off from 192.168
             "8.8.8.8",
             "example.com",
+            // Tailscale's CGNAT range. A private network, but not a nearby
+            // one: over the VPN from another country the request looks exactly
+            // like one from the couch. Kept in step with netaddr.IsPrivateHost
+            // on the Go side, where the same case is pinned.
+            "100.94.171.18", "100.64.0.1",
             "",
         ] {
             #expect(!AppSettings.isPrivateHost(host), "\(host) should count as away")
@@ -214,8 +219,9 @@ struct HomeNetworkTests {
     }
 
     @Test func aMalformedAddressIsNotHome() {
-        // Conservative on purpose: being wrong this way withholds a button,
-        // being wrong the other way loses the server.
+        // Conservative on purpose. Being wrong this way adds a confirmation
+        // that was not needed; being wrong the other way powers the machine
+        // off without mentioning that nothing on the network can wake it.
         for host in ["192.168.0", "192.168.0.1.5", "1.2.3.x", "192.168.0.doscientos"] {
             #expect(!AppSettings.isPrivateHost(host), "\(host) should not count as home")
         }

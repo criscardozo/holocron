@@ -95,3 +95,39 @@ func TestNormaliseIsIdempotent(t *testing.T) {
 		}
 	}
 }
+
+// TestIsPrivateHostSeparatesHomeFromEverywhereElse pins the ranges, because
+// the answer decides how much friction sits in front of powering the machine
+// off, and 172.16/12 is the one people get wrong.
+func TestIsPrivateHostSeparatesHomeFromEverywhereElse(t *testing.T) {
+	t.Parallel()
+	cases := map[string]bool{
+		"192.168.0.2":          true,
+		"192.168.0.2:8080":     true,
+		"10.0.0.5":             true,
+		"172.16.0.1":           true,
+		"172.31.255.254":       true,
+		"127.0.0.1":            true,
+		"localhost":            true,
+		"localhost:8080":       true,
+		"obiwan.local":         true,
+		"obiwan.home.arpa":     true,
+		"169.254.10.1":         true,
+		"[::1]:8080":           true,
+		"[fd00::1]":            true,
+		"holocron.merli.store": false,
+		"8.8.8.8":              false,
+		// Just outside 172.16/12 on either side. A hand-rolled check that
+		// tested only the first octet would call both of these private.
+		"172.15.0.1": false,
+		"172.32.0.1": false,
+		// A public name that merely starts like a private one.
+		"192.168.0.2.example.com": false,
+		"":                        false,
+	}
+	for host, want := range cases {
+		if got := IsPrivateHost(host); got != want {
+			t.Errorf("IsPrivateHost(%q) = %v, want %v", host, got, want)
+		}
+	}
+}

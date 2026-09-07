@@ -172,3 +172,115 @@ func requested(t *testing.T, ts *testServer, a power.Action) bool {
 	pending, ok := ts.deps.Power.Pending()
 	return ok && pending == a
 }
+
+// asHost sends the request with a Host header of our choosing. It cannot go
+// through the headers map: net/http reads Host off the request field and
+// ignores a header by that name, so a test that set it there would pass while
+// exercising the LAN path.
+func asHost(t *testing.T, ts *testServer, host, path string, form url.Values) response {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost,
+		ts.URL+path, strings.NewReader(form.Encode()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Host = host
+	return ts.do(t, req)
+}
+
+func getAsHost(t *testing.T, ts *testServer, host, path string) response {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Host = host
+	return ts.do(t, req)
+}
+
+// tokenFor generates the API token and returns it, for the tests that need to
+// get past the token gate to reach what they are actually testing.
+func tokenFor(t *testing.T, ts *testServer) string {
+	t.Helper()
+	tok, err := ts.deps.APIToken.Generate(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tok
+}
+
+// TestPoweringOffFromOutsideAsksYouToSayIt covers the case that used to be
+// refused outright. It is allowed now, but not silently: the machine cannot be
+// woken over the network, so the consequence has to be stated.
+func TestPoweringOffFromOutsideAsksYouToSayIt(t *testing.T) {
+	t.Parallel()
+	ts := newTestServer(t)
+	installHelper(t, ts)
+	token := tokenFor(t, ts)
+
+	const public = "holocron.merli.store"
+
+	resp := asHost(t, ts, public, "/manage/action",
+		url.Values{"action": {"poweroff"}, "token": {token}})
+	if !strings.Contains(resp.Body, "dirección pública") {
+		t.Errorf("expected the public-address warning, got %q", resp.Body)
+	}
+	if requested(t, ts, power.ActionPowerOff) {
+		t.Fatal("powered off from outside without the acknowledgement")
+	}
+
+	resp = asHost(t, ts, public, "/manage/action",
+		url.Values{"action": {"poweroff"}, "token": {token}, "ack": {"1"}})
+	if !requested(t, ts, power.ActionPowerOff) {
+		t.Fatalf("the acknowledged power-off was not requested: %q", resp.Body)
+	}
+}
+
+// TestBeingHomeDoesNotAskForTheAck guards the other direction: the new gate
+// must not make the ordinary case — standing next to the machine — worse.
+func TestBeingHomeDoesNotAskForTheAck(t *testing.T) {
+	t.Parallel()
+	ts := newTestServer(t)
+	installHelper(t, ts)
+	token := tokenFor(t, ts)
+
+	resp := asHost(t, ts, "192.168.0.2:8080", "/manage/action",
+		url.Values{"action": {"poweroff"}, "token": {token}})
+	if !requested(t, ts, power.ActionPowerOff) {
+		t.Fatalf("a power-off from the LAN should not need an ack: %q", resp.Body)
+	}
+}
+
+// TestOnlyStrandingAsksForTheAck keeps the friction attached to the property
+// that earns it. Rebooting from a train is fine — it comes back on its own.
+func TestOnlyStrandingAsksForTheAck(t *testing.T) {
+	t.Parallel()
+	ts := newTestServer(t)
+	installHelper(t, ts)
+
+	resp := asHost(t, ts, "holocron.merli.store", "/manage/action",
+		url.Values{"action": {"reboot"}})
+	if !requested(t, ts, power.ActionReboot) {
+		t.Fatalf("a remote reboot should not need an ack: %q", resp.Body)
+	}
+}
+
+// TestTheAckOnlyAppearsFromOutside checks the rendering matches the rule, so
+// the LAN form does not grow a checkbox nobody needs to tick.
+func TestTheAckOnlyAppearsFromOutside(t *testing.T) {
+	t.Parallel()
+	ts := newTestServer(t)
+	installHelper(t, ts)
+
+	if body := getAsHost(t, ts, "192.168.0.2:8080", "/manage").Body; strings.Contains(body, `name="ack"`) {
+		t.Error("the LAN page should not ask for an acknowledgement")
+	}
+	body := getAsHost(t, ts, "holocron.merli.store", "/manage").Body
+	if !strings.Contains(body, `name="ack"`) {
+		t.Error("the public page should ask for an acknowledgement")
+	}
+	if !strings.Contains(body, "required") {
+		t.Error("the acknowledgement must be required, so the browser enforces it too")
+	}
+}

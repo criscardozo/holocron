@@ -99,8 +99,13 @@ struct APIClient: Sendable {
         try await get("manage")
     }
 
-    func runManageAction(_ key: String) async throws {
-        try await sendForm("manage/action", fields: ["action": key])
+    /// `acknowledged` carries the consent the server asks for when powering
+    /// off over the public address. Sent only when the person actually gave
+    /// it: passing it always would make the server-side check decorative.
+    func runManageAction(_ key: String, acknowledged: Bool = false) async throws {
+        var fields = ["action": key]
+        if acknowledged { fields["ack"] = "1" }
+        try await sendForm("manage/action", fields: fields)
     }
 
     // MARK: - Library quality

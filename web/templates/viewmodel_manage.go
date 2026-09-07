@@ -12,6 +12,11 @@ type ManageActionRow struct {
 	// Destructive marks the ones that also require the API token, which is
 	// what makes the form ask for it.
 	Destructive bool
+	// RequireAck asks the person to state the consequence out loud before the
+	// button works. Set only when the action strands the machine *and* the
+	// page was reached from outside the house — the one combination where the
+	// consequence is not obvious from where you are standing.
+	RequireAck bool
 }
 
 // ManagePageView drives the machine management screen.
@@ -36,6 +41,11 @@ type ManagePageView struct {
 	// of it could be consulted, which is not the same as all clear.
 	Warnings []string
 	Checked  bool
+
+	// Remote is true when this page was reached over the public address rather
+	// than from the LAN. Read from the Host header, so it is a hint about
+	// where the person is, never a permission check.
+	Remote bool
 }
 
 // ManageServiceRow is what can honestly be said about a neighbouring service:

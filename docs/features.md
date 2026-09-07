@@ -249,8 +249,49 @@ es de ida salvo que haya alguien al lado. Darle a reiniciar la misma fricción
 entrenaría el mismo gesto para los dos, y el que muerde es el que no vuelve.
 
 En iOS la misma idea toma otra forma, porque la app **tiene** el token guardado
-y mandarlo sería fricción cero: apagar se confirma **manteniendo apretado**, y
-**no se ofrece** cuando la dirección configurada no es de la red de casa.
+y mandarlo sería fricción cero: apagar se confirma **manteniendo apretado**.
+
+### Apagar desde afuera de casa
+
+Se puede, y al principio no se podía. La primera versión lo **negaba** cuando la
+dirección configurada no era de la red de casa, y era la decisión equivocada:
+salir de casa es justamente cuando querés poder apagarla, y ni la app ni el
+servidor saben si hay alguien adentro para volver a encenderla. Negarlo era
+decidir por el usuario algo que sólo él puede saber.
+
+Ahora la consecuencia se **enuncia y hay que aceptarla**, en las dos superficies:
+
+- **Web**: aparece un `<input type="checkbox" name="ack" required>` arriba del
+  campo del token. `required` lo hace cumplir el navegador sin una línea de
+  JavaScript propio.
+- **iOS**: un `Toggle` que **arma** el botón de mantener apretado. Dos gestos
+  distintos, y el primero es el que lleva la frase.
+
+El servidor lo revalida en `needsStrandAck` (`internal/httpserver/manage.go`),
+para la web y para la API, de modo que las dos superficies no puedan divergir —
+y así una página cargada en casa y enviada más tarde desde el tren igual pregunta.
+
+**Es fricción, no autorización**, y el código lo dice: quien tiene el token puede
+mandar `ack=1` a mano, y el `Host` del que se deduce «afuera» lo controla el
+cliente. Lo que compra es que un apagado remoto sea una decisión y no un toque
+mal dado.
+
+La asimetría del riesgo es la que uno quiere, y está medida: por el túnel llega
+`Host: holocron.merli.store` (cloudflared no reescribe) y por la LAN
+`192.168.0.2:8090`. Desde la LAN se puede mentir el `Host` y hacerse pasar por
+remoto, pero eso sólo se gana **más** fricción. Al revés no se puede: Cloudflare
+enruta por ese mismo `Host`, así que un request de afuera que ponga
+`Host: localhost` no llega nunca al túnel.
+
+Un caso que conviene saber que es deliberado: **Tailscale cuenta como afuera**.
+Su rango es 100.64/10 (CGNAT) y `netaddr.IsPrivateHost` no lo trata como
+privado. Es una red privada pero no una *cercana* — llegar por la VPN desde otro
+país se ve idéntico a llegar desde el sillón, que es el punto de Tailscale.
+
+Por qué no hizo falta tocar Cloudflare: la app iOS pega a `/api/v1/manage/action`,
+que cae bajo la aplicación de Access de `/api` (service token), no bajo la de
+`/manage` (identidad de Google). El navegador entra por la de Google. Cada
+superficie ya tenía su credencial.
 
 ### El chequeo previo
 

@@ -12,6 +12,7 @@ package netaddr
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 )
@@ -62,4 +63,44 @@ func Normalise(raw string) (string, error) {
 		Host:   u.Host,
 		Path:   strings.TrimRight(u.Path, "/"),
 	}).String(), nil
+}
+
+// IsPrivateHost reports whether host names a machine only reachable from
+// inside a home network. The port is optional and ignored.
+//
+// This exists to tell "you are standing next to the machine" apart from "you
+// are somewhere else", which is the difference that matters before an action
+// that cannot be undone remotely. It is emphatically not a security boundary:
+// the Host header is client-supplied, so a private-looking value proves
+// nothing. It is used only to decide how much friction to put in front of a
+// button, never to grant access.
+func IsPrivateHost(host string) bool {
+	h := strings.ToLower(strings.TrimSpace(host))
+	if h == "" {
+		return false
+	}
+	// Host headers and typed addresses both arrive with a port more often than
+	// not, and an IPv6 literal arrives in brackets.
+	if stripped, _, err := net.SplitHostPort(h); err == nil {
+		h = stripped
+	}
+	h = strings.Trim(h, "[]")
+
+	if ip := net.ParseIP(h); ip != nil {
+		// IsPrivate covers 10/8, 172.16/12, 192.168/16 and fc00::/7; the other
+		// two catch localhost by address and the 169.254 self-assigned range a
+		// machine uses when DHCP did not answer.
+		//
+		// Note what is missing: 100.64/10, the range Tailscale hands out. It is
+		// a private network but not a *nearby* one — reaching the machine over
+		// a VPN from another country looks identical to reaching it from the
+		// couch, so it is treated as remote. That is the safe direction, and
+		// here it is also the honest one.
+		return ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast()
+	}
+	// Not an address, so a name. Only the names that cannot resolve outside a
+	// local network count; anything else is treated as public, which is the
+	// safe direction to be wrong in.
+	return h == "localhost" || strings.HasSuffix(h, ".local") ||
+		strings.HasSuffix(h, ".localhost") || strings.HasSuffix(h, ".home.arpa")
 }

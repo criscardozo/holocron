@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/version"
 )
@@ -266,5 +267,46 @@ func TestUpdatePanelDoesNotClaimToBeCurrentBeforeChecking(t *testing.T) {
 	}
 	if !strings.Contains(page, "Sin chequear") {
 		t.Error("it should say it has not checked, and point at the button")
+	}
+}
+
+// TestAPIPowerOffFromOutsideNeedsTheAck keeps the app and the web form on the
+// same rule. Without this the two surfaces could drift, and the one that
+// drifted would be the one holding a saved token on a phone.
+func TestAPIPowerOffFromOutsideNeedsTheAck(t *testing.T) {
+	t.Parallel()
+	ts := newTestServer(t)
+	installHelper(t, ts)
+	token := tokenFor(t, ts)
+
+	send := func(host string, form url.Values) response {
+		t.Helper()
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost,
+			ts.URL+"/api/v1/manage/action", strings.NewReader(form.Encode()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Host = host
+		return ts.do(t, req)
+	}
+
+	const public = "holocron.merli.store"
+
+	resp := send(public, url.Values{"action": {"poweroff"}})
+	if resp.Status != http.StatusPreconditionRequired {
+		t.Errorf("status = %d, want %d", resp.Status, http.StatusPreconditionRequired)
+	}
+	if requested(t, ts, power.ActionPowerOff) {
+		t.Fatal("the API powered off from outside without an acknowledgement")
+	}
+
+	resp = send(public, url.Values{"action": {"poweroff"}, "ack": {"1"}})
+	if resp.Status != http.StatusAccepted {
+		t.Fatalf("status = %d, want %d (%s)", resp.Status, http.StatusAccepted, resp.Body)
+	}
+	if !requested(t, ts, power.ActionPowerOff) {
+		t.Fatal("the acknowledged power-off was not requested")
 	}
 }

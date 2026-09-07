@@ -6,14 +6,23 @@ import SwiftUI
 /// so a confirmation dialog is enough. Powering off does not — a Raspberry Pi 4
 /// has no wake-on-LAN, so the only way back is somebody walking to it — and a
 /// dialog would put that one tap away from the button, which is exactly the
-/// gesture a thumb learns. So it holds instead, and it is not offered at all
-/// when the app is talking to the server over the public address.
+/// gesture a thumb learns. So it holds instead.
+///
+/// Over the public address it holds *and* asks for consent first. It used to be
+/// refused outright, which was the wrong call: leaving the house is exactly
+/// when you might want to shut the machine down, and the app cannot know
+/// whether somebody is home to turn it back on. So the consequence is stated
+/// and has to be accepted, rather than the decision being made for you.
 struct ManagementView: View {
     @Environment(AppSettings.self) private var settings
 
     @State private var state: Loadable<ManageStatus> = .idle
     @State private var banner: String?
     @State private var bannerIsError = false
+    /// Actions whose consequence has been accepted, by key. Kept per action
+    /// rather than as one flag so accepting one thing never arms another, and
+    /// cleared once the action is requested.
+    @State private var acknowledged: Set<String> = []
 
     var body: some View {
         LoadableView(state: state, reload: load) { status in
@@ -92,7 +101,7 @@ struct ManagementView: View {
         ForEach(status.actions) { action in
             Section {
                 if action.needsToken && !settings.isOnHomeNetwork {
-                    awayFromHome(action)
+                    strandGate(action)
                 } else if action.needsToken {
                     HoldToConfirmButton(label: action.label) {
                         Task { await run(action) }
@@ -115,16 +124,34 @@ struct ManagementView: View {
         }
     }
 
-    /// The guard that does the real work. A dialog only helps if it is read;
-    /// this one knows something the person tapping might not have thought about.
-    private func awayFromHome(_ action: ManageAction) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(action.label, systemImage: "power")
-                .font(.callout)
-                .foregroundStyle(Noir.muted)
-            Text("No disponible: estás entrando por la dirección pública. Apagarla desde afuera te deja sin nada hasta volver a casa, y no se puede encender a distancia.")
-                .font(.caption2)
-                .foregroundStyle(Noir.muted)
+    /// The guard that does the real work. A dialog only helps if it is read,
+    /// and this one knows something the person tapping might not have thought
+    /// about — so it asks them to state it rather than just showing it.
+    ///
+    /// The toggle arms the button; it does not perform the action. Two separate
+    /// gestures, and the first one is the one that carries the sentence.
+    private func strandGate(_ action: ManageAction) -> some View {
+        let armed = acknowledged.contains(action.key)
+        return VStack(alignment: .leading, spacing: 10) {
+            Label("Estás entrando por la dirección pública",
+                  systemImage: "antenna.radiowaves.left.and.right")
+                .font(.caption)
+                .foregroundStyle(Noir.accent300)
+
+            Toggle(isOn: Binding(
+                get: { acknowledged.contains(action.key) },
+                set: { on in
+                    if on { acknowledged.insert(action.key) } else { acknowledged.remove(action.key) }
+                }
+            )) {
+                Text("Entiendo que no se puede encender a distancia y que queda apagada hasta que alguien vaya hasta ella.")
+                    .font(.caption)
+            }
+            .tint(Noir.danger)
+
+            HoldToConfirmButton(label: action.label, enabled: armed) {
+                Task { await run(action) }
+            }
         }
     }
 
@@ -146,8 +173,10 @@ struct ManagementView: View {
     @MainActor private func run(_ action: ManageAction) async {
         guard let client = settings.client else { return }
         banner = nil
+        let consented = acknowledged.contains(action.key)
         do {
-            try await client.runManageAction(action.key)
+            try await client.runManageAction(action.key, acknowledged: consented)
+            acknowledged.remove(action.key)
             bannerIsError = false
             // The acknowledgement is the last thing this request can tell us:
             // for a reboot or a power off, the server is about to stop being
@@ -178,6 +207,10 @@ struct ManagementView: View {
 /// remotely: a second tap is a gesture the thumb learns, and a hold is not.
 private struct HoldToConfirmButton: View {
     let label: String
+    /// False while a precondition is unmet — off the home network, until the
+    /// consequence has been accepted. Disabled rather than hidden: a button
+    /// that is not there explains nothing.
+    var enabled: Bool = true
     let action: () -> Void
 
     /// Long enough to be a decision, short enough not to feel broken.
@@ -196,7 +229,7 @@ private struct HoldToConfirmButton: View {
                     .scaleEffect(x: progress, y: 1, anchor: .leading)
                 Label(progress > 0 ? "Mantené apretado…" : label, systemImage: "power")
                     .font(.callout.weight(.semibold))
-                    .foregroundStyle(Noir.danger)
+                    .foregroundStyle(enabled ? Noir.danger : Noir.muted)
                     .padding(.horizontal, 12)
             }
             .frame(height: 44)
@@ -211,11 +244,13 @@ private struct HoldToConfirmButton: View {
             )
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(label)
-            .accessibilityHint("Mantené apretado para confirmar")
+            .accessibilityHint(enabled
+                ? "Mantené apretado para confirmar"
+                : "Primero aceptá la advertencia de arriba")
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction { action() }
+            .accessibilityAction { if enabled { action() } }
 
-            Text("Mantené apretado para confirmar")
+            Text(enabled ? "Mantené apretado para confirmar" : "Aceptá la advertencia para habilitarlo")
                 .font(.caption2)
                 .foregroundStyle(Noir.muted)
         }
@@ -224,7 +259,7 @@ private struct HoldToConfirmButton: View {
     }
 
     private func start() {
-        guard holding == nil else { return }
+        guard enabled, holding == nil else { return }
         holding = Task { @MainActor in
             let step = 0.05
             while progress < 1 {
