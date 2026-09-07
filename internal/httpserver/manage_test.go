@@ -176,7 +176,13 @@ func requested(t *testing.T, ts *testServer, a power.Action) bool {
 // asHost sends the request with a Host header of our choosing. It cannot go
 // through the headers map: net/http reads Host off the request field and
 // ignores a header by that name, so a test that set it there would pass while
-// exercising the LAN path.
+// exercising the LAN path — green, and proving the opposite of what it claims.
+// That is worse than a failing test.
+//
+// Note the asymmetry, because it makes the two ways of checking this
+// non-interchangeable: on the client side `curl -H "Host: ..."` really does
+// rewrite the request host, which is why measuring the live server that way is
+// valid. Same header, opposite behaviour depending on which end you are at.
 func asHost(t *testing.T, ts *testServer, host, path string, form url.Values) response {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost,
