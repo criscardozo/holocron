@@ -27,6 +27,7 @@ import (
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
+	"github.com/cristian/holocron/internal/trailers"
 	"github.com/cristian/holocron/internal/updates"
 	"github.com/cristian/holocron/internal/widgets"
 )
@@ -56,6 +57,10 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	settingsStore := settings.NewStore(database)
 	diskService := diskusage.NewService(database, folderStore, jobManager)
 	namingService := naming.NewService(database, folderStore, jobManager)
+	// yt-dlp is looked up once at startup. Absent is a normal state, not a
+	// startup failure: the trailers screen explains it rather than the server
+	// refusing to run because an optional external tool is missing.
+	trailersService := trailers.NewService(folderStore, jobManager, trailers.NewRunner())
 	libraryService := library.NewService(database, settingsStore, jobManager)
 	qualityService := quality.NewService(database, settingsStore, jobManager)
 	subtitlesService := subtitles.NewService(database, settingsStore)
@@ -81,6 +86,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Folders:      folderStore,
 		Disk:         diskService,
 		Naming:       namingService,
+		Trailers:     trailersService,
 		Settings:     settingsStore,
 		Library:      libraryService,
 		Quality:      qualityService,

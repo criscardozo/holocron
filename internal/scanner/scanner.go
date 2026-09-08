@@ -627,3 +627,15 @@ func (c *errorCollector) snapshot() []ScanError {
 	copy(out, c.items)
 	return out
 }
+
+// AvailableBytes reports the space a non-root process can still use at path.
+// Exported because deciding whether to start a download is the same question
+// the disk widget answers, and there is no reason for two statfs wrappers with
+// the same platform quirk in them.
+func AvailableBytes(path string) (uint64, error) {
+	st, err := filesystemStat(path)
+	if err != nil {
+		return 0, err
+	}
+	return st.available, nil
+}

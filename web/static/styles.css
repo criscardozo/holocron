@@ -476,7 +476,8 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 	font-size: 12.5px; display: grid; gap: 2px; color: var(--color-accent-300);
 }
 .rename-skipped li { display: flex; gap: 6px; align-items: baseline; }
-/* The blocked list sits right under the apply button, and without this the two
+/* A trailing group sits right under the action button, and without this the two
    read as one block — exactly the wrong impression for a list of things the
-   button will not touch. */
-.rename .lib-group { margin-top: calc(var(--space-6) * 1.5); }
+   button did not or will not touch. */
+.rename .lib-group,
+.trailers .lib-group { margin-top: calc(var(--space-6) * 1.5); }

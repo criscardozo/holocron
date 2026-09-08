@@ -21,6 +21,7 @@ import (
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
+	"github.com/cristian/holocron/internal/trailers"
 	"github.com/cristian/holocron/internal/updates"
 	"github.com/cristian/holocron/internal/widgets"
 	"github.com/cristian/holocron/web"
@@ -35,6 +36,7 @@ type Deps struct {
 	Folders      *folders.Store
 	Disk         *diskusage.Service
 	Naming       *naming.Service
+	Trailers     *trailers.Service
 	Settings     *settings.Store
 	Library      *library.Service
 	Quality      *quality.Service
@@ -84,6 +86,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /naming/rename/preview", s.handleRenamePreview)
 	mux.HandleFunc("GET /naming/rename/status", s.handleRenameStatus)
 	mux.HandleFunc("POST /naming/rename/apply", s.handleRenameApply)
+
+	// Trailers: the films that have none, and fetching them.
+	mux.HandleFunc("GET /trailers", s.handleTrailersPage)
+	mux.HandleFunc("POST /trailers/scan", s.handleTrailersScan)
+	mux.HandleFunc("GET /trailers/status", s.handleTrailersStatus)
+	mux.HandleFunc("POST /trailers/fetch", s.handleTrailersFetch)
 
 	// Phase 3: media inventory.
 	mux.HandleFunc("GET /media", s.handleMediaPage)

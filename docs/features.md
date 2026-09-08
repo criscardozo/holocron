@@ -405,3 +405,94 @@ previa. El disco pudo cambiar en el medio —hay un servidor de medios
 escribiendo— y actuar sobre un plan viejo es como un renombrado termina sobre
 un nombre que ahora pertenece a otra cosa. La vista previa es orientativa; el
 apply es la decisión.
+
+## Feature 9 — Trailers (`/trailers`)
+
+Busca en YouTube el trailer de las películas que no tienen uno y lo baja al
+lado del archivo.
+
+### La convención es la que hay, no la que uno supone
+
+Jellyfin reconoce un trailer por el sufijo `-trailer` antes de la extensión, y
+es lo que esta biblioteca ya usa: **`<nombre>-trailer.mp4` al lado de la
+película**, no `<nombre>.trailer.mp4` ni una subcarpeta `trailers/`. Medido
+sobre la biblioteca real.
+
+El archivo que se escribe se llama **como la carpeta**, nunca como el video de
+YouTube. La biblioteca ya arrastra cosas como
+`A MAN CALLED OTTO  Trailer oficial  Subtitulos Español Latinoamericano-trailer.mp4`
+de haberlo hecho al revés, y reintroducir eso en el mismo release que limpia
+los nombres sería absurdo.
+
+### Elegir el video es la feature
+
+Una búsqueda de «`<película>` trailer» devuelve el trailer, y también
+reacciones, análisis de veinte minutos, fan edits, clips y a veces la película
+entera. El script anterior tomaba el primer resultado, así que lo que YouTube
+hubiera decidido rankear primero entraba a la biblioteca bajo un nombre que
+dice «trailer», y nadie se enteraba hasta darle play.
+
+Se descarta lo que no es un trailer: duración fuera de 20 s – 10 min, y títulos
+con reaction / reseña / breakdown / explicado / recap / making of / fan made /
+película completa / soundtrack. Se puntúa lo que queda por: decir «trailer»,
+decir «oficial», durar entre 55 s y 3 min 40 s, y cuánto del título de la
+película aparece en el del video.
+
+**Cero coincidencia de título es rechazo, no penalización.** Un video puede
+parecer un trailer perfecto —oficial, la duración justa, dice trailer— y ser
+otra película que la búsqueda trajo de casualidad. Esos puntúan bien en todo lo
+demás, así que sólo esto los frena.
+
+### Idioma original primero
+
+El orden de búsqueda es la preferencia, escrita:
+
+1. `"Título" AÑO official trailer` — el corte original
+2. `Título AÑO trailer subtitulado español` — audio original, subtítulos
+3. `Título AÑO trailer` — lo que haya
+
+Es al revés del script anterior, que buscaba «subtitulado» y después «español»,
+poniendo el doblaje adelante. Un título doblado (`doblado`, `español latino`,
+`castellano`) pierde 4 puntos pero **no** se rechaza: para algunas películas
+viejas es lo único que hay, y un trailer doblado es mejor que ninguno.
+
+Las búsquedas se prueban en orden y la primera respuesta suficientemente buena
+gana, en vez de correr las tres y quedarse con la mejor. Cada una es una
+llamada de red, y con 181 películas la diferencia son minutos contra una hora.
+
+### Verificado contra YouTube de verdad
+
+Los tests unitarios sólo prueban que el puntaje se comporta con los ejemplos
+que escribí, y los escribió la misma persona que decidió qué es un buen
+candidato. `TestAgainstRealYouTube` (opt-in con `HOLOCRON_LIVE_YOUTUBE=1`)
+corre la búsqueda completa contra la red. La última corrida acertó el trailer
+oficial en 6 de 6, incluidas las cuatro películas argentinas y mexicanas viejas
+que se esperaba que fueran las difíciles.
+
+### La dependencia externa, y que se va a romper
+
+Holocron es un binario estático que no asume toolchain en el destino, y esta es
+la única parte que rompe la regla. Leer YouTube en Go puro no es algo que se
+mantenga funcionando: los extractores cambian lo bastante seguido como para que
+yt-dlp exista como proyecto de tiempo completo dedicado a seguirlos.
+
+Consecuencia de diseño: **yt-dlp se trata como ausente por defecto, nunca como
+un hecho.** La pantalla distingue «no está instalado», «está viejo» y «YouTube
+cambió otra vez» porque tienen tres arreglos distintos, y un error genérico
+manda a leer los logs de Holocron por un problema que no es de Holocron. Un
+extractor roto corta el lote entero en vez de producir 181 fallas idénticas.
+
+### El piso de disco
+
+Antes de **cada** descarga, no una vez al empezar, se chequea que queden más de
+20 GB libres. No es una estimación de cuánto pesan los trailers —promedian
+28 MB, unos 5 GB en total— es un piso bajo el disco mismo: el volumen estaba al
+97% y perdiendo 25 GB por día mientras esto se escribía, y hay otra cosa
+escribiendo ahí. Una feature que escribe en ese disco tiene que frenar sola.
+
+### Confinamiento
+
+Las carpetas que llegan del formulario se comparan contra el último escaneo, no
+se resuelven como rutas. Una carpeta que Holocron no encontró él mismo leyendo
+una carpeta de medios configurada es una carpeta en la que no va a escribir, así
+que no hay aritmética de rutas entre un request y una descarga.

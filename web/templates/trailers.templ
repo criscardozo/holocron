@@ -1,0 +1,165 @@
+package templates
+
+import "fmt"
+
+// TrailersPage lists the films with no trailer and fetches them from YouTube.
+//
+// Half this screen is about yt-dlp rather than about films, and deliberately.
+// It is an external tool that YouTube breaks on its own schedule, so "not
+// installed", "too old" and "YouTube changed again" each get said plainly —
+// they have three different fixes, and an unexplained failure sends someone
+// reading Holocron's logs for a problem that is not Holocron's.
+templ TrailersPage(v TrailersPageView) {
+	@Layout("Trailers") {
+		<div class="page-head">
+			<div>
+				<h1>Trailers</h1>
+				<p class="sub">Películas sin trailer, y su descarga desde YouTube</p>
+			</div>
+		</div>
+		@TrailersSection(v)
+	}
+}
+
+templ TrailersSection(v TrailersPageView) {
+	<section id="trailers" class="trailers">
+		if v.Notice != "" {
+			<div class={ "notice", "mb-6", templ.KV("error", v.NoticeErr) }>
+				@IconSm(noticeIcon(v.NoticeErr))
+				<span>{ v.Notice }</span>
+			</div>
+		}
+		@trailerTool(v)
+		if !v.HasMediaFolders {
+			<p class="muted">No hay carpetas de Películas configuradas. Agregá una en <a href="/settings">Ajustes</a>.</p>
+		} else if v.Running {
+			<div class="job running" hx-get="/trailers/status" hx-trigger="every 3s" hx-select="#trailers" hx-target="#trailers" hx-swap="outerHTML">
+				<span class="spinner"></span>
+				<span>Trabajando… esto puede tardar bastante.</span>
+			</div>
+		} else {
+			<div class="head-actions mb-6">
+				<form hx-post="/trailers/scan" hx-target="#trailers" hx-swap="outerHTML">
+					<button class="btn btn-secondary" type="submit">
+						@IconSm("refresh")
+						if v.Scanned {
+							Volver a revisar
+						} else {
+							Buscar cuáles no tienen
+						}
+					</button>
+				</form>
+			</div>
+			if v.Scanned && len(v.Films) == 0 {
+				<div class="notice mb-6">
+					@IconSm("check")
+					<span>Todas las películas tienen trailer.</span>
+				</div>
+			} else if len(v.Films) > 0 {
+				@trailerFilms(v)
+			}
+			@trailerResults(v.Results)
+		}
+	</section>
+}
+
+// trailerTool says what is known about yt-dlp before anything else, because
+// every other thing on the page depends on it.
+templ trailerTool(v TrailersPageView) {
+	if v.ToolMissing() {
+		<div class="notice error mb-6">
+			@IconSm("alert")
+			<span>
+				<strong>yt-dlp no está instalado</strong> en la Pi. Sin él Holocron puede
+				decirte qué películas no tienen trailer, pero no bajar ninguno.
+			</span>
+		</div>
+	} else if v.ToolStale {
+		<div class="notice mb-6">
+			@IconSm("alert")
+			<span>
+				yt-dlp <span class="mono">{ v.ToolVersion }</span> tiene más de seis meses.
+				YouTube cambia seguido y una versión vieja suele fallar con
+				«no se pudo leer YouTube» — si pasa eso, actualizalo antes de buscar otra causa.
+			</span>
+		</div>
+	} else if v.ToolVersion != "" {
+		<p class="muted mb-6">
+			yt-dlp <span class="mono">{ v.ToolVersion }</span> en <span class="mono">{ v.ToolPath }</span>
+		</p>
+	}
+}
+
+templ trailerFilms(v TrailersPageView) {
+	<form hx-post="/trailers/fetch" hx-target="#trailers" hx-swap="outerHTML"
+		hx-confirm="Esto baja videos de YouTube al disco de la Pi, uno por película. Puede tardar mucho. ¿Seguir?">
+		<div class="notice mb-6">
+			@IconSm("alert")
+			<span>
+				<strong>{ fmt.Sprintf("%d películas", len(v.Films)) }</strong> sin trailer.
+				Se busca primero el trailer en idioma original y después el subtitulado;
+				los doblados quedan últimos. El archivo se llama como la carpeta.
+			</span>
+		</div>
+		<table class="table fix">
+			<thead>
+				<tr><th class="w-40"></th><th>Carpeta</th><th>Se va a buscar</th></tr>
+			</thead>
+			<tbody>
+				for _, f := range v.Films {
+					<tr>
+						<td><input type="checkbox" name="film" value={ f.Key } checked aria-label={ "Bajar trailer de " + f.Folder }/></td>
+						<td class="mono found">{ f.Folder }</td>
+						<td>
+							{ f.Title }
+							if f.Year != "" {
+								<span class="muted">({ f.Year })</span>
+							} else {
+								<span class="badge badge-no">sin año</span>
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		<div class="head-actions">
+			<button class="btn btn-danger" type="submit">
+				@IconSm("plug")
+				Bajar los tildados
+			</button>
+		</div>
+	</form>
+}
+
+// trailerResults shows which video was taken for each film and why, because a
+// wrong trailer is silent: nothing fails, the file is just not what it says.
+templ trailerResults(rows []TrailerResultRow) {
+	if len(rows) > 0 {
+		<div class="lib-group">
+			<div class="lib-head">
+				<h2>Última descarga</h2>
+				<span class="count">{ fmt.Sprintf("%d películas", len(rows)) }</span>
+			</div>
+			<table class="table fix">
+				<thead><tr><th>Carpeta</th><th>Qué se bajó</th></tr></thead>
+				<tbody>
+					for _, r := range rows {
+						<tr>
+							<td class="mono">{ r.Folder }</td>
+							if r.Err != "" {
+								<td class="muted">{ r.Err }</td>
+							} else {
+								<td>
+									{ r.Trailer }
+									if r.Reason != "" {
+										<span class="muted">— { r.Reason }</span>
+									}
+								</td>
+							}
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}

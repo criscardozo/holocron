@@ -24,6 +24,7 @@ import (
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
+	"github.com/cristian/holocron/internal/trailers"
 	"github.com/cristian/holocron/internal/updates"
 	"github.com/cristian/holocron/internal/widgets"
 )
@@ -61,6 +62,7 @@ func newTestServer(t *testing.T) *testServer {
 		Folders:      folderStore,
 		Disk:         diskusage.NewService(database, folderStore, jobManager),
 		Naming:       naming.NewService(database, folderStore, jobManager),
+		Trailers:     trailers.NewService(folderStore, jobManager, absentYTDLP{}),
 		Settings:     settingsStore,
 		Library:      library.NewService(database, settingsStore, jobManager),
 		Quality:      quality.NewService(database, settingsStore, jobManager),
