@@ -160,11 +160,10 @@ func (r *Runner) Download(ctx context.Context, url, dir, stem string, floor int)
 		return ErrNoYTDLP
 	}
 	// The resolution floor lives in the format selector rather than in the
-	// candidate filter, because a flat search does not report resolution and
-	// asking for it costs fifteen times as long — measured, 24 s a query
-	// against 1.6. When nothing clears the floor, yt-dlp answers "Requested
-	// format is not available", which becomes ErrTooLowRes and sends the
-	// caller to the next candidate.
+	// candidate filter, because a flat search does not report resolution at
+	// all. When nothing clears the floor, yt-dlp answers "Requested format is
+	// not available", which becomes ErrTooLowRes and sends the caller to the
+	// next candidate.
 	h := itoa(floor)
 	_, err := r.run(ctx,
 		url,

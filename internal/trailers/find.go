@@ -68,10 +68,18 @@ const maxAttempts = 3
 // first.
 //
 // A list rather than one answer, because the search cannot see everything that
-// disqualifies a video. Resolution is the case that forced this: asking for it
-// costs 24 seconds a query against 1.6 with a flat search — measured, fifteen
-// times slower, an hour and a half over this library — so the floor is applied
-// when downloading instead, and a candidate rejected there needs a next one.
+// disqualifies a video. Resolution is the case that forced it: a flat search
+// does not report it, so the floor is applied when downloading instead, and a
+// candidate rejected there needs a next one. The same goes for a video YouTube
+// has since removed.
+//
+// The reason is that structure, not speed. Asking the search for resolution is
+// slower — 6 s a query against 14 s on the Pi, measured there — but 2.3x is a
+// difference this could afford, and an earlier version of this comment claimed
+// 15x from a measurement taken on a laptop with fibre. It does not transfer.
+// What does not change with hardware is that the download can still refuse a
+// candidate the search approved, so the caller needs somewhere to go next
+// either way.
 func Find(ctx context.Context, s Searcher, title string, year int) ([]Found, error) {
 	type scored struct {
 		f Found

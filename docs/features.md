@@ -476,12 +476,29 @@ un trailer legítimo con resolución basura. La biblioteca ya tiene
 `Antes de amanecer` a **450x360** y `Antes del atardecer` a **320x240** — pasan
 todos los filtros y no sirven en un televisor.
 
-No se puede resolver durante la búsqueda: `--flat-playlist` no devuelve la
-resolución, y pedirla cuesta **24 s por consulta contra 1,6 s** (medido; quince
-veces más, una hora y media sobre esta biblioteca). Así que el piso va en el
-selector de formato de la descarga, y cuando nada lo alcanza yt-dlp contesta
-`Requested format is not available` — eso se traduce a un error propio y el
-llamador prueba el candidato siguiente.
+No se resuelve durante la búsqueda porque `--flat-playlist` no devuelve la
+resolución. El piso va en el selector de formato de la descarga, y cuando nada
+lo alcanza yt-dlp contesta `Requested format is not available` — eso se traduce
+a un error propio y el llamador prueba el candidato siguiente.
+
+Sobre el costo, con una corrección que vale anotar. La primera versión de esto
+decía «quince veces más lento, hora y media sobre la biblioteca», medido en la
+MacBook. En la Pi, que es donde corre, la sesión ObiWan midió otra cosa:
+
+| | Mac | Pi 4 |
+|---|---|---|
+| búsqueda flat | 1,6 s | 6 s |
+| búsqueda completa | 24,3 s | 14 s |
+| factor | 15x | **2,3x** |
+
+O sea que el argumento del costo **no se sostiene en el destino**: 42 minutos
+contra 18 es una diferencia que esta feature podría pagar. Los tiempos de red y
+CPU de una laptop con fibra no se transfieren a un Pi 4.
+
+La razón real del diseño no es la velocidad sino la estructura: la descarga
+puede rechazar un candidato que la búsqueda aprobó —por resolución o porque
+YouTube dio de baja el video— así que el llamador necesita a dónde ir después,
+con o sin resolución en la búsqueda.
 
 Por eso `Find` devuelve una **lista ordenada** y no una respuesta: lo que
 descalifica a un video —resolución, o que YouTube lo haya dado de baja— sólo se
