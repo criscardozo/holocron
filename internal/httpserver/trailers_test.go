@@ -63,6 +63,6 @@ func (absentYTDLP) Version(context.Context) (string, error) {
 func (absentYTDLP) Search(context.Context, string, int) ([]trailers.Candidate, error) {
 	return nil, trailers.ErrNoYTDLP
 }
-func (absentYTDLP) Download(context.Context, string, string, string) error {
+func (absentYTDLP) Download(context.Context, string, string, string, int) error {
 	return trailers.ErrNoYTDLP
 }

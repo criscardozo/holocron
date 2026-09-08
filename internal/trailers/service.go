@@ -54,7 +54,7 @@ type Tool interface {
 	Path() string
 	Version(ctx context.Context) (string, error)
 	Search(ctx context.Context, query string, n int) ([]Candidate, error)
-	Download(ctx context.Context, url, dir, stem string) error
+	Download(ctx context.Context, url, dir, stem string, floor int) error
 }
 
 // Service finds films without a trailer and fetches them.
@@ -257,7 +257,7 @@ func (s *Service) fetch(ctx context.Context, films []Film, p *jobs.Progress) (st
 			break
 		}
 
-		found, err := Find(ctx, s.runner, f.Title, f.Year)
+		cands, err := Find(ctx, s.runner, f.Title, f.Year)
 		if err != nil {
 			failed++
 			results = append(results, Result{Folder: f.Folder, Err: describe(err)})
@@ -268,18 +268,21 @@ func (s *Service) fetch(ctx context.Context, films []Film, p *jobs.Progress) (st
 			}
 			continue
 		}
-		if err := s.runner.Download(ctx, found.Candidate.URL(), f.Dir, Stem(f.Folder)); err != nil {
+
+		// Candidates are tried in order because the search cannot see
+		// everything that disqualifies one: a video below the resolution
+		// floor, or one YouTube has since removed, only announces itself when
+		// the download is attempted. Neither says anything about the next.
+		res, stop := s.tryCandidates(ctx, f, cands)
+		results = append(results, res)
+		if res.Err == "" {
+			got++
+		} else {
 			failed++
-			results = append(results, Result{Folder: f.Folder, Err: describe(err)})
-			if errors.Is(err, ErrExtractorBroken) {
-				break
-			}
-			continue
 		}
-		got++
-		results = append(results, Result{
-			Folder: f.Folder, Trailer: found.Candidate.Title, Reason: found.Reason,
-		})
+		if stop {
+			break
+		}
 	}
 
 	s.mu.Lock()
@@ -300,6 +303,33 @@ func (s *Service) fetch(ctx context.Context, films []Film, p *jobs.Progress) (st
 	return msg, nil
 }
 
+// tryCandidates downloads the first candidate that works. stop is true when
+// the failure is one that will repeat for every remaining film, in which case
+// the batch is over rather than 180 identical lines long.
+func (s *Service) tryCandidates(ctx context.Context, f Film, cands []Found) (Result, bool) {
+	var last error
+	// Every candidate at the preferred resolution before any of them at the
+	// hard floor. The other order would take a 360p upload of the right
+	// trailer over a 1080p one further down the list, which is the case this
+	// exists for.
+	for _, floor := range []int{preferHeight, minHeight} {
+		for _, c := range cands {
+			if err := ctx.Err(); err != nil {
+				return Result{Folder: f.Folder, Err: describe(err)}, true
+			}
+			err := s.runner.Download(ctx, c.Candidate.URL(), f.Dir, Stem(f.Folder), floor)
+			switch {
+			case err == nil:
+				return Result{Folder: f.Folder, Trailer: c.Candidate.Title, Reason: c.Reason}, false
+			case errors.Is(err, ErrExtractorBroken), errors.Is(err, ErrNoYTDLP):
+				return Result{Folder: f.Folder, Err: describe(err)}, true
+			}
+			last = err
+		}
+	}
+	return Result{Folder: f.Folder, Err: describe(last)}, false
+}
+
 // describe turns an error into something worth showing. The three failure modes
 // have three different fixes, and an unexplained one sends the user reading
 // Holocron's logs for a problem that is not Holocron's.
@@ -311,6 +341,10 @@ func describe(err error) string {
 		return "yt-dlp no pudo leer YouTube — casi seguro la versión quedó vieja"
 	case errors.Is(err, ErrNotFound):
 		return "no se encontró nada que sea el trailer de esta película"
+	case errors.Is(err, ErrTooLowRes):
+		return "todos los candidatos están por debajo de 360p, no vale la pena bajarlos"
+	case errors.Is(err, ErrGone):
+		return "los videos encontrados ya no están en YouTube"
 	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
 		return "se canceló"
 	default:

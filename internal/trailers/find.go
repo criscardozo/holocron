@@ -3,6 +3,7 @@ package trailers
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -58,35 +59,69 @@ type Found struct {
 // already there.
 var ErrNotFound = fmt.Errorf("no trailer found")
 
-// Find searches for a film's trailer.
-func Find(ctx context.Context, s Searcher, title string, year int) (Found, error) {
-	var best Found
-	bestScore := 0
+// maxAttempts bounds how many candidates the caller may try. More than a
+// couple means the search did not really find the trailer, and each attempt is
+// a download that may run for a while.
+const maxAttempts = 3
+
+// Find searches for a film's trailer and returns the plausible candidates, best
+// first.
+//
+// A list rather than one answer, because the search cannot see everything that
+// disqualifies a video. Resolution is the case that forced this: asking for it
+// costs 24 seconds a query against 1.6 with a flat search — measured, fifteen
+// times slower, an hour and a half over this library — so the floor is applied
+// when downloading instead, and a candidate rejected there needs a next one.
+func Find(ctx context.Context, s Searcher, title string, year int) ([]Found, error) {
+	type scored struct {
+		f Found
+		n int
+	}
+	var all []scored
+	seen := make(map[string]bool)
+	best := 0
 
 	for _, q := range Queries(title, year) {
 		if err := ctx.Err(); err != nil {
-			return Found{}, err
+			return nil, err
 		}
 		cands, err := s.Search(ctx, q, searchResults)
 		if err != nil {
 			// A broken extractor will not fix itself on the next query, so
 			// stop rather than making two more doomed network calls per film.
-			return Found{}, err
+			return nil, err
 		}
 		for _, c := range cands {
+			if seen[c.ID] {
+				continue
+			}
 			n, why := score(c, title, year)
-			if n > bestScore {
-				best, bestScore = Found{Candidate: c, Reason: why, Query: q}, n
+			if n <= 0 {
+				continue
+			}
+			seen[c.ID] = true
+			all = append(all, scored{Found{Candidate: c, Reason: why, Query: q}, n})
+			if n > best {
+				best = n
 			}
 		}
-		if bestScore >= goodEnough {
-			return best, nil
+		if best >= goodEnough {
+			break
 		}
 	}
-	if bestScore <= 0 {
-		return Found{}, ErrNotFound
+	if len(all) == 0 {
+		return nil, ErrNotFound
 	}
-	return best, nil
+	sort.SliceStable(all, func(i, j int) bool { return all[i].n > all[j].n })
+
+	out := make([]Found, 0, len(all))
+	for _, sc := range all {
+		out = append(out, sc.f)
+	}
+	if len(out) > maxAttempts {
+		out = out[:maxAttempts]
+	}
+	return out, nil
 }
 
 // Stem is the filename a trailer should take for a folder: the folder's own

@@ -469,6 +469,33 @@ corre la búsqueda completa contra la red. La última corrida acertó el trailer
 oficial en 6 de 6, incluidas las cuatro películas argentinas y mexicanas viejas
 que se esperaba que fueran las difíciles.
 
+### El piso de resolución
+
+Filtrar por duración y por palabras del título deja pasar un caso que no se ve:
+un trailer legítimo con resolución basura. La biblioteca ya tiene
+`Antes de amanecer` a **450x360** y `Antes del atardecer` a **320x240** — pasan
+todos los filtros y no sirven en un televisor.
+
+No se puede resolver durante la búsqueda: `--flat-playlist` no devuelve la
+resolución, y pedirla cuesta **24 s por consulta contra 1,6 s** (medido; quince
+veces más, una hora y media sobre esta biblioteca). Así que el piso va en el
+selector de formato de la descarga, y cuando nada lo alcanza yt-dlp contesta
+`Requested format is not available` — eso se traduce a un error propio y el
+llamador prueba el candidato siguiente.
+
+Por eso `Find` devuelve una **lista ordenada** y no una respuesta: lo que
+descalifica a un video —resolución, o que YouTube lo haya dado de baja— sólo se
+descubre al intentar bajarlo, y ninguna de las dos cosas dice nada del
+siguiente.
+
+**Dos pisos, no uno.** Un piso único no puede estar bien acá: alto excluye los
+trailers viejos que sólo existieron en 360p, que son justo las películas para
+las que existe la feature; bajo deja pasar el 450x360. Entonces se ofrece
+**todos** los candidatos a 480p primero, y sólo si ninguno llega se hace una
+segunda pasada aceptando 360p. Así un 1080p le gana a un 360p aunque el 360p
+tenga mejor título — que es exactamente lo que pasa buscando «Antes de
+amanecer».
+
 ### La dependencia externa, y que se va a romper
 
 Holocron es un binario estático que no asume toolchain en el destino, y esta es

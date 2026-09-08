@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func (f *fakeTool) Version(context.Context) (string, error) {
 func (f *fakeTool) Search(context.Context, string, int) ([]Candidate, error) {
 	return f.results, f.searchErr
 }
-func (f *fakeTool) Download(_ context.Context, _, dir, stem string) error {
+func (f *fakeTool) Download(_ context.Context, _, dir, stem string, _ int) error {
 	if f.dlErr != nil {
 		return f.dlErr
 	}
@@ -205,4 +206,183 @@ func waitIdle(t *testing.T, svc *Service) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatal("job never finished")
+}
+
+// pickyTool fails the first N downloads with err, then succeeds. Stands in for
+// the two things a search cannot see: a video below the resolution floor and
+// one YouTube has since removed.
+type pickyTool struct {
+	fakeTool
+	failFirst int
+	failWith  error
+	attempts  []string
+	floors    []int
+}
+
+func (p *pickyTool) Download(ctx context.Context, url, dir, stem string, floor int) error {
+	p.attempts = append(p.attempts, url)
+	p.floors = append(p.floors, floor)
+	if len(p.attempts) <= p.failFirst {
+		return p.failWith
+	}
+	return p.fakeTool.Download(ctx, url, dir, stem, floor)
+}
+
+// TestALowResCandidateFallsThroughToTheNext. The library already holds trailers
+// at 320x240 and 450x360: those pass every filter based on duration and title
+// and are useless on a television. The floor cannot be applied during the
+// search — a flat search does not report resolution and asking costs fifteen
+// times as long — so it lands here, and it has to leave a way forward.
+func TestALowResCandidateFallsThroughToTheNext(t *testing.T) {
+	t.Parallel()
+	tool := &pickyTool{
+		fakeTool: fakeTool{results: []Candidate{
+			{ID: "small", Title: "Antes de amanecer - Trailer oficial", Duration: 95},
+			{ID: "good", Title: "Antes de amanecer (1995) - Trailer subtitulado", Duration: 122},
+		}},
+		failFirst: 1,
+		failWith:  ErrTooLowRes,
+	}
+	svc, _, movies := newTrailerService(t, tool)
+	mkFilm(t, movies, "Antes de amanecer (1995)", "pelicula.mkv")
+
+	films, err := svc.scan(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.fetch(t.Context(), films, &jobs.Progress{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(tool.attempts) != 2 {
+		t.Fatalf("tried %d candidates, want 2: %v", len(tool.attempts), tool.attempts)
+	}
+	res := svc.Results()
+	if len(res) != 1 || res[0].Err != "" {
+		t.Fatalf("results = %+v", res)
+	}
+	if res[0].Trailer == "" {
+		t.Error("nothing was recorded as downloaded")
+	}
+}
+
+// TestADeletedVideoAlsoFallsThrough, for the same reason: it is a property of
+// that one candidate, not of the film.
+func TestADeletedVideoAlsoFallsThrough(t *testing.T) {
+	t.Parallel()
+	tool := &pickyTool{
+		fakeTool: fakeTool{results: []Candidate{
+			{ID: "gone", Title: "Heat (1995) - Official Trailer", Duration: 140},
+			{ID: "ok", Title: "Heat 1995 Trailer subtitulado", Duration: 135},
+		}},
+		failFirst: 1,
+		failWith:  ErrGone,
+	}
+	svc, _, movies := newTrailerService(t, tool)
+	mkFilm(t, movies, "Heat (1995)", "pelicula.mkv")
+
+	films, _ := svc.scan(t.Context())
+	if _, err := svc.fetch(t.Context(), films, &jobs.Progress{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(tool.attempts) != 2 {
+		t.Errorf("tried %v", tool.attempts)
+	}
+}
+
+// TestGivingUpOnAFilmDoesNotGiveUpOnTheBatch. When every candidate for one film
+// is too small, the next film still gets its turn — unlike a broken extractor,
+// which stops everything because it will repeat.
+func TestGivingUpOnAFilmDoesNotGiveUpOnTheBatch(t *testing.T) {
+	t.Parallel()
+	tool := &pickyTool{
+		fakeTool: fakeTool{results: []Candidate{
+			{ID: "a", Title: "Dune - Official Trailer", Duration: 150},
+		}},
+		failFirst: 99,
+		failWith:  ErrTooLowRes,
+	}
+	svc, _, movies := newTrailerService(t, tool)
+	mkFilm(t, movies, "Dune (2021)", "p.mkv")
+	mkFilm(t, movies, "Heat (1995)", "p.mkv")
+
+	films, _ := svc.scan(t.Context())
+	if _, err := svc.fetch(t.Context(), films, &jobs.Progress{}); err != nil {
+		t.Fatal(err)
+	}
+	res := svc.Results()
+	if len(res) != 2 {
+		t.Fatalf("stopped after %d films, want both", len(res))
+	}
+	// Dune is the one the candidate matches, so it is the one that got as far
+	// as a download and hit the floor. Heat is refused earlier, by the title
+	// check, and says so differently — which is the point: the two failures
+	// are not the same and must not read as if they were.
+	var dune, heat string
+	for _, r := range res {
+		if strings.HasPrefix(r.Folder, "Dune") {
+			dune = r.Err
+		} else {
+			heat = r.Err
+		}
+	}
+	if !strings.Contains(dune, "360p") {
+		t.Errorf("Dune should name the resolution floor, got %q", dune)
+	}
+	if !strings.Contains(heat, "no se encontró") {
+		t.Errorf("Heat should say nothing matched, got %q", heat)
+	}
+	// One candidate, tried once at each floor: the preferred one and then the
+	// hard one. maxAttempts caps candidates, not passes.
+	if len(tool.attempts) != 2 {
+		t.Errorf("attempted %d downloads for one candidate: %v", len(tool.attempts), tool.attempts)
+	}
+	if len(tool.floors) != 2 || tool.floors[0] <= tool.floors[1] {
+		t.Errorf("floors = %v, want the preferred one attempted before the hard one", tool.floors)
+	}
+}
+
+// TestAHigherResCandidateWinsOverABetterTitledOne is the case ObiWan's finding
+// pointed at, made concrete. Searching "Antes de amanecer" really does return a
+// 360p upload ranked above a 1080p one, and the 360p title scores better. The
+// preferred-floor pass is what stops the library gaining another 450x360 file.
+func TestAHigherResCandidateWinsOverABetterTitledOne(t *testing.T) {
+	t.Parallel()
+	// Only the second candidate has anything at 480p or above.
+	tool := &floorAwareTool{ok: map[string]int{"low": 360, "high": 1080}}
+	svc, _, movies := newTrailerService(t, tool)
+	mkFilm(t, movies, "Antes de amanecer (1995)", "p.mkv")
+
+	tool.results = []Candidate{
+		{ID: "low", Title: "Antes de amanecer (1995) - Trailer oficial subtitulado", Duration: 95},
+		{ID: "high", Title: "Tráiler Antes de amanecer", Duration: 122},
+	}
+
+	films, _ := svc.scan(t.Context())
+	if _, err := svc.fetch(t.Context(), films, &jobs.Progress{}); err != nil {
+		t.Fatal(err)
+	}
+	res := svc.Results()
+	if len(res) != 1 || res[0].Err != "" {
+		t.Fatalf("results = %+v", res)
+	}
+	if tool.took != "high" {
+		t.Errorf("took %q, want the 1080p upload even though the other titled better", tool.took)
+	}
+}
+
+// floorAwareTool answers like yt-dlp does: a download fails when the video has
+// nothing at or above the requested floor.
+type floorAwareTool struct {
+	fakeTool
+	ok   map[string]int // video id -> best height available
+	took string
+}
+
+func (f *floorAwareTool) Download(ctx context.Context, url, dir, stem string, floor int) error {
+	id := url[strings.LastIndex(url, "=")+1:]
+	if f.ok[id] < floor {
+		return ErrTooLowRes
+	}
+	f.took = id
+	return f.fakeTool.Download(ctx, url, dir, stem, floor)
 }

@@ -52,10 +52,11 @@ func TestAgainstRealYouTube(t *testing.T) {
 			t.Errorf("%s: %v", f.title, err)
 			continue
 		}
-		fmt.Printf("%-30s %4ds  %-55.55s  [%s]\n",
-			f.title, got.Candidate.Duration, got.Candidate.Title, got.Reason)
-		if !saysTrailer.MatchString(got.Candidate.Title) {
-			t.Errorf("%s: picked something that does not say trailer: %q", f.title, got.Candidate.Title)
+		best := got[0]
+		fmt.Printf("%-30s %4ds  %-55.55s  [%s]  (+%d alternativas)\n",
+			f.title, best.Candidate.Duration, best.Candidate.Title, best.Reason, len(got)-1)
+		if !saysTrailer.MatchString(best.Candidate.Title) {
+			t.Errorf("%s: picked something that does not say trailer: %q", f.title, best.Candidate.Title)
 		}
 	}
 }

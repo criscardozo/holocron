@@ -50,8 +50,8 @@ func TestAGoodFirstAnswerStopsTheSearch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Candidate.ID != "a" {
-		t.Errorf("picked %q", got.Candidate.ID)
+	if len(got) == 0 || got[0].Candidate.ID != "a" {
+		t.Errorf("picked %+v", got)
 	}
 	if len(f.calls) != 1 {
 		t.Errorf("made %d searches, want 1: %v", len(f.calls), f.calls)
@@ -71,8 +71,8 @@ func TestItFallsThroughWhenTheFirstQueryIsWeak(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Candidate.ID != "real" {
-		t.Errorf("picked %q, want the real trailer", got.Candidate.ID)
+	if len(got) == 0 || got[0].Candidate.ID != "real" {
+		t.Errorf("picked %+v, want the real trailer", got)
 	}
 	if len(f.calls) != 3 {
 		t.Errorf("should have tried every query, made %d", len(f.calls))
