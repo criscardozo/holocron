@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -13,7 +14,6 @@ import (
 // followed by edition tags like " {edition-Director's Cut}".
 var (
 	validRe = regexp.MustCompile(`^.+ \((?:19|20)\d{2}\)(?: \{[^}]+\})*$`)
-	yearRe  = regexp.MustCompile(`(?:19|20)\d{2}`)
 )
 
 // Issue is a folder that violates the naming convention.
@@ -33,20 +33,18 @@ func Validate(name string) (ok bool, expected string) {
 	if name == strings.TrimSpace(name) && validRe.MatchString(name) {
 		return true, ""
 	}
-	if year := yearRe.FindString(name); year != "" {
-		title := strings.NewReplacer("("+year+")", "", "["+year+"]", "", year, "").Replace(name)
-		title = strings.Trim(title, " .-_[]()")
-		title = strings.Join(strings.Fields(title), " ")
-		if title == "" {
-			title = "Título"
-		}
-		return false, title + " (" + year + ")"
-	}
-	title := strings.Join(strings.Fields(strings.Trim(name, " .-_[]()")), " ")
+	title, year, found := Parse(name)
 	if title == "" {
 		title = "Título"
 	}
-	return false, title + " (Año)"
+	if !found {
+		return false, title + " (Año)"
+	}
+	suggestion := title + " (" + strconv.Itoa(year) + ")"
+	if eds := Editions(name); len(eds) > 0 {
+		suggestion += " " + strings.Join(eds, " ")
+	}
+	return false, suggestion
 }
 
 // ScanDir validates the immediate subdirectories of root and returns the ones

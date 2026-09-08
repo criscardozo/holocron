@@ -305,3 +305,103 @@ Los sondeos son *best effort*: uno que no contesta no aporta advertencia en vez
 de bloquear la página. `Checked` distingue **«no hay nada en curso»** de **«no
 se pudo preguntar»**, que se ven iguales y sólo uno de los dos significa que es
 seguro apagar.
+
+## Feature 8 — Renombrado masivo de películas (`/naming/rename`)
+
+Lleva las carpetas de películas a «Título (Año)» y arrastra con ellas todo lo
+que dependía del nombre viejo.
+
+### Por qué es una pantalla aparte y no un botón en `/naming`
+
+Es lo más destructivo que hace Holocron: cambia archivos que no se pueden
+reconstruir, en masa, en un disco compartido con un servidor de medios. La
+vista previa **es** la feature. Nada pasa hasta que la lista exacta de cambios
+estuvo en pantalla — cada carpeta y cada archivo adentro — y cada carpeta tiene
+su tilde para dejarla afuera.
+
+### Nada se renombra solo
+
+La unidad de trabajo es la carpeta, no el archivo. Un subtítulo se asocia a su
+video por el nombre, y lo mismo vale para las imágenes que Jellyfin levanta por
+nombre de archivo. Renombrar la carpeta y dejar `Movie.1080p.es.srt` adentro
+sale gratis en el momento y cuesta los subtítulos para siempre, sin un solo
+mensaje de error: la película simplemente se reproduce sin ellos.
+
+Qué se mueve junto: video, subtítulos (`.srt`, `.ssa`, `.ass`, `.sub`, `.idx`,
+`.vtt`…), imágenes que llevan el nombre de la película y `.nfo`. Qué **no** se
+toca: `poster.jpg`, `fanart.jpg`, `logo.png` — esos ya son los nombres que
+Jellyfin busca, y reescribirlos rompería lo que funciona.
+
+El «mismo nombre» se resuelve contra dos candidatos: el nombre de la carpeta y
+el de cualquier video adentro, el más largo primero. Eso cubre la carpeta cuyo
+contenido no coincide con ella, que es la mitad de una biblioteca armada
+durante años. El prefijo tiene que terminar en un separador, si no `Alien 2`
+haría match adentro de `Alien 2049`.
+
+### Nada se pisa, nunca
+
+Todo renombrado cuyo destino ya existe se saltea y se informa. En una
+biblioteca una colisión significa dos películas distintas, no una copia vieja
+— y `rename(2)` reemplaza el destino sin decir una palabra, así que un
+renombrado descuidado no genera desorden: borra una película.
+
+El chequeo es `Lstat` y después `Rename`. No es hermético —nada impide que el
+destino aparezca en el medio— pero la alternativa que sí lo sería, un `link` +
+`unlink`, necesita un filesystem con enlaces duros y la biblioteca está en
+exFAT. Cierra el caso que pasa, no la carrera.
+
+### El parser de títulos
+
+`naming.Parse` es la parte que tenía que estar bien. La sugerencia anterior se
+mostraba al lado de la carpeta y la leía una persona, que notaba si era
+disparate. Ahora maneja un renombrado masivo, y una respuesta plausible pero
+equivocada es peor que una obviamente equivocada: nadie revisa un nombre que se
+ve bien, y para cuando el scraper matchea la película equivocada el archivo ya
+está renombrado.
+
+Lo que la versión vieja hacía mal, medido:
+
+| Carpeta | Antes | Ahora |
+|---|---|---|
+| `The.Matrix.1999.1080p.BluRay` | `The.Matrix..1080p.BluRay (1999)` | `The Matrix (1999)` |
+| `Blade.Runner.2049.2017` | `Blade.Runner..2017 (2049)` | `Blade Runner 2049 (2017)` |
+| `2012.2009` | `2009 (2012)` | `2012 (2009)` |
+
+El año se toma del **último** token que parece año, no del primero: los títulos
+que contienen un año lo ponen antes del de estreno (`Blade Runner 2049 2017`,
+`2012 2009`, `1917 2019`) y tomar el primero los rompe a todos.
+
+Los tags de release (`1080p`, `WEB-DL`, `x265`, `REMUX`…) sólo se sacan del
+**final** del título, así que una película llamada `Dual` o `Cam` conserva su
+nombre. Los puntos se convierten en espacios sólo cuando hay más puntos que
+espacios, así `Mr. Nobody (2009)` no pierde el suyo.
+
+### No se inventa el año
+
+Una carpeta sin año no se toca y aparece en su propia lista. El año es lo que
+distingue dos películas con el mismo título; adivinarlo manda al scraper a la
+equivocada detrás de un nombre que parece deliberado. En esta biblioteca son
+sobre todo títulos argentinos y mexicanos viejos (`Esperando la carroza`,
+`Cien veces no debo`).
+
+### Sólo películas
+
+Las series quedan afuera a propósito. Los episodios llevan número de temporada
+y de capítulo, que este parser no conoce, y aplicarles las mismas reglas
+convertiría una biblioteca que funciona en una pila de archivos con el nombre
+de la serie.
+
+### Confinamiento
+
+Todo pasa por `os.Root` abierto en la carpeta de medios configurada. Las claves
+que vuelven del formulario son entrada del usuario camino a un renombrado, así
+que `locate` exige que la ruta esté **un** nivel adentro de una carpeta
+configurada: la carpeta de medios en sí, algo más profundo, un hermano con
+prefijo parecido (`/mnt/Peliculas-viejas`) o cualquier `..` se rechazan y se
+informan.
+
+El plan se **recalcula** al aplicar en vez de arrastrarse desde la vista
+previa. El disco pudo cambiar en el medio —hay un servidor de medios
+escribiendo— y actuar sobre un plan viejo es como un renombrado termina sobre
+un nombre que ahora pertenece a otra cosa. La vista previa es orientativa; el
+apply es la decisión.

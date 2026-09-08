@@ -52,6 +52,10 @@ templ namingContent(v NamingPageView) {
 			<p class="sub">Carpetas que no cumplen la convención «Título (Año)»</p>
 		</div>
 		<div class="head-actions">
+			<a class="btn btn-secondary" href="/naming/rename">
+				@IconSm("plug")
+				Renombrar en masa
+			</a>
 			<form method="post" action="/naming/scan" hx-post="/naming/scan?to=page" hx-target="body">
 				<button class="btn btn-primary" type="submit">
 					@IconSm("refresh")

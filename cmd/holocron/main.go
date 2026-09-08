@@ -55,7 +55,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	folderStore := folders.NewStore(database)
 	settingsStore := settings.NewStore(database)
 	diskService := diskusage.NewService(database, folderStore, jobManager)
-	namingService := naming.NewService(database, folderStore)
+	namingService := naming.NewService(database, folderStore, jobManager)
 	libraryService := library.NewService(database, settingsStore, jobManager)
 	qualityService := quality.NewService(database, settingsStore, jobManager)
 	subtitlesService := subtitles.NewService(database, settingsStore)

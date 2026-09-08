@@ -1,0 +1,159 @@
+package templates
+
+import "fmt"
+
+// RenamePage previews a bulk rename and applies it.
+//
+// The preview is the feature. Renaming a library in bulk is the one thing here
+// that cannot be undone with a button, so nothing happens until the exact list
+// of changes has been on screen — every folder, and every file inside it.
+templ RenamePage(v RenamePageView) {
+	@Layout("Renombrar") {
+		<div class="page-head">
+			<div>
+				<h1>Renombrar películas</h1>
+				<p class="sub">Carpetas y archivos a «Título (Año)», con los subtítulos y las imágenes siguiendo al video</p>
+			</div>
+		</div>
+		@RenameSection(v)
+	}
+}
+
+// RenameSection is what the job polling swaps in place.
+templ RenameSection(v RenamePageView) {
+	<section id="rename" class="rename">
+		if v.Notice != "" {
+			<div class={ "notice", "mb-6", templ.KV("error", v.NoticeErr) }>
+				@IconSm(noticeIcon(v.NoticeErr))
+				<span>{ v.Notice }</span>
+			</div>
+		}
+		if !v.HasMediaFolders {
+			<p class="muted">No hay carpetas de Películas configuradas. Agregá una en <a href="/settings">Ajustes</a>.</p>
+		} else if v.Running {
+			<div class="job running" hx-get="/naming/rename/status" hx-trigger="every 2s" hx-select="#rename" hx-target="#rename" hx-swap="outerHTML">
+				<span class="spinner"></span>
+				<span>Revisando las carpetas…</span>
+			</div>
+		} else {
+			<div class="head-actions mb-6">
+				<form hx-post="/naming/rename/preview" hx-target="#rename" hx-swap="outerHTML">
+					<button class="btn btn-secondary" type="submit">
+						@IconSm("refresh")
+						if v.Previewed {
+							Volver a revisar
+						} else {
+							Revisar qué cambiaría
+						}
+					</button>
+				</form>
+			</div>
+			if v.Previewed && len(v.Plans) == 0 && len(v.Blocked) == 0 {
+				<div class="notice">
+					@IconSm("check")
+					<span>Nada para renombrar: las carpetas de películas ya cumplen la convención.</span>
+				</div>
+			} else if len(v.Plans) > 0 {
+				@renamePlans(v)
+			}
+			@renameBlocked(v.Blocked)
+		}
+	</section>
+}
+
+templ renamePlans(v RenamePageView) {
+	<form hx-post="/naming/rename/apply" hx-target="#rename" hx-swap="outerHTML"
+		hx-confirm="Esto renombra carpetas y archivos en el disco. No hay deshacer. ¿Seguir?">
+		<div class="notice mb-6">
+			@IconSm("alert")
+			<span>
+				<strong>{ fmt.Sprintf("%d carpetas", len(v.Plans)) }</strong> y
+				<strong>{ fmt.Sprintf("%d archivos", v.TotalFiles) }</strong> cambiarían de nombre.
+				Destildá lo que no quieras tocar. No se pisa ningún archivo que ya exista.
+			</span>
+		</div>
+		for _, p := range v.Plans {
+			@renamePlanCard(p)
+		}
+		<div class="head-actions">
+			<button class="btn btn-danger" type="submit">
+				@IconSm("check")
+				Renombrar lo tildado
+			</button>
+		</div>
+	</form>
+}
+
+templ renamePlanCard(p RenamePlanRow) {
+	<div class="card elev-sm mb-6">
+		<label class="rename-head">
+			<input type="checkbox" name="folder" value={ p.Key } checked/>
+			<span class="rename-names">
+				if p.FolderChanges() {
+					<span class="mono found">{ p.From }</span>
+					<span class="rename-arrow">→</span>
+					<span class="mono expected">{ p.To }</span>
+				} else {
+					<span class="mono">{ p.From }</span>
+					<span class="muted">— la carpeta ya está bien, cambian los archivos de adentro</span>
+				}
+			</span>
+		</label>
+		if len(p.Files) > 0 {
+			<ul class="rename-files">
+				for _, f := range p.Files {
+					<li>
+						<span class="mono found">{ f.From }</span>
+						<span class="rename-arrow">→</span>
+						<span class="mono expected">{ f.To }</span>
+					</li>
+				}
+			</ul>
+		}
+		if len(p.Skipped) > 0 {
+			<ul class="rename-skipped">
+				for _, sk := range p.Skipped {
+					<li>
+						@IconSm("alert")
+						<span>{ sk }</span>
+					</li>
+				}
+			</ul>
+		}
+	</div>
+}
+
+templ renameBlocked(rows []RenameBlockedRow) {
+	if len(rows) > 0 {
+		<div class="lib-group">
+			<div class="lib-head">
+				<h2>Necesitan que decidas vos</h2>
+				<span class="count">{ fmt.Sprintf("%d carpetas", len(rows)) }</span>
+			</div>
+			<p class="muted mb-6">
+				Holocron no inventa el año: es lo que distingue dos películas con el mismo
+				título, y adivinarlo manda al scraper a la película equivocada con un nombre
+				que parece correcto. Renombralas a mano.
+			</p>
+			<table class="table fix">
+				<thead><tr><th>Carpeta</th><th>Por qué</th></tr></thead>
+				<tbody>
+					for _, r := range rows {
+						<tr>
+							<td class="mono found">{ r.Folder }</td>
+							<td class="muted">{ r.Reason }</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+// noticeIcon keeps the ternary out of the markup, since templ has none.
+func noticeIcon(isErr bool) string {
+	if isErr {
+		return "alert"
+	}
+	return "check"
+}

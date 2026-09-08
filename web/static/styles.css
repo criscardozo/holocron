@@ -457,3 +457,26 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .pw-90{width:90%;}.pw-91{width:91%;}.pw-92{width:92%;}.pw-93{width:93%;}.pw-94{width:94%;}
 .pw-95{width:95%;}.pw-96{width:96%;}.pw-97{width:97%;}.pw-98{width:98%;}.pw-99{width:99%;}
 .pw-100{width:100%;}
+
+/* ── renombrado masivo ──────────────────────────────────────────────── */
+/* The preview is a diff, so it is laid out like one: the old name and the new
+   one on the same line, in the same two colours the naming table already uses
+   for "found" and "expected". */
+.rename-head { display: flex; gap: var(--space-3); align-items: flex-start; cursor: pointer; }
+.rename-head input { margin-top: 3px; flex: none; accent-color: var(--color-accent); }
+.rename-names { display: flex; gap: var(--space-2); align-items: baseline; flex-wrap: wrap; }
+.rename-arrow { color: color-mix(in srgb, var(--color-text) 40%, transparent); flex: none; }
+.rename-files {
+	list-style: none; margin: var(--space-3) 0 0; padding: 0 0 0 calc(var(--space-3) * 2);
+	font-size: 12.5px; display: grid; gap: 2px;
+}
+.rename-files li { display: flex; gap: var(--space-2); align-items: baseline; flex-wrap: wrap; }
+.rename-skipped {
+	list-style: none; margin: var(--space-3) 0 0; padding: 0 0 0 calc(var(--space-3) * 2);
+	font-size: 12.5px; display: grid; gap: 2px; color: var(--color-accent-300);
+}
+.rename-skipped li { display: flex; gap: 6px; align-items: baseline; }
+/* The blocked list sits right under the apply button, and without this the two
+   read as one block — exactly the wrong impression for a list of things the
+   button will not touch. */
+.rename .lib-group { margin-top: calc(var(--space-6) * 1.5); }

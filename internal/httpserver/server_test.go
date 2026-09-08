@@ -60,7 +60,7 @@ func newTestServer(t *testing.T) *testServer {
 		Log:          logger,
 		Folders:      folderStore,
 		Disk:         diskusage.NewService(database, folderStore, jobManager),
-		Naming:       naming.NewService(database, folderStore),
+		Naming:       naming.NewService(database, folderStore, jobManager),
 		Settings:     settingsStore,
 		Library:      library.NewService(database, settingsStore, jobManager),
 		Quality:      quality.NewService(database, settingsStore, jobManager),

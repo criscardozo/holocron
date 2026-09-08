@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sync"
 
 	"github.com/cristian/holocron/internal/folders"
+	"github.com/cristian/holocron/internal/jobs"
 )
 
 // Service scans the configured movie/TV folders for naming issues and caches
@@ -14,11 +16,19 @@ import (
 type Service struct {
 	db      *sql.DB
 	folders *folders.Store
+	jobs    *jobs.Manager
+
+	// The last preview, kept in memory rather than in SQLite. A plan is only
+	// true for as long as the disk has not changed, so persisting it across
+	// restarts would mean offering a stale one; losing it is the right
+	// behaviour, not a limitation.
+	mu    sync.Mutex
+	plans []PlannedFolder
 }
 
 // NewService creates a Service.
-func NewService(db *sql.DB, fs *folders.Store) *Service {
-	return &Service{db: db, folders: fs}
+func NewService(db *sql.DB, fs *folders.Store, jm *jobs.Manager) *Service {
+	return &Service{db: db, folders: fs, jobs: jm}
 }
 
 // Scan re-scans all movie and TV folders, replaces the cached issues, and

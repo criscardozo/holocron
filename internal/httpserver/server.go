@@ -80,6 +80,10 @@ func (s *Server) Handler() http.Handler {
 	// Phase 2: naming validator.
 	mux.HandleFunc("GET /naming", s.handleNamingPage)
 	mux.HandleFunc("POST /naming/scan", s.handleNamingScan)
+	mux.HandleFunc("GET /naming/rename", s.handleRenamePage)
+	mux.HandleFunc("POST /naming/rename/preview", s.handleRenamePreview)
+	mux.HandleFunc("GET /naming/rename/status", s.handleRenameStatus)
+	mux.HandleFunc("POST /naming/rename/apply", s.handleRenameApply)
 
 	// Phase 3: media inventory.
 	mux.HandleFunc("GET /media", s.handleMediaPage)
