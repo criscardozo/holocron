@@ -34,6 +34,12 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		view.QbitSet = true
 	}
 	view.APITokenSet = s.deps.APIToken.Configured(ctx)
+
+	// Each credential card says whether it is set up, instead of showing an
+	// empty form that looks the same either way.
+	view.Jellyfin = SettingsCredJellyfin(view)
+	view.OpenSubs = SettingsCredOpenSubs(view)
+	view.Qbit = SettingsCredQbit(view)
 	view.Updates = s.updatesView(ctx, false)
 	// A reload mid-flow should keep showing the code rather than restart it.
 	if s.deps.JellyfinLink.Pending() {
@@ -158,4 +164,135 @@ func (s *Server) handleRevokeAPIToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.redirect(w, r, "/settings?notice="+url.QueryEscape("Token de la API revocado."))
+}
+
+// The three credential cards. Configured means "there is enough stored here to
+// try", never "it works": the live check is a separate, lazily-loaded answer,
+// because those are different questions and conflating them is what made the
+// old card misleading in the first place.
+
+// SettingsCredJellyfin describes the Jellyfin card. Linked, not merely
+// addressed: an address with no token is half-configured, and the Quick
+// Connect step is exactly what the form is still there to offer.
+func SettingsCredJellyfin(v templates.SettingsView) templates.SettingsCred {
+	c := templates.SettingsCred{
+		Configured: v.JellyfinLink.Linked,
+		ClearHref:  "/settings/jellyfin/clear",
+		Confirm:    "¿Borrar la dirección y el token de Jellyfin? Vas a tener que volver a vincularlo con Quick Connect.",
+		StatusHref: "/settings/status/jellyfin",
+	}
+	if !c.Configured {
+		return c
+	}
+	c.Facts = append(c.Facts, templates.SettingsFact{Label: "Servidor", Value: v.JellyfinURL})
+	if v.JellyfinLink.User != "" {
+		c.Facts = append(c.Facts, templates.SettingsFact{Label: "Cuenta", Value: v.JellyfinLink.User})
+	}
+	return c
+}
+
+// SettingsCredOpenSubs describes the OpenSubtitles card. No live check: there
+// is no probe for it that does not spend a download from a small daily quota,
+// and burning one to draw a badge would be a poor trade.
+func SettingsCredOpenSubs(v templates.SettingsView) templates.SettingsCred {
+	c := templates.SettingsCred{
+		Configured: v.OpenSubsSet,
+		ClearHref:  "/settings/opensubtitles/clear",
+		Confirm:    "¿Borrar el usuario y la API key de OpenSubtitles?",
+	}
+	if !c.Configured {
+		return c
+	}
+	if v.OpenSubsUser != "" {
+		c.Facts = append(c.Facts, templates.SettingsFact{Label: "Usuario", Value: v.OpenSubsUser})
+	}
+	c.Facts = append(c.Facts, templates.SettingsFact{Label: "API key", Value: "guardada"})
+	return c
+}
+
+// SettingsCredQbit describes the qBittorrent card.
+func SettingsCredQbit(v templates.SettingsView) templates.SettingsCred {
+	c := templates.SettingsCred{
+		Configured: v.QbitURL != "" && v.QbitSet,
+		ClearHref:  "/settings/qbittorrent/clear",
+		Confirm:    "¿Borrar la URL, el usuario y la contraseña de qBittorrent?",
+		StatusHref: "/settings/status/qbittorrent",
+	}
+	if !c.Configured {
+		return c
+	}
+	c.Facts = append(c.Facts,
+		templates.SettingsFact{Label: "WebUI", Value: v.QbitURL},
+		templates.SettingsFact{Label: "Usuario", Value: v.QbitUser},
+		templates.SettingsFact{Label: "Contraseña", Value: "guardada"},
+	)
+	return c
+}
+
+// handleClearJellyfin forgets the address and the token together.
+//
+// Both, not just one. Leaving the address behind after unlinking is what makes
+// a card look configured while nothing works, and this button exists precisely
+// to get back to a clean start.
+func (s *Server) handleClearJellyfin(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if err := s.deps.JellyfinLink.Unlink(ctx); err != nil {
+		s.log.Warn("clear jellyfin", "error", err)
+	}
+	if err := s.deps.Settings.Set(ctx, settings.KeyJellyfinURL, ""); err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	s.redirect(w, r, "/settings?notice="+url.QueryEscape("Credenciales de Jellyfin borradas."))
+}
+
+func (s *Server) handleClearOpenSubtitles(w http.ResponseWriter, r *http.Request) {
+	if err := s.clearKeys(r, settings.KeyOpenSubtitlesUser, settings.KeyOpenSubtitlesKey); err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	s.redirect(w, r, "/settings?notice="+url.QueryEscape("Credenciales de OpenSubtitles borradas."))
+}
+
+func (s *Server) handleClearQbit(w http.ResponseWriter, r *http.Request) {
+	if err := s.clearKeys(r, settings.KeyQbitURL, settings.KeyQbitUser, settings.KeyQbitPass); err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	s.redirect(w, r, "/settings?notice="+url.QueryEscape("Credenciales de qBittorrent borradas."))
+}
+
+// clearKeys empties every key or fails, so a half-cleared card cannot happen.
+func (s *Server) clearKeys(r *http.Request, keys ...string) error {
+	for _, k := range keys {
+		if err := s.deps.Settings.Set(r.Context(), k, ""); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// handleJellyfinStatus and handleQbitStatus answer the "is it actually working"
+// question the card asks after it has rendered.
+func (s *Server) handleJellyfinStatus(w http.ResponseWriter, r *http.Request) {
+	info, err := s.deps.Library.TestConnection(r.Context())
+	if err != nil {
+		s.log.Debug("jellyfin status", "error", err)
+		s.render(w, r, templates.CredStatus(false, "no responde"))
+		return
+	}
+	detail := "responde"
+	if info.Name != "" {
+		detail = info.Name
+	}
+	s.render(w, r, templates.CredStatus(true, detail))
+}
+
+func (s *Server) handleQbitStatus(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.deps.Torrents.Summary(r.Context()); err != nil {
+		s.log.Debug("qbittorrent status", "error", err)
+		s.render(w, r, templates.CredStatus(false, "no responde"))
+		return
+	}
+	s.render(w, r, templates.CredStatus(true, "responde"))
 }

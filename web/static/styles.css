@@ -481,3 +481,23 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
    button did not or will not touch. */
 .rename .lib-group,
 .trailers .lib-group { margin-top: calc(var(--space-6) * 1.5); }
+
+/* ── tarjetas de credenciales ya configuradas ───────────────────────── */
+.cred-on { display: grid; gap: var(--space-3); }
+.cred-state { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin: 0; }
+
+/* ── ayuda desplegable ──────────────────────────────────────────────── */
+/* <details> instead of a tooltip: reachable by keyboard, works on a phone, and
+   needs no JavaScript — which this app does not ship and the CSP would block. */
+.hint { flex-basis: 100%; margin-top: var(--space-2); font-size: 12.5px; }
+.hint > summary {
+	display: flex; gap: 6px; align-items: center; width: fit-content;
+	cursor: pointer; color: var(--color-accent); list-style: none;
+}
+.hint > summary::-webkit-details-marker { display: none; }
+.hint > summary:hover { text-decoration: underline; }
+.hint-body {
+	margin-top: var(--space-2); padding: var(--space-3);
+	border-left: 2px solid var(--color-divider); display: grid; gap: var(--space-2);
+}
+.hint-body p { margin: 0; line-height: 1.5; }

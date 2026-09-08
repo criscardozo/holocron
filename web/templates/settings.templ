@@ -58,17 +58,21 @@ templ settingsContent(v SettingsView) {
 				Jellyfin
 			</h2>
 			<p class="desc">Para inventariar la biblioteca y saber qué le falta subtítulos.</p>
-			<form method="post" action="/settings/jellyfin" hx-post="/settings/jellyfin" hx-target="body">
-				<div class="field">
-					<label>Dirección del servidor</label>
-					<input class="input" type="text" name="url" value={ v.JellyfinURL } placeholder="http://192.168.0.2:8096"/>
-				</div>
-				<div class="block-foot">
-					<button type="submit" class="btn btn-secondary">Guardá</button>
-				</div>
-			</form>
-			<hr class="sep"/>
-			@JellyfinLink(v.JellyfinLink)
+			if v.Jellyfin.Configured {
+				@credConnected(v.Jellyfin)
+			} else {
+				<form method="post" action="/settings/jellyfin" hx-post="/settings/jellyfin" hx-target="body">
+					<div class="field">
+						<label>Dirección del servidor</label>
+						<input class="input" type="text" name="url" value={ v.JellyfinURL } placeholder="http://192.168.0.2:8096"/>
+					</div>
+					<div class="block-foot">
+						<button type="submit" class="btn btn-secondary">Guardá</button>
+					</div>
+				</form>
+				<hr class="sep"/>
+				@JellyfinLink(v.JellyfinLink)
+			}
 		</div>
 
 		<div class="card elev-sm block">
@@ -77,6 +81,9 @@ templ settingsContent(v SettingsView) {
 				OpenSubtitles
 			</h2>
 			<p class="desc">Para buscar y descargar subtítulos en español.</p>
+			if v.OpenSubs.Configured {
+				@credConnected(v.OpenSubs)
+			} else {
 			<form method="post" action="/settings/opensubtitles" hx-post="/settings/opensubtitles" hx-target="body">
 				<div class="field">
 					<label>Usuario</label>
@@ -102,6 +109,7 @@ templ settingsContent(v SettingsView) {
 					<button type="submit" class="btn btn-primary">Guardá</button>
 				</div>
 			</form>
+			}
 		</div>
 
 		<div class="card elev-sm block">
@@ -151,6 +159,9 @@ templ settingsContent(v SettingsView) {
 				qBittorrent
 			</h2>
 			<p class="desc">WebUI de qBittorrent-nox para administrar las descargas.</p>
+			if v.Qbit.Configured {
+				@credConnected(v.Qbit)
+			} else {
 			<form method="post" action="/settings/qbittorrent" hx-post="/settings/qbittorrent" hx-target="body">
 				<div class="settings-grid">
 					<div class="field">
@@ -178,9 +189,57 @@ templ settingsContent(v SettingsView) {
 					<button type="submit" class="btn btn-primary">Guardá</button>
 				</div>
 			</form>
+			}
 		</div>
 
 	</div>
+}
+
+// credConnected replaces a credential form once the credentials are stored.
+//
+// "Ya conectado" is what it says, and then it goes and checks. Stored is not
+// the same as working — a moved server or a rotated password leaves the card
+// looking configured and the feature broken — so the live answer arrives
+// straight after the page and can contradict the badge.
+templ credConnected(c SettingsCred) {
+	<div class="cred-on">
+		<p class="cred-state">
+			<span class="badge badge-yes">
+				@IconSm("check")
+				Ya conectado
+			</span>
+			if c.StatusHref != "" {
+				<span hx-get={ c.StatusHref } hx-trigger="load" hx-swap="outerHTML" class="muted">comprobando…</span>
+			}
+		</p>
+		if len(c.Facts) > 0 {
+			<ul class="stat-list">
+				for _, f := range c.Facts {
+					<li>
+						<span class="stat-key">{ f.Label }</span>
+						<span class="stat-val mono">{ f.Value }</span>
+					</li>
+				}
+			</ul>
+		}
+		<div class="block-foot">
+			<form method="post" action={ templ.SafeURL(c.ClearHref) } hx-post={ c.ClearHref } hx-target="body" hx-confirm={ c.Confirm }>
+				<button type="submit" class="btn btn-danger">
+					@IconSm("trash")
+					Borrar credenciales y reconectar
+				</button>
+			</form>
+		</div>
+	</div>
+}
+
+// CredStatus is the live check, swapped in after the card renders.
+templ CredStatus(ok bool, detail string) {
+	if ok {
+		<span class="badge badge-yes">{ detail }</span>
+	} else {
+		<span class="badge badge-no">{ detail }</span>
+	}
 }
 
 templ folderRow(f SettingsFolderRow) {

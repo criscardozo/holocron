@@ -3,11 +3,11 @@ package templates
 // ManagePage is the machine management screen: what the Pi is doing, what
 // would be interrupted, and the buttons that act on it.
 templ ManagePage(v ManagePageView) {
-	@Layout("ObiWan") {
+	@Layout("Gestión") {
 		<div class="page-head">
 			<div>
-				<h1>ObiWan</h1>
-				<p class="sub">Estado de la Raspberry Pi y control de sus servicios</p>
+				<h1>Gestión de ObiWan</h1>
+				<p class="sub">Estado de la Raspberry Pi y control de sus servicios: reiniciar, apagar</p>
 			</div>
 		</div>
 		@ManageSection(v)
@@ -143,6 +143,7 @@ templ actionCard(a ManageActionRow) {
 					@IconSm(a.Icon)
 					{ a.Label }
 				</button>
+				@tokenHint()
 			</form>
 		} else {
 			<form hx-post="/manage/action" hx-target="#manage" hx-swap="outerHTML" hx-confirm={ a.Confirm }>
@@ -154,4 +155,36 @@ templ actionCard(a ManageActionRow) {
 			</form>
 		}
 	</div>
+}
+
+// tokenHint answers the question the token field provokes and does not answer:
+// where does one get it. Asking for a credential without saying where it lives
+// is how a safety measure turns into a dead end.
+//
+// A <details> rather than a tooltip: it is keyboard reachable, it works on a
+// phone, and it needs no JavaScript of our own — which this app does not have
+// and whose CSP would not run anyway.
+templ tokenHint() {
+	<details class="hint">
+		<summary>
+			@IconSm("info")
+			¿De dónde saco el token?
+		</summary>
+		<div class="hint-body">
+			<p>
+				Es el mismo token que usa la app de iOS. Se genera en
+				<a href="/settings">Ajustes → App iOS</a>, y se muestra
+				<strong>una sola vez</strong>: después queda guardada nada más que su
+				huella, así que no se puede volver a ver.
+			</p>
+			<p class="muted">
+				Si lo perdiste, generá uno nuevo desde ahí. El anterior deja de servir,
+				y la app te va a pedir el nuevo.
+			</p>
+			<p class="muted">
+				Se pide sólo para apagar, que es lo único que no se puede deshacer a
+				distancia. Los reinicios no lo necesitan.
+			</p>
+		</div>
+	</details>
 }
