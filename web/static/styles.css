@@ -124,8 +124,13 @@ a:hover { color: var(--color-accent-200); }
 .btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
 .btn-ghost:hover:not(:disabled) { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .btn-icon { width: 36px; height: 36px; padding: 0; }
-.btn-danger { color: var(--danger); }
-.btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+/* Bordered like the other variants, and it matters more here than anywhere
+   else: the only irreversible controls in the app wear this class, and without
+   a border they read as loose text rather than as something you press. Softened
+   rather than the full colour so a list of icon-only delete buttons does not
+   turn into a row of red boxes; hover brings it up to full. */
+.btn-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.btn-danger:hover:not(:disabled) { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 
 /* ── forms ─────────────────────────────────────────────────────────── */
 .field { display: grid; gap: 6px; margin-bottom: var(--space-4); }
