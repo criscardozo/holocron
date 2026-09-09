@@ -4,9 +4,13 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cristian/holocron/internal/jellyfin"
 )
+
+// testNow is the instant every test judges "has this aired" against.
+var testNow = time.Date(2026, 9, 9, 12, 0, 0, 0, time.UTC)
 
 func num(n int) *int { return &n }
 
@@ -47,7 +51,7 @@ func TestSubtitleFindingsSkipSeries(t *testing.T) {
 		episode("e3", "The Bear", "Brigade", 1, 3, audio("eng"), subs("")),
 		episode("e4", "The Bear", "Sheridan", 1, 4, audio("spa")),
 	}
-	r := Analyse(items)
+	r := Analyse(items, testNow)
 
 	if got := countOf(t, r, CatSubsMissing); got != 2 {
 		t.Fatalf("subs-missing = %d, want 2 (the series must not be counted)", got)
@@ -82,7 +86,7 @@ func TestGhostsAreReportedOnce(t *testing.T) {
 	r := Analyse([]jellyfin.Item{
 		{ID: "g1", Type: jellyfin.TypeEpisode, Name: "", Path: "",
 			SeriesName: "Lost", Season: num(2), Episode: num(5)},
-	})
+	}, testNow)
 
 	if got := r.Count(CatGhost); got != 1 {
 		t.Fatalf("ghosts = %d, want 1", got)
@@ -107,7 +111,7 @@ func TestNumberingCollision(t *testing.T) {
 		// Same number but a different series: not a collision.
 		episode("d", "Fargo", "The Crocodile's Dilemma", 1, 1, audio("spa")),
 	}
-	r := Analyse(items)
+	r := Analyse(items, testNow)
 
 	if got := r.Count(CatCollision); got != 2 {
 		t.Fatalf("collisions = %d, want 2 (both sides of the clash)", got)
@@ -128,7 +132,7 @@ func TestUnnumberedEpisodeIsNotACollision(t *testing.T) {
 	a.Season, a.Episode = nil, nil
 	b.Season, b.Episode = nil, nil
 
-	if got := Analyse([]jellyfin.Item{a, b}).Count(CatCollision); got != 0 {
+	if got := Analyse([]jellyfin.Item{a, b}, testNow).Count(CatCollision); got != 0 {
 		t.Errorf("collisions = %d, want 0", got)
 	}
 }
@@ -156,7 +160,7 @@ func TestGenericTitles(t *testing.T) {
 	for _, tc := range cases {
 		it := jellyfin.Item{ID: "x", Type: jellyfin.TypeMovie, Name: tc.name,
 			Path: "/media/peliculas/x.mkv", Overview: "algo", Streams: []jellyfin.MediaStream{audio("spa")}}
-		got := Analyse([]jellyfin.Item{it}).Count(CatGenericTitle)
+		got := Analyse([]jellyfin.Item{it}, testNow).Count(CatGenericTitle)
 		if (got == 1) != tc.generic {
 			t.Errorf("%q: generic = %v, want %v", tc.name, got == 1, tc.generic)
 		}
@@ -169,7 +173,7 @@ func TestMissingSynopsis(t *testing.T) {
 	blank.Overview = "   \n"
 	ok := episode("b", "Show", "Dos", 1, 2, audio("spa"))
 
-	r := Analyse([]jellyfin.Item{blank, ok})
+	r := Analyse([]jellyfin.Item{blank, ok}, testNow)
 	if got := r.Count(CatNoSynopsis); got != 1 {
 		t.Fatalf("no-synopsis = %d, want 1 (whitespace is not a synopsis)", got)
 	}
@@ -185,7 +189,7 @@ func TestTruncationKeepsTheRealCount(t *testing.T) {
 		it.ID = "id-" + episodeCode(1, i)
 		items = append(items, it)
 	}
-	r := Analyse(items)
+	r := Analyse(items, testNow)
 
 	if got := r.Count(CatSubsMissing); got != maxPerCategory+37 {
 		t.Errorf("count = %d, want %d", got, maxPerCategory+37)
@@ -209,9 +213,9 @@ func TestReportIsDeterministic(t *testing.T) {
 		episode("c", "Alfa", "Tres", 2, 2, audio("eng")),
 		{ID: "g", Type: jellyfin.TypeMovie, Name: "Fantasma", Path: ""},
 	}
-	first := Analyse(items)
+	first := Analyse(items, testNow)
 	for range 20 {
-		got := Analyse(items)
+		got := Analyse(items, testNow)
 		if len(got.Findings) != len(first.Findings) {
 			t.Fatalf("finding count moved: %d vs %d", len(got.Findings), len(first.Findings))
 		}
@@ -239,11 +243,77 @@ func TestMentionsGuardsTheRefreshTarget(t *testing.T) {
 	r := Analyse([]jellyfin.Item{
 		{ID: "real", Type: jellyfin.TypeMovie, Name: "Sin sinopsis",
 			Path: "/media/peliculas/x.mkv", Streams: []jellyfin.MediaStream{audio("spa")}},
-	})
+	}, testNow)
 	if !r.Mentions("real") {
 		t.Error("an item that produced a finding must be refreshable")
 	}
 	if r.Mentions("../../etc/passwd") {
 		t.Error("an id the report never saw must be rejected")
+	}
+}
+
+// TestAnUnairedEpisodeIsNotAGhost is the near miss this category exists for.
+//
+// Jellyfin lists an in-progress season's future episodes with no file, which
+// looks exactly like a file that was deleted. The panel called both "ghosts"
+// and told the user to clean them up — which for the first kind meant deleting
+// the season they were in the middle of watching. Measured on the real library:
+// six of one show's eleven ghosts were unaired and the first came out the next
+// day.
+func TestAnUnairedEpisodeIsNotAGhost(t *testing.T) {
+	t.Parallel()
+	future := jellyfin.Item{
+		ID: "a", Type: jellyfin.TypeEpisode, Name: "Everything Beautiful",
+		SeriesName: "Materia oscura", Premiere: testNow.Add(24 * time.Hour),
+	}
+	deleted := jellyfin.Item{
+		ID: "b", Type: jellyfin.TypeEpisode, Name: "Episodio viejo",
+		SeriesName: "En el barro", Premiere: testNow.Add(-365 * 24 * time.Hour),
+	}
+
+	r := Analyse([]jellyfin.Item{future, deleted}, testNow)
+
+	if got := r.Count(CatGhost); got != 1 {
+		t.Errorf("ghosts = %d, want only the one that actually aired", got)
+	}
+	if got := r.Count(CatUnaired); got != 1 {
+		t.Errorf("unaired = %d, want the future episode", got)
+	}
+	// And the two must never be counted together again.
+	for _, f := range r.For(CatGhost) {
+		if strings.Contains(f.Title, "Everything Beautiful") {
+			t.Error("an unaired episode is being reported as a ghost")
+		}
+	}
+}
+
+// TestAnUnknownAirDateIsTreatedAsAired. Plenty of older material has no
+// premiere date, and reading "unknown" as "in the future" would hide a real
+// missing file behind a reassuring label — the same mistake in the other
+// direction.
+func TestAnUnknownAirDateIsTreatedAsAired(t *testing.T) {
+	t.Parallel()
+	noDate := jellyfin.Item{
+		ID: "c", Type: jellyfin.TypeEpisode, Name: "Sin fecha",
+		SeriesName: "Algo habrán hecho",
+	}
+	r := Analyse([]jellyfin.Item{noDate}, testNow)
+	if got := r.Count(CatGhost); got != 1 {
+		t.Errorf("ghosts = %d, want the undated one counted as missing", got)
+	}
+	if got := r.Count(CatUnaired); got != 0 {
+		t.Errorf("unaired = %d, want none", got)
+	}
+}
+
+// TestTheGhostAdviceDoesNotTellYouToDeleteASeasonInProgress. The hint is the
+// part a person acts on, so it is the part that has to be right.
+func TestTheGhostAdviceDoesNotTellYouToDeleteASeasonInProgress(t *testing.T) {
+	t.Parallel()
+	if hint := CatUnaired.Hint(); !strings.Contains(hint, "No los borres") {
+		t.Errorf("the unaired hint should say not to delete them, got %q", hint)
+	}
+	if hint := CatGhost.Hint(); !strings.Contains(hint, "Ya salieron") {
+		t.Errorf("the ghost hint should say it only covers what has aired, got %q", hint)
 	}
 }

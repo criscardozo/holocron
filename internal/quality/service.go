@@ -82,7 +82,7 @@ func (s *Service) scan(ctx context.Context, c *jellyfin.Client, p *jobs.Progress
 		return "", fmt.Errorf("audit items: %w", jellyfin.Rejected(err))
 	}
 
-	report := Analyse(items)
+	report := Analyse(items, time.Now())
 	report.GeneratedAt = time.Now()
 	p.Set(95)
 

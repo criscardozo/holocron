@@ -362,6 +362,33 @@ de bloquear la página. `Checked` distingue **«no hay nada en curso»** de **«
 se pudo preguntar»**, que se ven iguales y sólo uno de los dos significa que es
 seguro apagar.
 
+### «Fantasma» y «todavía no salió» no son lo mismo
+
+Un episodio que Jellyfin lista sin archivo puede ser dos cosas opuestas, y
+durante un tiempo el panel las contó juntas bajo **Fantasmas**, con el consejo
+de limpiarlas borrándolas desde Jellyfin.
+
+Para una temporada en curso eso significaba **borrar la temporada que estás
+mirando**. Jellyfin conoce los episodios futuros por la metadata del proveedor y
+los lista sin archivo, que es exactamente lo que parece un archivo borrado.
+
+Se descubrió midiendo la biblioteca real: de los 11 «fantasmas» de una serie,
+**6 eran episodios sin emitir** y el primero salía al día siguiente. Los otros
+~93 sí eran temporadas ausentes de verdad.
+
+Ahora se distinguen por `PremiereDate`, que se pide en `auditFields`
+justamente para esto. Fecha futura → **Todavía no salieron**, con el consejo
+inverso: no los toques. Fecha pasada, o sin archivo y sin fecha → Fantasma.
+
+**Sin fecha cuenta como emitido**, no como futuro. Mucho material viejo no
+tiene `PremiereDate`, y leer «desconocido» como «va a salir» escondería un
+archivo faltante real detrás de una etiqueta tranquilizadora — el mismo error
+en la otra dirección.
+
+`Analyse` toma el instante como parámetro en vez de llamar a `time.Now()`
+adentro, así el límite que decide entre «borrá esto» y «no toques esto» se
+puede testear en un momento fijo.
+
 ## Feature 8 — Renombrado masivo de películas (`/naming/rename`)
 
 Lleva las carpetas de películas a «Título (Año)» y arrastra con ellas todo lo

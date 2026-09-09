@@ -41,8 +41,19 @@ const (
 	// CatGenericTitle is a title that is filler or a release string rather than
 	// a name — the sign of a failed metadata match.
 	CatGenericTitle Category = "generic-title"
-	// CatGhost is an item Jellyfin lists with no file behind it.
+	// CatGhost is an item Jellyfin lists with no file behind it *and* which
+	// has already aired, so the file is genuinely missing.
 	CatGhost Category = "ghost"
+	// CatUnaired is an episode Jellyfin knows about that has not come out yet.
+	//
+	// Its own category because the advice for it is the opposite of a ghost's,
+	// and they used to be counted together. Jellyfin lists an in-progress
+	// season's future episodes with no file — exactly what a ghost looks like
+	// — so "clean these up" meant "delete the season you are in the middle
+	// of watching". Measured on this library the week this was written: six of
+	// the eleven ghosts for one show were unaired, and the first came out the
+	// next day.
+	CatUnaired Category = "unaired"
 	// CatCollision is two or more episodes claiming the same season/episode
 	// number, which leaves one of them unreachable in most clients.
 	CatCollision Category = "collision"
@@ -50,7 +61,7 @@ const (
 
 // Categories in display order.
 var Categories = []Category{
-	CatSubsMissing, CatNoSynopsis, CatGenericTitle, CatGhost, CatCollision,
+	CatSubsMissing, CatNoSynopsis, CatGenericTitle, CatUnaired, CatGhost, CatCollision,
 }
 
 // Label is the heading shown for the category.
@@ -62,6 +73,8 @@ func (c Category) Label() string {
 		return "Sin sinopsis"
 	case CatGenericTitle:
 		return "Título genérico"
+	case CatUnaired:
+		return "Todavía no salieron"
 	case CatGhost:
 		return "Fantasmas"
 	case CatCollision:
@@ -81,8 +94,10 @@ func (c Category) Hint() string {
 		return "Casi siempre alcanza con pedirle a Jellyfin que vuelva a leer la metadata."
 	case CatGenericTitle:
 		return "Jellyfin no pudo identificar el archivo. Revisá el nombre y refrescá la metadata."
+	case CatUnaired:
+		return "No hay nada que hacer: Jellyfin ya los conoce y todavía no salieron. No los borres — es una temporada en curso."
 	case CatGhost:
-		return "El archivo ya no está: se limpian borrándolos desde Jellyfin o reescaneando la biblioteca ahí."
+		return "Ya salieron y el archivo no está: se limpian borrándolos desde Jellyfin o reescaneando la biblioteca ahí. Los que todavía no salieron están en su propia lista y no entran acá."
 	case CatCollision:
 		return "Dos archivos con el mismo SxxEyy: uno queda tapado. Se arregla renombrando."
 	default:
@@ -155,17 +170,27 @@ func (r Report) Mentions(itemID string) bool {
 }
 
 // Analyse turns a Jellyfin listing into a report.
-func Analyse(items []jellyfin.Item) Report {
+// Analyse is pure: it takes the items and the moment to judge "has this aired
+// yet" against, and returns the report. now is a parameter rather than a call
+// to time.Now inside, so the boundary that decides between "delete this" and
+// "leave this alone" can be tested at a fixed instant.
+func Analyse(items []jellyfin.Item, now time.Time) Report {
 	r := Report{Scanned: len(items), Counts: map[Category]int{}}
 
 	type slot struct{ season, episode int }
 	numbered := map[string]map[slot][]jellyfin.Item{}
 
 	for _, it := range items {
-		// A ghost is reported once, as a ghost. Piling "no synopsis" on top of
-		// a file that does not exist buries the finding that matters.
+		// No file. Which of the two things that means depends entirely on the
+		// air date, and they take opposite advice: a ghost should be cleaned
+		// up, an unaired episode must be left alone. Reported once either way,
+		// because piling "no synopsis" on top buries the finding that matters.
 		if !it.OnDisk() {
-			r.add(CatGhost, it, "Jellyfin lo lista, pero no hay archivo en disco")
+			if it.Unaired(now) {
+				r.add(CatUnaired, it, "Sale el "+it.Premiere.Local().Format("02/01/2006"))
+			} else {
+				r.add(CatGhost, it, "Jellyfin lo lista, pero no hay archivo en disco")
+			}
 			continue
 		}
 		if strings.TrimSpace(it.Overview) == "" {

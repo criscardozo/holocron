@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Item types Holocron cares about.
@@ -23,7 +24,11 @@ const itemFields = "Path,ProviderIds,MediaSources,MediaStreams,ProductionYear"
 // the synopsis, and the season/episode numbers that reveal a collision. Kept
 // apart from itemFields so the ordinary sync does not pay for overviews it
 // never reads.
-const auditFields = itemFields + ",Overview,IndexNumber,ParentIndexNumber,SeriesName,SeriesId"
+//
+// PremiereDate earns its place by preventing a specific harm: without it, an
+// episode that has not aired yet is indistinguishable from one whose file was
+// deleted, and the advice for those two is opposite.
+const auditFields = itemFields + ",Overview,IndexNumber,ParentIndexNumber,SeriesName,SeriesId,PremiereDate"
 
 // auditPageSize bounds one response. Episodes carry their streams, so asking
 // for two thousand at once would mean a multi-megabyte decode on a Pi.
@@ -75,7 +80,11 @@ type Item struct {
 	Episode    *int   `json:"IndexNumber"`
 	Season     *int   `json:"ParentIndexNumber"`
 	SeriesName string `json:"SeriesName"`
-	SeriesID   string `json:"SeriesId"`
+	// Premiere is when the episode airs. Zero when Jellyfin does not know,
+	// which is common for older material and must not be read as "aired".
+	Premiere time.Time `json:"PremiereDate"`
+
+	SeriesID string `json:"SeriesId"`
 }
 
 type itemsResponse struct {
@@ -405,4 +414,13 @@ func (c *Client) RunningTasks(ctx context.Context) ([]ScheduledTask, error) {
 		}
 	}
 	return running, nil
+}
+
+// Unaired reports whether this item is scheduled for the future, so Jellyfin
+// listing it without a file is expected rather than a problem.
+//
+// Zero means unknown, not aired: plenty of older material has no premiere date
+// and treating that as "in the future" would hide real missing files.
+func (i Item) Unaired(now time.Time) bool {
+	return !i.Premiere.IsZero() && i.Premiere.After(now)
 }
