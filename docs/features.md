@@ -234,6 +234,23 @@ sudo ls -a /var/lib/holocron | grep -- '-requested'   # ls SIN -a no ve dotfiles
 sudo systemctl start holocron-poweroff.path holocron-reboot.path
 ```
 
+### Reinstalar no vuelve a encender lo que alguien apagó
+
+El instalador hacía `systemctl enable` y `systemctl restart` sobre Holocron sin
+condición. Reinstalar es **cómo se actualiza**, así que «actualizar Holocron»
+también significaba «arrancar Holocron», por detrás de quien lo hubiera parado
+a propósito.
+
+Se vio cuando Cristian pausó el servicio para probar Radarr: quedaba una pausa
+que el próximo update deshacía sola y en silencio. Es exactamente el error del
+botón de cloudflared, apuntando a este servicio en vez de a uno vecino.
+
+Ahora, si la unit ya existe **y** está `disabled` o `masked`, el instalador
+actualiza los archivos, lo dice, y deja el servicio parado con la línea para
+arrancarlo. Se mira antes de escribir nada, porque una unit ausente y una
+deshabilitada fallan igual el `is-enabled` y sólo una de las dos significa «no
+lo toques»: la ausente es una instalación nueva y tiene que arrancar normal.
+
 ### Una acción sólo existe si su servicio existe
 
 La cuarta columna de `power_actions` en el instalador nombra la unit que tiene

@@ -88,4 +88,24 @@ grep -q "PathExists=$STATE_DIR/.reboot-requested" "$SYSTEMD_DIR/holocron-reboot.
 grep -q 'ExecStart=/usr/bin/systemctl reboot' "$SYSTEMD_DIR/holocron-reboot.service" ||
 	fail "the reboot service does not have a fixed ExecStart"
 
+# ── 6. A deliberately disabled Holocron stays disabled across a reinstall ────
+# Reinstalling is how you get a new version. It must not also mean "start the
+# service somebody stopped on purpose" — the cloudflared mistake, pointed at
+# this service.
+SERVICE_PATH="$SYSTEMD_DIR/holocron.service"
+SERVICE_NAME="holocron"
+
+# Not installed yet: a first install must start normally.
+rm -f "$SERVICE_PATH"
+service_disabled && fail "a machine with no unit installed was read as deliberately disabled"
+
+# Installed and enabled: normal update, starts as before.
+: >"$SERVICE_PATH"
+printf 'holocron\n' >"$ENABLED_UNITS"
+service_disabled && fail "an enabled service was read as disabled"
+
+# Installed and disabled: leave it alone.
+: >"$ENABLED_UNITS"
+service_disabled || fail "a disabled service was not recognised, so a reinstall would restart it"
+
 echo "ok: install.sh power helpers"

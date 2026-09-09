@@ -303,6 +303,26 @@ action_wanted() {
 	esac
 }
 
+# service_disabled reports whether Holocron is installed on this machine and
+# somebody has deliberately turned it off.
+#
+# An install must not undo that. Reinstalling is how you get a new version, and
+# it would be absurd for "update Holocron" to also mean "start Holocron" behind
+# somebody who stopped it on purpose — the same mistake the cloudflared control
+# made, pointed at this service instead of a neighbouring one.
+#
+# Absent unit means a first install, which is a different thing entirely and
+# should start normally. That is why this looks at the unit file first: a
+# missing unit and a disabled one both fail `is-enabled`, and only one of them
+# means "leave it alone".
+service_disabled() {
+	[ -f "$SERVICE_PATH" ] || return 1
+	case "$(systemctl is-enabled "$SERVICE_NAME" 2>/dev/null || true)" in
+		disabled | masked | masked-runtime) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
 # wanted_power_actions is power_actions filtered to what this machine should
 # have. Everything downstream reads from here, including the reset unit's
 # Before= lines — otherwise removing an action leaves systemd holding a
@@ -504,7 +524,13 @@ EOF
 start_service() {
 	log "Enabling and starting the service"
 	systemctl daemon-reload
-	systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
+	if [ "${WAS_DISABLED:-no}" = yes ]; then
+		log "Holocron is disabled on this machine, so it stays stopped."
+		log "  The files are updated. Start it with:"
+		log "    systemctl enable --now $SERVICE_NAME"
+	else
+		systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
+	fi
 	if [ -f "$UPDATER_UNIT" ]; then
 		systemctl enable --now holocron-update.path >/dev/null 2>&1 || true
 	fi
@@ -519,7 +545,11 @@ start_service() {
 	fi
 	# When run by the updater this restarts the very service that asked for it,
 	# which is fine: systemd owns both, and the updater runs independently.
-	systemctl restart "$SERVICE_NAME"
+	# Skipped entirely when the service was deliberately disabled — see
+	# service_disabled.
+	if [ "${WAS_DISABLED:-no}" != yes ]; then
+		systemctl restart "$SERVICE_NAME"
+	fi
 }
 
 access_url() {
@@ -537,6 +567,13 @@ do_install() {
 	require_cmd curl
 	require_cmd sha256sum
 	require_cmd systemctl
+
+	# Read before anything is written: once the unit file is rewritten the
+	# question "was this already installed and turned off" gets harder to ask.
+	WAS_DISABLED=no
+	if service_disabled; then
+		WAS_DISABLED=yes
+	fi
 
 	local existed="no"
 	[ -x "$INSTALL_PATH" ] && existed="yes"
