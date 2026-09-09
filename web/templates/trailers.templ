@@ -1,6 +1,5 @@
 package templates
 
-import "fmt"
 
 // TrailersPage lists the films with no trailer and fetches them from YouTube.
 //
@@ -96,7 +95,7 @@ templ trailerFilms(v TrailersPageView) {
 		<div class="notice mb-6">
 			@IconSm("alert")
 			<span>
-				<strong>{ fmt.Sprintf("%d películas", len(v.Films)) }</strong> sin trailer.
+				<strong>{ Plural(len(v.Films), "película", "películas") }</strong> sin trailer.
 				Se busca primero el trailer en idioma original y después el subtitulado;
 				los doblados quedan últimos. El archivo se llama como la carpeta.
 			</span>
@@ -138,7 +137,7 @@ templ trailerResults(rows []TrailerResultRow) {
 		<div class="lib-group">
 			<div class="lib-head">
 				<h2>Última descarga</h2>
-				<span class="count">{ fmt.Sprintf("%d películas", len(rows)) }</span>
+				<span class="count">{ Plural(len(rows), "película", "películas") }</span>
 			</div>
 			<table class="table fix">
 				<thead><tr><th>Carpeta</th><th>Qué se bajó</th></tr></thead>

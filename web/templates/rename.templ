@@ -1,6 +1,5 @@
 package templates
 
-import "fmt"
 
 // RenamePage previews a bulk rename and applies it.
 //
@@ -67,8 +66,8 @@ templ renamePlans(v RenamePageView) {
 		<div class="notice mb-6">
 			@IconSm("alert")
 			<span>
-				<strong>{ fmt.Sprintf("%d carpetas", len(v.Plans)) }</strong> y
-				<strong>{ fmt.Sprintf("%d archivos", v.TotalFiles) }</strong> cambiarían de nombre.
+				<strong>{ Plural(len(v.Plans), "carpeta", "carpetas") }</strong> y
+				<strong>{ Plural(v.TotalFiles, "archivo", "archivos") }</strong> cambiarían de nombre.
 				Destildá lo que no quieras tocar. No se pisa ningún archivo que ya exista.
 			</span>
 		</div>
@@ -128,7 +127,7 @@ templ renameBlocked(rows []RenameBlockedRow) {
 		<div class="lib-group">
 			<div class="lib-head">
 				<h2>Necesitan que decidas vos</h2>
-				<span class="count">{ fmt.Sprintf("%d carpetas", len(rows)) }</span>
+				<span class="count">{ Plural(len(rows), "carpeta", "carpetas") }</span>
 			</div>
 			<p class="muted mb-6">
 				Holocron no inventa el año: es lo que distingue dos películas con el mismo

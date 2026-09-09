@@ -64,6 +64,12 @@ templ namingContent(v NamingPageView) {
 			</form>
 		</div>
 	</div>
+	if v.Notice != "" {
+		<div class="notice mb-6">
+			@IconSm("check")
+			<span>{ v.Notice }</span>
+		</div>
+	}
 	if !v.HasMediaFolders {
 		<p class="muted">No hay carpetas de Películas/Series configuradas. Agregá una en <a href="/settings">Ajustes</a>.</p>
 	} else if v.Count == 0 {
@@ -75,11 +81,46 @@ templ namingContent(v NamingPageView) {
 		<div class="notice mb-6">
 			@IconSm("alert")
 			<span>
-				<strong>{ fmt.Sprintf("%d carpetas", v.Count) }</strong> con nombre inválido. El patrón esperado es <span class="mono">Título (Año)</span> — corregilas para que Jellyfin las reconozca bien.
+				<strong>{ Plural(v.Count, "carpeta", "carpetas") }</strong> con nombre inválido. El patrón esperado es <span class="mono">Título (Año)</span> — corregilas para que Jellyfin las reconozca bien.
 			</span>
 		</div>
 		@namingGroup("Películas", filterIssues(v.Issues, "movies"))
 		@namingGroup("Series", filterIssues(v.Issues, "tv"))
+	}
+	@namingIgnored(v.Ignored)
+}
+
+// namingIgnored is the way back. A one-way ignore button would quietly shrink
+// the list until nobody remembers what is missing from it.
+templ namingIgnored(rows []NamingIgnoredRow) {
+	if len(rows) > 0 {
+		<div class="lib-group">
+			<div class="lib-head">
+				<h2>Ignoradas</h2>
+				<span class="count">{ Plural(len(rows), "carpeta", "carpetas") }</span>
+			</div>
+			<p class="muted mb-6">
+				No se revisan ni se renombran. Las carpetas ocultas (las que empiezan con
+				punto, como <span class="mono">.claude</span>) ya se saltean solas y no
+				hace falta agregarlas acá.
+			</p>
+			<table class="table fix">
+				<thead><tr><th>Carpeta</th><th class="w-140"></th></tr></thead>
+				<tbody>
+					for _, r := range rows {
+						<tr>
+							<td class="mono">{ r.Path }</td>
+							<td>
+								<form method="post" action="/naming/unignore" hx-post="/naming/unignore" hx-target="body">
+									<input type="hidden" name="path" value={ r.Path }/>
+									<button type="submit" class="btn btn-ghost">Dejar de ignorar</button>
+								</form>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
 	}
 }
 
@@ -91,13 +132,22 @@ templ namingGroup(title string, issues []NamingIssueRow) {
 				<span class="count">{ fmt.Sprintf("%d con problemas", len(issues)) }</span>
 			</div>
 			<table class="table fix">
-				<thead><tr><th class="w-90">Tipo</th><th>Nombre actual</th><th>Sugerido</th></tr></thead>
+				<thead><tr><th class="w-90">Tipo</th><th>Nombre actual</th><th>Sugerido</th><th class="w-140"></th></tr></thead>
 				<tbody>
 					for _, is := range issues {
 						<tr>
 							<td><span class="badge badge-neutral">{ typeLabel(is.Type) }</span></td>
 							<td class="mono found">{ is.Found }</td>
 							<td class="mono expected">{ is.Expected }</td>
+							<td>
+								<form method="post" action="/naming/ignore" hx-post="/naming/ignore" hx-target="body">
+									<input type="hidden" name="path" value={ is.Path }/>
+									<button type="submit" class="btn btn-ghost" title={ "Dejar de avisar sobre " + is.Found }>
+										@IconSm("check")
+										Ignorar
+									</button>
+								</form>
+							</td>
 						</tr>
 					}
 				</tbody>

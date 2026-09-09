@@ -139,3 +139,13 @@ func Grid(cards []templ.Component) templ.Component {
 		return err
 	})
 }
+
+// Plural formats a count with a Spanish noun, picking singular or plural.
+// "1 carpetas" is the kind of thing that makes an interface feel unfinished,
+// and these counts are small often enough for it to show.
+func Plural(n int, singular, plural string) string {
+	if n == 1 {
+		return "1 " + singular
+	}
+	return strconv.Itoa(n) + " " + plural
+}

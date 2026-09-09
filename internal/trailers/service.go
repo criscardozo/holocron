@@ -176,7 +176,11 @@ func (s *Service) scan(ctx context.Context) ([]Film, error) {
 			continue
 		}
 		for _, e := range entries {
-			if !e.IsDir() {
+			// Hidden directories are never films, and listing them here would
+			// offer to download a trailer for .Spotlight-V100. Same rule as
+			// the naming scan, from the same place, so the two screens cannot
+			// disagree about what counts as a film.
+			if !e.IsDir() || naming.Hidden(e.Name()) {
 				continue
 			}
 			if err := ctx.Err(); err != nil {

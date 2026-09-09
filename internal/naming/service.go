@@ -59,6 +59,21 @@ func (s *Service) Scan(ctx context.Context) (int, error) {
 		issues = append(issues, found...)
 	}
 
+	// Filtered here rather than when reading the table, so an ignored folder
+	// never reaches the count either — a badge saying 3 over a list of 2 is
+	// its own small bug.
+	ignored, err := s.ignoredSet(ctx)
+	if err != nil {
+		return 0, err
+	}
+	kept := issues[:0]
+	for _, is := range issues {
+		if !ignored[is.Path] {
+			kept = append(kept, is)
+		}
+	}
+	issues = kept
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, fmt.Errorf("begin tx: %w", err)

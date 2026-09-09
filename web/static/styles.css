@@ -501,3 +501,4 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 	border-left: 2px solid var(--color-divider); display: grid; gap: var(--space-2);
 }
 .hint-body p { margin: 0; line-height: 1.5; }
+.w-140 { width: 140px; }

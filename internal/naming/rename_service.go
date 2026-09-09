@@ -47,6 +47,11 @@ func (s *Service) PlanMovies(ctx context.Context) ([]PlannedFolder, error) {
 		return nil, fmt.Errorf("list movie folders: %w", err)
 	}
 
+	ignored, err := s.ignoredSet(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	var out []PlannedFolder
 	for _, f := range roots {
 		root, err := os.OpenRoot(f.Path)
@@ -61,7 +66,10 @@ func (s *Service) PlanMovies(ctx context.Context) ([]PlannedFolder, error) {
 			continue
 		}
 		for _, e := range entries {
-			if !e.IsDir() {
+			if !e.IsDir() || Hidden(e.Name()) {
+				continue
+			}
+			if ignored[filepath.Join(f.Path, e.Name())] {
 				continue
 			}
 			if err := ctx.Err(); err != nil {
@@ -101,6 +109,11 @@ func (s *Service) ApplyFolders(ctx context.Context, keys []string) (Summary, err
 		return Summary{}, fmt.Errorf("list movie folders: %w", err)
 	}
 
+	ignored, err := s.ignoredSet(ctx)
+	if err != nil {
+		return Summary{}, err
+	}
+
 	var sum Summary
 	for _, key := range keys {
 		if err := ctx.Err(); err != nil {
@@ -126,6 +139,13 @@ func (s *Service) ApplyFolders(ctx context.Context, keys []string) (Summary, err
 			continue
 		}
 		if p.Blocked != "" || p.Empty() {
+			_ = root.Close()
+			continue
+		}
+		// Checked again here, not only when listing. The preview and the apply
+		// are separate requests, and an ignore added in between has to win —
+		// otherwise the one case the button exists for is the one it misses.
+		if ignored[filepath.Join(rootPath, rel)] {
 			_ = root.Close()
 			continue
 		}

@@ -276,22 +276,46 @@ mandar `ack=1` a mano, y el `Host` del que se deduce «afuera» lo controla el
 cliente. Lo que compra es que un apagado remoto sea una decisión y no un toque
 mal dado.
 
-La asimetría del riesgo es la que uno quiere, y está medida: por el túnel llega
-`Host: holocron.merli.store` (cloudflared no reescribe) y por la LAN
-`192.168.0.2:8090`. Desde la LAN se puede mentir el `Host` y hacerse pasar por
-remoto, pero eso sólo se gana **más** fricción. Al revés no se puede: Cloudflare
-enruta por ese mismo `Host`, así que un request de afuera que ponga
-`Host: localhost` no llega nunca al túnel.
+### Cómo se decide «afuera», y qué cambió cuando se bajó Cloudflare
 
-Un caso que conviene saber que es deliberado: **Tailscale cuenta como afuera**.
-Su rango es 100.64/10 (CGNAT) y `netaddr.IsPrivateHost` no lo trata como
-privado. Es una red privada pero no una *cercana* — llegar por la VPN desde otro
-país se ve idéntico a llegar desde el sillón, que es el punto de Tailscale.
+Se lee del `Host` que recibe el origen. Hoy:
 
-Por qué no hizo falta tocar Cloudflare: la app iOS pega a `/api/v1/manage/action`,
-que cae bajo la aplicación de Access de `/api` (service token), no bajo la de
-`/manage` (identidad de Google). El navegador entra por la de Google. Cada
-superficie ya tenía su credencial.
+| Entrada | `Host` | ¿Pide confirmación? |
+|---|---|---|
+| LAN directa | `192.168.0.2:8090` | no |
+| Tailscale, por IP | `100.94.171.18:8090` | **sí** |
+| Tailscale, por nombre | `obiwan.ayu-palermo.ts.net:8090` | **sí** |
+
+**Tailscale cuenta como afuera, y es deliberado.** Su rango es 100.64/10
+(CGNAT) y `netaddr.IsPrivateHost` no lo trata como privado. Es una red privada
+pero no una *cercana*: llegar por la VPN desde otro país se ve idéntico a llegar
+desde el sillón, que es exactamente el punto de Tailscale. Como el acceso remoto
+ahora va todo por ahí, en la práctica la confirmación se pide siempre salvo
+desde la LAN.
+
+**Una versión anterior de esta sección afirmaba una asimetría que ya no
+existe**, y vale dejar registrado por qué. Decía: desde la LAN se puede mentir
+el `Host` y hacerse pasar por remoto, pero eso sólo gana más fricción; y al
+revés no se puede, porque Cloudflare enruta por ese mismo `Host` y un request de
+afuera con `Host: localhost` nunca llegaría al túnel.
+
+La primera mitad sigue siendo cierta. **La segunda dependía de que hubiera un
+túnel delante**, y en septiembre de 2026 se dio de baja el acceso público
+—cloudflared parado, los CNAME borrados— y todo el acceso remoto pasó a
+Tailscale. Ya no hay nada que enrute por `Host`: cualquiera que alcance el
+puerto 8090 puede mandar el que quiera, incluido uno privado, y saltear la
+confirmación.
+
+Eso no cambia el diseño, porque **nunca fue autorización**: quien tiene el token
+puede mandar `ack=1` a mano igual. Pero una propiedad de seguridad escrita en la
+documentación sobrevive a la infraestructura que la sostenía, y esta ya no
+aplica.
+
+Lo que sí cambió de verdad: **`/api` quedó con una sola capa.** Antes tenía
+Cloudflare Access con service token por delante y el bearer de Holocron por
+detrás. Ahora la frontera es la red de Tailscale más el bearer. La consecuencia
+práctica es que el token de la API dejó de ser el segundo factor y pasó a ser el
+único, y quien esté en el tailnet lo tiene todo salvo ese token.
 
 ### El chequeo previo
 
@@ -383,6 +407,31 @@ distingue dos películas con el mismo título; adivinarlo manda al scraper a la
 equivocada detrás de un nombre que parece deliberado. En esta biblioteca son
 sobre todo títulos argentinos y mexicanos viejos (`Esperando la carroza`,
 `Cien veces no debo`).
+
+### Carpetas que no son películas
+
+Dos mecanismos, porque hay dos clases de caso.
+
+Las **carpetas ocultas se saltean solas**: nada cuyo nombre empiece con punto es
+una película, así que no hay nada que decidir. Eso cubre `.claude` y el estado
+de trabajo de cualquier herramienta, más `.Spotlight-V100` y `.Trashes`, que
+esta biblioteca junta por vivir en exFAT y ser tocada desde una Mac.
+`System Volume Information` es lo mismo desde Windows y no es oculta por su
+nombre, así que está nombrada aparte.
+
+Todo lo demás **sí es un juicio, y es del usuario**: cada fila de `/naming`
+tiene un botón «Ignorar». La lista de ignoradas se muestra abajo con un botón
+para volver atrás — un ignorar de una sola dirección achica la lista en silencio
+hasta que nadie recuerda qué falta en ella.
+
+El ignorar vive en su propia tabla y no en un campo de `naming_issues`, porque
+cada escaneo borra y reescribe esa tabla: una marca ahí se perdería la próxima
+vez que alguien apretara refrescar, que es justo cuando importa.
+
+Se chequea en tres lugares —al escanear, al armar la vista previa y **otra vez**
+al aplicar— porque la vista previa y el apply son requests distintos, y un
+ignorar agregado en el medio tiene que ganar. Si no, el único caso para el que
+existe el botón es el que se le escapa.
 
 ### Sólo películas
 

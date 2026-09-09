@@ -59,6 +59,9 @@ func ScanDir(root, mediaType string) ([]Issue, error) {
 		if e.Type()&os.ModeSymlink != 0 || !e.IsDir() {
 			continue
 		}
+		if Hidden(e.Name()) {
+			continue
+		}
 		if ok, expected := Validate(e.Name()); !ok {
 			issues = append(issues, Issue{
 				Path:     filepath.Join(root, e.Name()),
