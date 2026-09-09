@@ -109,6 +109,20 @@ Tablas previstas (crecen por fase):
 > Config sensible (API keys, tokens) se guarda en SQLite con permisos owner-only
 > sobre el archivo de la DB. No se versiona.
 
+> **La base corre en WAL** (`journal_mode(WAL)` en `internal/db`), así que
+> **`cp` del `.db` no es una copia**: las escrituras recientes viven en el
+> archivo `-wal` hasta el checkpoint, y copiar sólo el `.db` te devuelve al
+> último checkpoint sin decir nada. Para copiarla o restaurarla, `sqlite3
+> archivo.db ".backup destino.db"`, o llevar los tres archivos (`.db`, `-wal`,
+> `-shm`) juntos y con el servicio parado.
+>
+> Está escrito acá porque ya pasó: la sesión ObiWan restauró con `cp -a` después
+> de una prueba y perdió el último informe de calidad —sin daño, se recalcula—
+> y esa misma sesión usa `sqlite3 .backup` en cada instalación **justo por
+> esto**. Sabía la regla y usó el comando equivocado porque el contexto era
+> «restaurar rápido» y no «hacer un respaldo». Ninguna parte de Holocron copia
+> la base hoy; si alguna vez lo hace, que sea con `.backup`.
+
 ## 5. Trabajos en background (`jobs`)
 
 Varias features son lentas (escanear un disco grande, auditar la biblioteca
