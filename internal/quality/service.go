@@ -84,6 +84,7 @@ func (s *Service) scan(ctx context.Context, c *jellyfin.Client, p *jobs.Progress
 
 	report := Analyse(items, time.Now())
 	report.GeneratedAt = time.Now()
+	report.Version = version.Current()
 	p.Set(95)
 
 	if err := s.save(ctx, report); err != nil {
@@ -169,4 +170,16 @@ func (s *Service) Refresh(ctx context.Context, itemID string) error {
 		return fmt.Errorf("refresh item: %w", jellyfin.Rejected(err))
 	}
 	return nil
+}
+
+// SaveReportForTest stores a minimal report stamped with a given version and
+// time. Only for tests: it exists so the "this came from another Holocron"
+// path can be exercised without running an analysis against a real Jellyfin.
+func (s *Service) SaveReportForTest(ctx context.Context, version string, at time.Time) error {
+	return s.save(ctx, Report{
+		GeneratedAt: at,
+		Version:     version,
+		Scanned:     1,
+		Counts:      map[Category]int{CatGhost: 101},
+	})
 }

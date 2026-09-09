@@ -28,8 +28,16 @@ type QualityPageView struct {
 	Scanning    bool
 	HasReport   bool
 	GeneratedAt string
-	Scanned     int
-	Total       int
+	// Age is how long ago in words. A timestamp reads as fine at a glance;
+	// "hace 4 días" is the same fact and cannot be skimmed past.
+	Age string
+	// Stale marks a report produced by a different Holocron. Not just old:
+	// the categories change between versions, so the counts do not mean what
+	// the current labels say they mean.
+	Stale     bool
+	StaleFrom string
+	Scanned   int
+	Total     int
 	// Admin reports whether the linked Jellyfin account may ask the server to
 	// re-read metadata. Without it the refresh action is not offered at all.
 	Admin    bool

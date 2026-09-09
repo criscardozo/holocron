@@ -3,9 +3,12 @@ package httpserver
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/cristian/holocron/internal/version"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/quality"
@@ -114,6 +117,12 @@ func (s *Server) qualityView(ctx context.Context, selected string) templates.Qua
 	v.Total = report.Total()
 	if !report.GeneratedAt.IsZero() {
 		v.GeneratedAt = report.GeneratedAt.Local().Format("02/01 15:04")
+		v.Age = humanAge(time.Since(report.GeneratedAt))
+		// A report from another Holocron is not merely old, it is
+		// incomparable: the categories change between versions.
+		if report.Version != "" && report.Version != version.Current() {
+			v.Stale, v.StaleFrom = true, report.Version
+		}
 	}
 
 	active := pickCategory(report, selected)
@@ -164,4 +173,24 @@ func pickCategory(report quality.Report, requested string) quality.Category {
 		}
 	}
 	return quality.Categories[0]
+}
+
+// humanAge says how long ago in words. A timestamp reads as fine at a glance
+// and a relative age does not: "hace 4 días" is the same fact and cannot be
+// skimmed past, which matters on a page whose numbers people act on.
+func humanAge(d time.Duration) string {
+	switch {
+	case d < 2*time.Minute:
+		return "recién"
+	case d < time.Hour:
+		return fmt.Sprintf("hace %d minutos", int(d.Minutes()))
+	case d < 2*time.Hour:
+		return "hace una hora"
+	case d < 24*time.Hour:
+		return fmt.Sprintf("hace %d horas", int(d.Hours()))
+	case d < 48*time.Hour:
+		return "hace un día"
+	default:
+		return fmt.Sprintf("hace %d días", int(d.Hours()/24))
+	}
 }

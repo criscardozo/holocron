@@ -362,6 +362,29 @@ de bloquear la página. `Checked` distingue **«no hay nada en curso»** de **«
 se pudo preguntar»**, que se ven iguales y sólo uno de los dos significa que es
 seguro apagar.
 
+### El reporte guardado dice de cuándo es, y de qué versión
+
+El panel cachea un reporte y lo sirve hasta el próximo análisis. Eso está bien
+—el análisis le pide a Jellyfin la biblioteca entera y tarda— pero durante un
+tiempo lo mostró **con la misma cara que si fuera de ahora**.
+
+La falla se vio en el peor momento posible: justo después del release que dejó
+de contar como fantasmas los episodios sin emitir, el panel seguía mostrando
+`Fantasmas (101)`. La sesión ObiWan estuvo a punto de reportar que el arreglo
+no funcionaba; lo agarró porque fue a mirar el `generated_at` en la base, por
+costumbre y no por sospecha.
+
+Dos cosas, y la segunda es la que importa:
+
+- **La antigüedad va en palabras.** «Último análisis 05/09 18:34 — hace 4 días».
+  Una fecha se lee como aceptable de un vistazo; «hace 4 días» es el mismo dato
+  y no se puede saltear.
+- **El reporte guarda la versión que lo generó.** Si no es la que corre, el
+  panel lo dice fuerte: un reporte de otra versión no es sólo viejo, es
+  **incomparable**, porque las categorías cambian entre versiones. Los números
+  quedan bajo etiquetas nuevas que ya no significan lo que significaban, y en
+  esta pantalla la gente borra cosas mirando esos números.
+
 ### «Fantasma» y «todavía no salió» no son lo mismo
 
 Un episodio que Jellyfin lista sin archivo puede ser dos cosas opuestas, y

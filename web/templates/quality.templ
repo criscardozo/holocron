@@ -78,11 +78,31 @@ templ QualityDetailSection(v QualityPageView) {
 					</button>
 				</form>
 				if v.GeneratedAt != "" {
-					<span class="muted">Último análisis { v.GeneratedAt }</span>
+					<span class="muted">
+						Último análisis { v.GeneratedAt }
+						if v.Age != "" {
+							— { v.Age }
+						}
+					</span>
 				}
 			</div>
 		</div>
 		<div id="quality-status"></div>
+		if v.Stale {
+			// Loud, because the failure mode is silent and the consequence is
+			// acting on a number. This exact case happened: after the release
+			// that stopped counting unaired episodes as ghosts, the page went
+			// on showing the old count under the new label.
+			<div class="notice error mb-6">
+				@IconSm("alert")
+				<span>
+					Este reporte lo generó Holocron <span class="mono">{ v.StaleFrom }</span> y
+					las categorías cambiaron desde entonces, así que estos números no
+					significan lo que dicen las etiquetas de ahora.
+					<strong>Volvé a analizar antes de tomar cualquier decisión con ellos.</strong>
+				</span>
+			</div>
+		}
 		if !v.HasReport {
 			<p class="muted">
 				Todavía no se analizó. El análisis le pide a Jellyfin la biblioteca entera

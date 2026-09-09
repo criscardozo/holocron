@@ -125,10 +125,17 @@ type Finding struct {
 
 // Report is the cached result of one audit.
 type Report struct {
-	GeneratedAt time.Time        `json:"generatedAt"`
-	Scanned     int              `json:"scanned"`
-	Counts      map[Category]int `json:"counts"`
-	Findings    []Finding        `json:"findings"`
+	GeneratedAt time.Time `json:"generatedAt"`
+	// Version is the Holocron that produced it. Kept because a cached report
+	// is not merely old across an upgrade, it is *incomparable*: the
+	// categories themselves change. When "Fantasmas" stopped including
+	// episodes that had not aired yet, the stored report went on showing the
+	// old count with the old meaning under the new label, and the number it
+	// showed was one somebody might delete things over.
+	Version  string           `json:"version"`
+	Scanned  int              `json:"scanned"`
+	Counts   map[Category]int `json:"counts"`
+	Findings []Finding        `json:"findings"`
 }
 
 // Count is how many items fall in the category, before any display cap.
