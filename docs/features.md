@@ -234,6 +234,38 @@ sudo ls -a /var/lib/holocron | grep -- '-requested'   # ls SIN -a no ve dotfiles
 sudo systemctl start holocron-poweroff.path holocron-reboot.path
 ```
 
+### Una acción sólo existe si su servicio existe
+
+La cuarta columna de `power_actions` en el instalador nombra la unit que tiene
+que estar **enabled** para que el control se instale. Vacía significa siempre:
+reiniciar y apagar no tienen un servicio detrás, y `holocron` es la unit que el
+propio script acaba de instalar.
+
+No es comodidad, es seguridad, y se descubrió midiendo:
+**`systemctl restart` arranca una unit deshabilitada** — `disabled` gobierna el
+arranque del sistema, no el start manual. Así que un botón para un servicio que
+alguien apagó a propósito es un botón que lo vuelve a encender. Pasó con
+`cloudflared` después de dar de baja el acceso público: la sesión ObiWan lo
+probó y el proceso levantó y se reconectó al edge de Cloudflare.
+
+Se mira `is-enabled` y **no** `is-active`: lo segundo sacaría un botón porque el
+servicio justo se estaba reiniciando, y lo devolvería después, que es peor que
+cualquiera de las dos respuestas por separado.
+
+El bucle de instalación recorre la lista **completa** y no la filtrada, porque
+tiene que **borrar** lo que ya no corresponde además de escribir lo que sí. Una
+corrida que sólo crea deja la decisión de ayer en disco, que es exactamente cómo
+el botón de cloudflared volvería en el próximo update. Y el `Before=` de la unit
+de reset se genera desde la lista filtrada: si no, systemd queda sosteniendo una
+referencia `not-found` y el próximo que mire el listado va a buscar un problema
+que no existe.
+
+Todo esto tiene un test que corre con `go test ./...`
+(`scripts/install_power_test.sh`, invocado desde `internal/power`). Es la
+primera parte del instalador con cobertura, y no por casualidad: es la que
+deshizo en silencio una decisión deliberada **dos veces** —primero
+`ReadWritePaths`, después este botón— y leerla no alcanzó ninguna de las dos.
+
 Dos trampas medidas: `ls` sin `-a` no lista archivos ocultos, así que una
 verificación descuidada informa «0 residuales» sin haber mirado nada; y si el
 nombre de prueba no termina exactamente en `-requested`, el glob no lo toca.

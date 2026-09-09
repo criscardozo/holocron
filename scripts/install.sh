@@ -23,15 +23,20 @@ REPO="criscardozo/holocron"
 BINARY_NAME="holocron"
 INSTALL_PATH="/usr/local/bin/holocron"
 SERVICE_NAME="holocron"
-SERVICE_PATH="/etc/systemd/system/holocron.service"
+# Where the units go. A variable rather than a literal so the power-helper
+# logic can be run against a temporary directory in a test — this is the part
+# of the installer that has silently undone a deliberate decision twice, and
+# the only way to know it does not is to exercise it.
+SYSTEMD_DIR="${SYSTEMD_DIR:-/etc/systemd/system}"
+SERVICE_PATH="$SYSTEMD_DIR/holocron.service"
 SERVICE_USER="holocron"
 STATE_DIR="/var/lib/holocron"
 ASSET="holocron-linux-arm64"
 
 UPDATER_PATH="/usr/local/bin/holocron-update"
-UPDATER_UNIT="/etc/systemd/system/holocron-update.path"
-UPDATER_SERVICE="/etc/systemd/system/holocron-update.service"
-POWER_RESET_SERVICE="/etc/systemd/system/holocron-action-reset.service"
+UPDATER_UNIT="$SYSTEMD_DIR/holocron-update.path"
+UPDATER_SERVICE="$SYSTEMD_DIR/holocron-update.service"
+POWER_RESET_SERVICE="$SYSTEMD_DIR/holocron-action-reset.service"
 # Where the privileged updater re-fetches this script from. A release asset,
 # not raw main: the updater runs as root, so pulling from a branch means running
 # whatever is on that branch at the moment the button is pressed. The asset is
@@ -261,15 +266,55 @@ effective_media_paths() {
 # that asked for them. Those get a couple of seconds so the HTTP response gets
 # out first, otherwise the browser sees a connection reset and cannot tell a
 # refusal from a success.
+# name <TAB> command <TAB> interrupts-this-request <TAB> unit that must be enabled
+#
+# The fourth column is what stops Holocron offering to restart something the
+# machine does not run. It matters more than convenience: `systemctl restart`
+# starts a *disabled* unit — disabled governs boot, not manual start — so a
+# button for a service somebody deliberately turned off is a button that turns
+# it back on. That happened with cloudflared after the public tunnel was taken
+# down, and was measured rather than argued: restart brought the process up and
+# it reconnected to the edge.
+#
+# Empty means always: reboot and poweroff have no service behind them, and
+# holocron is the unit this very script just installed.
 power_actions() {
 	cat <<-'ACTIONS'
-	restart-jellyfin	/usr/bin/systemctl restart jellyfin	no
-	restart-qbittorrent	/usr/bin/systemctl restart qbittorrent	no
-	restart-cloudflared	/usr/bin/systemctl restart cloudflared	yes
+	restart-jellyfin	/usr/bin/systemctl restart jellyfin	no	jellyfin.service
+	restart-qbittorrent	/usr/bin/systemctl restart qbittorrent	no	qbittorrent.service
+	restart-cloudflared	/usr/bin/systemctl restart cloudflared	yes	cloudflared.service
 	restart-holocron	/usr/bin/systemctl restart holocron	yes
 	reboot	/usr/bin/systemctl reboot	yes
 	poweroff	/usr/bin/systemctl poweroff	yes
 	ACTIONS
+}
+
+# action_wanted reports whether the unit behind an action is enabled on this
+# machine. Enablement, not liveness: `is-active` would drop a button because a
+# service happened to be restarting, and put it back later, which is worse than
+# either answer on its own.
+action_wanted() {
+	requires="$1"
+	[ -n "$requires" ] || return 0
+	state="$(systemctl is-enabled "$requires" 2>/dev/null || true)"
+	case "$state" in
+		enabled | enabled-runtime | static | indirect | alias | generated) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+# wanted_power_actions is power_actions filtered to what this machine should
+# have. Everything downstream reads from here, including the reset unit's
+# Before= lines — otherwise removing an action leaves systemd holding a
+# not-found reference and the next person goes looking for a problem that is
+# not there.
+wanted_power_actions() {
+	power_actions | while IFS="$(printf '\t')" read -r name command kills requires; do
+		[ -n "$name" ] || continue
+		if action_wanted "$requires"; then
+			printf '%s\t%s\t%s\n' "$name" "$command" "$kills"
+		fi
+	done
 }
 
 install_power_helpers() {
@@ -303,7 +348,7 @@ Before=paths.target
 # mistake.
 Conflicts=shutdown.target
 Before=shutdown.target
-$(power_actions | while IFS="$(printf '\t')" read -r name _ _; do
+$(wanted_power_actions | while IFS="$(printf '\t')" read -r name _ _; do
 	printf 'Before=holocron-%s.path\n' "$name"
 done)
 
@@ -316,14 +361,29 @@ RemainAfterExit=yes
 WantedBy=sysinit.target
 EOF
 
-	power_actions | while IFS="$(printf '\t')" read -r name command kills; do
+	# The full list, not the filtered one, because this loop has to *remove*
+	# what is no longer wanted as well as write what is. A run that only ever
+	# creates leaves yesterday's decision on disk, which is exactly how the
+	# cloudflared button would come back on the next update.
+	power_actions | while IFS="$(printf '\t')" read -r name command kills requires; do
 		[ -n "$name" ] || continue
+
+		if ! action_wanted "$requires"; then
+			if [ -e "$SYSTEMD_DIR/holocron-$name.path" ]; then
+				log "  $name: $requires is not enabled, removing the control"
+			fi
+			systemctl disable --now "holocron-$name.path" >/dev/null 2>&1 || true
+			rm -f "$SYSTEMD_DIR/holocron-$name.service" \
+				"$SYSTEMD_DIR/holocron-$name.path"
+			continue
+		fi
+
 		delay=""
 		if [ "$kills" = "yes" ]; then
 			delay="ExecStartPre=/bin/sleep 2"
 		fi
 
-		cat >"/etc/systemd/system/holocron-$name.service" <<EOF
+		cat >"$SYSTEMD_DIR/holocron-$name.service" <<EOF
 [Unit]
 Description=Holocron: $name
 
@@ -336,7 +396,7 @@ $delay
 ExecStart=$command
 EOF
 
-		cat >"/etc/systemd/system/holocron-$name.path" <<EOF
+		cat >"$SYSTEMD_DIR/holocron-$name.path" <<EOF
 [Unit]
 Description=Watch for a Holocron $name request
 After=holocron-action-reset.service
@@ -355,8 +415,8 @@ remove_power_helpers() {
 	power_actions | while IFS="$(printf '\t')" read -r name _ _; do
 		[ -n "$name" ] || continue
 		systemctl disable --now "holocron-$name.path" >/dev/null 2>&1 || true
-		rm -f "/etc/systemd/system/holocron-$name.service" \
-			"/etc/systemd/system/holocron-$name.path"
+		rm -f "$SYSTEMD_DIR/holocron-$name.service" \
+			"$SYSTEMD_DIR/holocron-$name.path"
 	done
 	systemctl disable --now holocron-action-reset.service >/dev/null 2>&1 || true
 	rm -f "$POWER_RESET_SERVICE"
@@ -452,7 +512,7 @@ start_service() {
 		# Enabled but deliberately not started now: its job is to clear stale
 		# triggers at boot, before any path unit watches for them.
 		systemctl enable holocron-action-reset.service >/dev/null 2>&1 || true
-		power_actions | while IFS="$(printf '\t')" read -r name _ _; do
+		wanted_power_actions | while IFS="$(printf '\t')" read -r name _ _; do
 			[ -n "$name" ] || continue
 			systemctl enable --now "holocron-$name.path" >/dev/null 2>&1 || true
 		done
@@ -541,4 +601,8 @@ main() {
 	esac
 }
 
-main "$@"
+# Sourcing the script gives you the functions without running anything, which
+# is what the installer test does.
+if [ -z "${HOLOCRON_LIB_ONLY:-}" ]; then
+	main "$@"
+fi
