@@ -21,9 +21,9 @@ struct JellyfinLinkView: View {
                 Section {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .font(.footnote)
-                        .foregroundStyle(Noir.danger)
+                        .foregroundStyle(Palette.danger)
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
             }
 
             if let status, status.isPending {
@@ -35,7 +35,7 @@ struct JellyfinLinkView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Noir.bg)
+        .background(Palette.bg)
         .navigationTitle("Conectar con Jellyfin")
         .navigationBarTitleDisplayMode(.inline)
         .task { await poll() }
@@ -47,7 +47,7 @@ struct JellyfinLinkView: View {
         Section {
             Text("Jellyfin te da un código, lo aprobás desde tu perfil y Holocron guarda el token solo.")
                 .font(.callout)
-                .foregroundStyle(Noir.muted)
+                .foregroundStyle(Palette.muted)
             Button {
                 Task { await start() }
             } label: {
@@ -60,7 +60,7 @@ struct JellyfinLinkView: View {
         } footer: {
             Text("La dirección del servidor se carga antes, en la web de Holocron: Jellyfin no tiene un servicio en la nube por el que descubrirlo.")
         }
-        .listRowBackground(Noir.surface)
+        .listRowBackground(Palette.surface)
     }
 
     private func pendingSection(_ status: JellyfinLinkStatus) -> some View {
@@ -72,36 +72,36 @@ struct JellyfinLinkView: View {
             Text(status.code ?? "")
                 .font(.system(size: 34, weight: .bold, design: .monospaced))
                 .kerning(8)
-                .foregroundStyle(Noir.accent)
+                .foregroundStyle(Palette.accent)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(Noir.surface2, in: RoundedRectangle(cornerRadius: 10))
+                .background(Palette.surface2, in: RoundedRectangle(cornerRadius: 10))
                 .textSelection(.enabled)
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
                 Text("Esperando que lo autorices…")
                     .font(.footnote)
-                    .foregroundStyle(Noir.muted)
+                    .foregroundStyle(Palette.muted)
             }
         }
-        .listRowBackground(Noir.surface)
+        .listRowBackground(Palette.surface)
     }
 
     private func linkedSection(_ status: JellyfinLinkStatus) -> some View {
         Section {
             Label(linkedMessage(status), systemImage: "checkmark.circle")
                 .font(.callout)
-                .foregroundStyle(Noir.ok)
+                .foregroundStyle(Palette.ok)
             // Said here rather than after a 403 later: the metadata refresh in
             // the quality panel needs an administrator.
             if status.admin == false {
                 Text("Esa cuenta no es administradora, así que no se le puede pedir a Jellyfin que vuelva a leer metadata.")
                     .font(.footnote)
-                    .foregroundStyle(Noir.muted)
+                    .foregroundStyle(Palette.muted)
             }
             Button("Listo") { dismiss() }
         }
-        .listRowBackground(Noir.surface)
+        .listRowBackground(Palette.surface)
     }
 
     private func linkedMessage(_ status: JellyfinLinkStatus) -> String {

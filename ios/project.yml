@@ -40,19 +40,17 @@ targets:
           UIInterfaceOrientationPortrait
           UIInterfaceOrientationLandscapeLeft
           UIInterfaceOrientationLandscapeRight
-        # The app is dark-only, matching the Noir theme of the web UI.
+        # The app is dark-only, matching the web UI, which wears Ginebra's look.
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
     info:
       path: Holocron/Info.plist
       properties:
-        # Holocron runs on a Raspberry Pi on the LAN over plain HTTP, so ATS
-        # has to allow local networking. This does NOT open up arbitrary
-        # insecure loads to the internet.
-        NSAppTransportSecurity:
-          NSAllowsLocalNetworking: true
+        # The server is reached over HTTPS through Caddy, at home or over
+        # Tailscale, so ATS needs no exception. The name can still resolve to
+        # an address on the LAN, which is what this prompt is for.
         NSLocalNetworkUsageDescription: >-
-          Holocron se conecta a tu Raspberry Pi en la red local para mostrar
-          el estado del HTPC y administrar las descargas.
+          Holocron se conecta a tu servidor en la red de casa para mostrar
+          su estado y administrar las descargas.
 
   HolocronTests:
     type: bundle.unit-test

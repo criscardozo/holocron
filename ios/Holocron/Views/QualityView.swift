@@ -30,7 +30,7 @@ struct QualityView: View {
                 content(report)
             }
         }
-        .background(Noir.bg)
+        .background(Palette.bg)
         .navigationTitle("Calidad")
         .refreshable { await load() }
         .task { if case .idle = state { await load() } }
@@ -56,10 +56,10 @@ struct QualityView: View {
                 }
                 scanButton
                 if let banner {
-                    Text(banner).font(.footnote).foregroundStyle(Noir.muted)
+                    Text(banner).font(.footnote).foregroundStyle(Palette.muted)
                 }
             }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
 
             Section {
                 Picker("Categoría", selection: $selected) {
@@ -70,9 +70,9 @@ struct QualityView: View {
                 .pickerStyle(.menu)
                 Text(selected.hint)
                     .font(.footnote)
-                    .foregroundStyle(Noir.muted)
+                    .foregroundStyle(Palette.muted)
             }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
 
             findingsSection(report)
         }
@@ -84,7 +84,7 @@ struct QualityView: View {
         let rows = report.findings(in: selected)
         Section {
             if rows.isEmpty {
-                Text("Nada por acá.").foregroundStyle(Noir.muted)
+                Text("Nada por acá.").foregroundStyle(Palette.muted)
             } else {
                 ForEach(rows) { finding in
                     row(finding, report: report)
@@ -95,7 +95,7 @@ struct QualityView: View {
                 Text("Se muestran \(rows.count) de \(report.count(selected)).")
             }
         }
-        .listRowBackground(Noir.surface)
+        .listRowBackground(Palette.surface)
     }
 
     private func row(_ finding: QualityFinding, report: QualityReport) -> some View {
@@ -104,13 +104,13 @@ struct QualityView: View {
             if !finding.path.isEmpty {
                 Text(finding.path)
                     .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(Noir.muted)
+                    .foregroundStyle(Palette.muted)
                     .lineLimit(1)
             }
             HStack(spacing: 6) {
                 Pill(text: finding.kind, kind: .neutral)
                 if !finding.detail.isEmpty {
-                    Text(finding.detail).font(.caption2).foregroundStyle(Noir.muted)
+                    Text(finding.detail).font(.caption2).foregroundStyle(Palette.muted)
                 }
                 Spacer()
                 // Offered only where re-reading the metadata is the actual fix,
@@ -118,7 +118,7 @@ struct QualityView: View {
                 // and saying so up front beats failing after the press.
                 if selected.refreshable, report.admin == true {
                     if requested.contains(finding.itemId) {
-                        Text("Pedido").font(.caption2).foregroundStyle(Noir.ok)
+                        Text("Pedido").font(.caption2).foregroundStyle(Palette.ok)
                     } else {
                         Button("Refrescar") {
                             Task { await refresh(finding) }
@@ -131,7 +131,7 @@ struct QualityView: View {
             if selected.refreshable, report.admin == false {
                 Text("Requiere una cuenta administradora de Jellyfin.")
                     .font(.caption2)
-                    .foregroundStyle(Noir.muted)
+                    .foregroundStyle(Palette.muted)
             }
         }
         .padding(.vertical, 2)
@@ -155,8 +155,8 @@ struct QualityView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
                 .font(.title2.weight(.bold)).monospacedDigit()
-                .foregroundStyle(tinted ? Noir.accent : Noir.text)
-            Text(caption).font(.caption2).foregroundStyle(Noir.muted)
+                .foregroundStyle(tinted ? Palette.accent : Palette.text)
+            Text(caption).font(.caption2).foregroundStyle(Palette.muted)
         }
     }
 

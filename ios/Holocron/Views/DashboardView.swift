@@ -1,13 +1,12 @@
 import SwiftUI
 
-/// The at-a-glance screen: how the Pi is doing and what needs attention.
+/// The at-a-glance screen: how the server is doing and what needs attention.
 struct DashboardView: View {
     @Environment(AppSettings.self) private var settings
 
     @State private var system: Loadable<SystemStats> = .idle
     @State private var disks: [DiskFolder] = []
     @State private var naming: NamingReport?
-    @State private var subtitles: SubtitlesReport?
 
     var body: some View {
         ScrollView {
@@ -16,16 +15,17 @@ struct DashboardView: View {
                     attentionStrip
                     systemCard(stats)
                     if !disks.isEmpty { diskCard }
+                    screenLinks
                 }
                 .padding(16)
             }
         }
-        .background(Noir.bg)
+        .background(Palette.bg)
         .navigationTitle("Estado")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { ManagementView() } label: {
-                    Label("ObiWan", systemImage: "slider.horizontal.3")
+                    Label("Gestión", systemImage: "slider.horizontal.3")
                 }
             }
         }
@@ -34,6 +34,31 @@ struct DashboardView: View {
     }
 
     // MARK: - Sections
+
+    /// The detail screens the web has as pages: one tap to the live readings.
+    private var screenLinks: some View {
+        VStack(spacing: 10) {
+            NavigationLink { HardwareView() } label: {
+                linkRow("Hardware", detail: "CPU por núcleo, memoria, red, discos y batería", icon: "cpu")
+            }
+            NavigationLink { ServicesView() } label: {
+                linkRow("Servicios", detail: "Unidades, tareas programadas y SMART", icon: "server.rack")
+            }
+        }
+    }
+
+    private func linkRow(_ title: String, detail: String, icon: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon).foregroundStyle(Palette.accent).frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.callout.weight(.semibold)).foregroundStyle(Palette.text)
+                Text(detail).font(.caption).foregroundStyle(Palette.muted)
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption).foregroundStyle(Palette.muted)
+        }
+        .card()
+    }
 
     @ViewBuilder private var attentionStrip: some View {
         let chips = attentionChips
@@ -44,14 +69,14 @@ struct DashboardView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.caption)
-                            .foregroundStyle(Noir.accent300)
+                            .foregroundStyle(Palette.accent300)
                         Text(chip).font(.callout)
                         Spacer()
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Color(hex: 0x331808), in: Capsule())
-                    .foregroundStyle(Color(hex: 0xFFCBAF))
+                    .background(Palette.accent900, in: Capsule())
+                    .foregroundStyle(Palette.accent200)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -62,9 +87,6 @@ struct DashboardView: View {
         var chips: [String] = []
         if let n = naming?.count, n > 0 {
             chips.append("\(n) \(n == 1 ? "nombre inválido" : "nombres inválidos")")
-        }
-        if let s = subtitles?.missing, s > 0 {
-            chips.append("\(s) sin subtítulos")
         }
         for disk in disks where disk.isHot {
             chips.append("\(disk.label) \(disk.usedPercent)%")
@@ -78,7 +100,7 @@ struct DashboardView: View {
                 Label("Sistema", systemImage: "waveform.path.ecg").sectionTitle()
                 Spacer()
                 if !stats.hostname.isEmpty {
-                    Text(stats.hostname).font(.caption).foregroundStyle(Noir.muted)
+                    Text(stats.hostname).font(.caption).foregroundStyle(Palette.muted)
                 }
             }
             statRow("CPU", stats.cpuPercent.map(Format.percent))
@@ -119,23 +141,23 @@ struct DashboardView: View {
                     Text("\(disk.usedPercent)%")
                         .font(.callout.weight(.bold))
                         .monospacedDigit()
-                        .foregroundStyle(disk.isHot ? Noir.accent300 : Noir.text)
+                        .foregroundStyle(disk.isHot ? Palette.accent300 : Palette.text)
                 } else {
-                    Text("sin leer").font(.caption).foregroundStyle(Noir.danger)
+                    Text("sin leer").font(.caption).foregroundStyle(Palette.danger)
                 }
             }
             if disk.available {
                 ProgressBar(value: Double(disk.usedPercent) / 100, hot: disk.isHot)
                 Text("\(Format.bytes(disk.usedBytes)) / \(Format.bytes(disk.totalBytes))")
                     .font(.caption2)
-                    .foregroundStyle(Noir.muted)
+                    .foregroundStyle(Palette.muted)
             }
         }
     }
 
     private func statRow(_ key: String, _ value: String?) -> some View {
         HStack {
-            Text(key).font(.subheadline).foregroundStyle(Noir.muted)
+            Text(key).font(.subheadline).foregroundStyle(Palette.muted)
             Spacer()
             Text(value ?? "—").font(.subheadline.weight(.semibold)).monospacedDigit()
         }
@@ -155,12 +177,10 @@ struct DashboardView: View {
             async let stats = client.system()
             async let folders = client.diskFolders()
             async let namingReport = try? client.naming()
-            async let subtitlesReport = try? client.subtitles()
 
             system = .loaded(try await stats)
             disks = (try? await folders) ?? []
             naming = await namingReport
-            subtitles = await subtitlesReport
         } catch {
             system = .failed(message(for: error))
         }

@@ -1,0 +1,119 @@
+{
+ "live": true,
+ "cpu": "7 %",
+ "cpuSpark": {
+  "points": "0.0,21.9 25.0,21.2 50.0,21.5 75.0,20.4 100.0,21.5",
+  "max": "100 %"
+ },
+ "cores": [
+  {
+   "name": "0",
+   "busy": "12 %",
+   "width": "12.0",
+   "mhz": "3,9 GHz",
+   "hot": false
+  },
+  {
+   "name": "1",
+   "busy": "3 %",
+   "width": "3.0",
+   "mhz": "0,8 GHz",
+   "hot": false
+  },
+  {
+   "name": "2",
+   "busy": "9 %",
+   "width": "9.0",
+   "mhz": "1,6 GHz",
+   "hot": false
+  },
+  {
+   "name": "3",
+   "busy": "91 %",
+   "width": "91.0",
+   "mhz": "3,9 GHz",
+   "hot": true
+  }
+ ],
+ "temp": "45 °C",
+ "tempHot": false,
+ "tempSpk": {
+  "points": "",
+  "max": ""
+ },
+ "load": "0,27 · 0,32 · 0,26",
+ "uptime": "2h 38m",
+ "ram": {
+  "used": "4.0 GiB",
+  "total": "20.0 GiB",
+  "pct": "20 %",
+  "width": "20.0",
+  "high": false
+ },
+ "swap": {
+  "used": "1.0 MiB",
+  "total": "8.0 GiB",
+  "pct": "0 %",
+  "width": "0.0",
+  "high": false
+ },
+ "zram": "4.0 MiB guardados en 1.0 MiB (×4,00)",
+ "hasSwap": true,
+ "links": [
+  {
+   "name": "enp1s0",
+   "up": true,
+   "speed": "1 Gb/s",
+   "rx": "146.5 KiB/s",
+   "tx": "39.1 KiB/s"
+  },
+  {
+   "name": "tailscale0",
+   "up": true,
+   "speed": "",
+   "rx": "0 B/s",
+   "tx": "0 B/s"
+  },
+  {
+   "name": "wlp2s0",
+   "up": false,
+   "speed": "",
+   "rx": "0 B/s",
+   "tx": "0 B/s"
+  }
+ ],
+ "netSpk": {
+  "points": "0.0,8.3 33.3,1.0 66.7,5.4 100.0,1.0",
+  "max": "146.5 KiB/s"
+ },
+ "disks": [
+  {
+   "name": "nvme0n1",
+   "model": "KINGSTON RBUSNS8154P3256GJ1",
+   "read": "1.9 MiB/s",
+   "write": "0 B/s",
+   "busy": "3 %",
+   "width": "3.0",
+   "idle": false
+  },
+  {
+   "name": "sdb",
+   "model": "Expansion HDD",
+   "read": "0 B/s",
+   "write": "0 B/s",
+   "busy": "0 %",
+   "width": "0.0",
+   "idle": true
+  }
+ ],
+ "battery": {
+  "present": true,
+  "percent": "100 %",
+  "width": "100.0",
+  "status": "llena",
+  "health": "65 %",
+  "discharging": false,
+  "left": "",
+  "low": false
+ }
+}

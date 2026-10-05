@@ -19,7 +19,7 @@ struct TorrentsView: View {
                 content(list)
             }
         }
-        .background(Noir.bg)
+        .background(Palette.bg)
         .navigationTitle("Torrents")
         .refreshable { await load() }
         .task { await pollWhileVisible() }
@@ -38,32 +38,32 @@ struct TorrentsView: View {
                     }
                 }
             }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
 
             if let banner {
                 Section {
-                    Text(banner).font(.footnote).foregroundStyle(Noir.muted)
+                    Text(banner).font(.footnote).foregroundStyle(Palette.muted)
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
             }
 
             Section {
                 summary(list)
             }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
 
             if list.torrents.isEmpty {
                 Section {
-                    Text("No hay torrents.").foregroundStyle(Noir.muted)
+                    Text("No hay torrents.").foregroundStyle(Palette.muted)
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
             } else {
                 Section("Descargas") {
                     ForEach(list.torrents) { torrent in
                         row(torrent)
                     }
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
             }
         }
         .scrollContentBackground(.hidden)
@@ -71,7 +71,7 @@ struct TorrentsView: View {
 
     private var addMagnetRow: some View {
         HStack(spacing: 10) {
-            Image(systemName: "plus.circle").foregroundStyle(Noir.accent)
+            Image(systemName: "plus.circle").foregroundStyle(Palette.accent)
             TextField("Pegá un magnet: acá…", text: $magnet)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
@@ -87,13 +87,13 @@ struct TorrentsView: View {
             VStack(alignment: .leading) {
                 Text("\(list.active ?? 0) / \(list.total ?? 0)")
                     .font(.title3.weight(.semibold)).monospacedDigit()
-                Text("activos").font(.caption2).foregroundStyle(Noir.muted)
+                Text("activos").font(.caption2).foregroundStyle(Palette.muted)
             }
             VStack(alignment: .leading) {
                 Label(Format.speed(list.dlSpeed ?? 0), systemImage: "arrow.down")
-                    .font(.subheadline).monospacedDigit().foregroundStyle(Noir.ok)
+                    .font(.subheadline).monospacedDigit().foregroundStyle(Palette.ok)
                 Label(Format.speed(list.upSpeed ?? 0), systemImage: "arrow.up")
-                    .font(.subheadline).monospacedDigit().foregroundStyle(Noir.accent300)
+                    .font(.subheadline).monospacedDigit().foregroundStyle(Palette.accent300)
             }
             Spacer()
         }
@@ -112,17 +112,17 @@ struct TorrentsView: View {
                 }
                 Spacer()
                 Text(Format.bytes(torrent.sizeBytes))
-                    .font(.caption2).monospacedDigit().foregroundStyle(Noir.muted)
+                    .font(.caption2).monospacedDigit().foregroundStyle(Palette.muted)
             }
 
             ProgressBar(value: torrent.progress)
 
             HStack {
                 Text("\(Int(torrent.progress * 100))%")
-                    .font(.caption2).monospacedDigit().foregroundStyle(Noir.muted)
+                    .font(.caption2).monospacedDigit().foregroundStyle(Palette.muted)
                 Spacer()
                 Text("↓ \(Format.speed(torrent.dlSpeed))  ↑ \(Format.speed(torrent.upSpeed))")
-                    .font(.caption2).monospacedDigit().foregroundStyle(Noir.muted)
+                    .font(.caption2).monospacedDigit().foregroundStyle(Palette.muted)
             }
         }
         .padding(.vertical, 4)
@@ -138,7 +138,7 @@ struct TorrentsView: View {
                 Label(torrent.paused ? "Reanudar" : "Pausar",
                       systemImage: torrent.paused ? "play.fill" : "pause.fill")
             }
-            .tint(Noir.accent)
+            .tint(Palette.accent)
         }
     }
 

@@ -97,35 +97,6 @@ struct MediaLibrary: Codable {
     var truncated: Bool?
 }
 
-struct SubtitleMissing: Codable, Identifiable, Hashable {
-    var path: String
-    var title: String
-    var year: Int
-    var type: String
-
-    var id: String { path }
-}
-
-struct SubtitlesReport: Codable {
-    var configured: Bool
-    var missing: Int
-    var items: [SubtitleMissing]
-    var truncated: Bool
-}
-
-struct SubtitleResult: Codable, Identifiable, Hashable {
-    var fileId: String
-    var fileName: String
-    var release: String
-    var language: String
-
-    var id: String { fileId }
-}
-
-struct SubtitleResults: Codable {
-    var results: [SubtitleResult]
-}
-
 struct Torrent: Codable, Identifiable, Hashable {
     var hash: String
     var name: String
@@ -300,4 +271,20 @@ struct ManageStatus: Codable {
     /// all-clear and must not be shown as one.
     var checked: Bool
     var pending: String?
+    /// Whether this request reached the server from outside the house, as the
+    /// server sees the client's real address. Optional for an older server.
+    var remote: Bool?
+    /// What the server calls itself ("Ginebra"), for the headings.
+    var machine: String?
+    /// The server's answer to the last power request, within the last day.
+    var lastAction: LastAction?
+}
+
+/// What the server's power script decided. On Ginebra a refused power-off
+/// otherwise looks exactly like a request that got lost.
+struct LastAction: Codable, Hashable {
+    var action: String
+    var ok: Bool
+    var reason: String
+    var at: String
 }

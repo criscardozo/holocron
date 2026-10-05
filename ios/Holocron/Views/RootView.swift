@@ -4,7 +4,7 @@ struct RootView: View {
     @Environment(AppSettings.self) private var settings
     @State private var tab: Tab = .dashboard
 
-    enum Tab: Hashable { case dashboard, torrents, subtitles, media, settings }
+    enum Tab: Hashable { case dashboard, activity, torrents, media, settings }
 
     var body: some View {
         // The iOS 18 `Tab` builder would be tidier, but the classic API keeps
@@ -13,12 +13,12 @@ struct RootView: View {
             NavigationStack { DashboardView() }
                 .tabItem { Label("Estado", systemImage: "waveform.path.ecg") }
                 .tag(Tab.dashboard)
+            NavigationStack { ActivityView() }
+                .tabItem { Label("Actividad", systemImage: "play.tv") }
+                .tag(Tab.activity)
             NavigationStack { TorrentsView() }
                 .tabItem { Label("Torrents", systemImage: "arrow.down.circle") }
                 .tag(Tab.torrents)
-            NavigationStack { SubtitlesView() }
-                .tabItem { Label("Subtítulos", systemImage: "captions.bubble") }
-                .tag(Tab.subtitles)
             NavigationStack { MediaView() }
                 .tabItem { Label("Medios", systemImage: "film") }
                 .tag(Tab.media)

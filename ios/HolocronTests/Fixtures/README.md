@@ -11,7 +11,7 @@ TOKEN=...            # Ajustes → App iOS → Generar token
 B=localhost:8090
 A="Authorization: Bearer $TOKEN"
 
-for ep in system disk naming media subtitles torrents; do
+for ep in system disk naming media torrents; do
   curl -s -H "$A" "$B/api/v1/$ep" -o "$ep.json"
 done
 curl -s -H "$A" "$B/api/v1/disk/1"        -o disk_detail.json
@@ -22,3 +22,16 @@ curl -s -H "$A" "$B/api/v1/disk/1/browse" -o disk_browse.json
 struct `apiTorrent` de `internal/httpserver/api.go`, porque capturar torrents
 reales requiere un qBittorrent andando. Si cambia esa struct, hay que
 actualizarlo a mano.
+
+**Las pantallas en vivo** (`hardware.json`, `activity.json`, `services.json`)
+salen del encoder de Go sobre lecturas medidas en Ginebra, no de una captura:
+en la Mac no hay `/proc` ni servicios y saldrían vacías. Para regenerarlas:
+
+```sh
+HOLOCRON_WRITE_FIXTURES=$PWD/ios/HolocronTests/Fixtures \
+  go test -run TestWriteIOSFixtures ./internal/httpserver
+```
+
+Las sesiones de Jellyfin y la cola de descargas son sintéticas (armadas a partir
+de los esquemas de las APIs), porque cuando se generaron no había nada
+reproduciéndose ni bajándose.

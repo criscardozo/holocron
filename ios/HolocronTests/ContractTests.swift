@@ -75,15 +75,6 @@ struct ContractTests {
         #expect(!movie.hasSubsEs)
     }
 
-    @Test func subtitles() throws {
-        let report = try decode(SubtitlesReport.self, "subtitles")
-        #expect(report.configured)
-        #expect(report.missing == 1)
-        #expect(!report.truncated)
-        let item = try #require(report.items.first)
-        #expect(item.title == "Dune: Parte Dos")
-    }
-
     @Test func torrents() throws {
         let list = try decode(TorrentList.self, "torrents")
         #expect(!list.configured) // captured with qBittorrent unconfigured
@@ -181,6 +172,44 @@ struct ContractTests {
         #expect(status.user == "cris")
         // Admin decides whether the metadata refresh can be offered at all.
         #expect(status.admin == true)
+    }
+
+    // The live screens. Their fixtures come from the Go encoder over readings
+    // measured on Ginebra (internal/httpserver/fixtures_test.go).
+
+    @Test func hardware() throws {
+        let hw = try decode(HardwareReading.self, "hardware")
+        #expect(hw.live)
+        #expect(!hw.cores.isEmpty)
+        #expect(hw.cpuSpark.values.count > 1)
+        #expect(hw.battery.present)
+        #expect(fraction(hw.ram.width) == 0.2)
+    }
+
+    @Test func activity() throws {
+        let act = try decode(ActivityReading.self, "activity")
+        #expect(!act.playing.isEmpty)
+        #expect(!act.downloads.isEmpty)
+        #expect(act.hasSeerr)
+        // Go sends an empty, never-allocated slice as null.
+        #expect(act.errors.isEmpty)
+    }
+
+    @Test func services() throws {
+        let svc = try decode(ServicesReading.self, "services")
+        #expect(svc.configured)
+        #expect(svc.down == svc.units.filter { !$0.ok }.count)
+        #expect(!svc.timers.isEmpty)
+        #expect(!svc.disks.isEmpty)
+        #expect(svc.errors.isEmpty)
+    }
+
+    @Test func lenientDecodesNullAndMissing() throws {
+        struct Box: Decodable { @Lenient var items: [String] }
+        let null = try JSONDecoder().decode(Box.self, from: Data(#"{"items":null}"#.utf8))
+        let missing = try JSONDecoder().decode(Box.self, from: Data("{}".utf8))
+        #expect(null.items.isEmpty)
+        #expect(missing.items.isEmpty)
     }
 }
 

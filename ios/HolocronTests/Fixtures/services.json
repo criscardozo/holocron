@@ -1,0 +1,78 @@
+{
+ "configured": true,
+ "units": [
+  {
+   "name": "jellyfin",
+   "state": "corriendo",
+   "ok": true,
+   "since": "desde hace 2h 30m"
+  },
+  {
+   "name": "biblioteca (montaje)",
+   "state": "montado",
+   "ok": true,
+   "since": "desde hace 2h 30m"
+  },
+  {
+   "name": "bazarr",
+   "state": "falló",
+   "ok": false,
+   "since": ""
+  }
+ ],
+ "down": 1,
+ "timers": [
+  {
+   "name": "ginebra-vigia",
+   "last": "recién",
+   "next": "en 8m",
+   "result": "bien",
+   "failed": false
+  },
+  {
+   "name": "ginebra-respaldo-config",
+   "last": "ayer",
+   "next": "en 5d 4h 0m",
+   "result": "bien",
+   "failed": false
+  }
+ ],
+ "disks": [
+  {
+   "disk": "nvme0n1",
+   "model": "KINGSTON",
+   "asleep": false,
+   "health": "sano",
+   "bad": false,
+   "facts": [
+    "34 °C",
+    "1351 h encendido",
+    "desgaste 7 %",
+    "238.5 GiB"
+   ],
+   "warn": null
+  },
+  {
+   "disk": "sdb",
+   "model": "",
+   "asleep": true,
+   "health": "",
+   "bad": false,
+   "facts": null,
+   "warn": null
+  },
+  {
+   "disk": "sdc",
+   "model": "WDC WD30EZRX-00D8PB0",
+   "asleep": false,
+   "health": "sano",
+   "bad": true,
+   "facts": null,
+   "warn": [
+    "217 sectores reasignados"
+   ]
+  }
+ ],
+ "smartAge": "medido hace 3 h",
+ "errors": null
+}

@@ -43,11 +43,11 @@ struct ErrorState: View {
         VStack(spacing: 14) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.largeTitle)
-                .foregroundStyle(Noir.accent300)
+                .foregroundStyle(Palette.accent300)
             Text(message)
                 .font(.callout)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(Noir.muted)
+                .foregroundStyle(Palette.muted)
             Button("Reintentar") { Task { await retry() } }
                 .buttonStyle(.bordered)
         }

@@ -3,12 +3,16 @@ import SwiftUI
 /// Control of the machine itself: restart a service, reboot, power off.
 ///
 /// The friction here is deliberately uneven. A restart comes back on its own,
-/// so a confirmation dialog is enough. Powering off does not — a Raspberry Pi 4
-/// has no wake-on-LAN, so the only way back is somebody walking to it — and a
+/// so a confirmation dialog is enough. Powering off does not — nothing on the
+/// network turns the machine back on, so the only way back is somebody walking
+/// to it — and a
 /// dialog would put that one tap away from the button, which is exactly the
 /// gesture a thumb learns. So it holds instead.
 ///
-/// Over the public address it holds *and* asks for consent first. It used to be
+/// From outside the house it holds *and* asks for consent first. Whether a
+/// request is from outside is the server's call, from the client's real
+/// address: behind Caddy the app's configured address is the same name from
+/// the couch and from abroad, so the app cannot tell on its own. It used to be
 /// refused outright, which was the wrong call: leaving the house is exactly
 /// when you might want to shut the machine down, and the app cannot know
 /// whether somebody is home to turn it back on. So the consequence is stated
@@ -31,9 +35,19 @@ struct ManagementView: View {
                     Section {
                         Label(banner, systemImage: bannerIsError ? "exclamationmark.triangle" : "checkmark.circle")
                             .font(.footnote)
-                            .foregroundStyle(bannerIsError ? Noir.danger : Noir.ok)
+                            .foregroundStyle(bannerIsError ? Palette.danger : Palette.ok)
                     }
-                    .listRowBackground(Noir.surface)
+                    .listRowBackground(Palette.surface)
+                }
+
+                if let last = status.lastAction {
+                    Section {
+                        Label(lastActionText(last, machine: status.machine),
+                              systemImage: last.ok ? "checkmark.circle" : "exclamationmark.triangle")
+                            .font(.footnote)
+                            .foregroundStyle(last.ok ? Palette.ok : Palette.danger)
+                    }
+                    .listRowBackground(Palette.surface)
                 }
 
                 preflightSection(status)
@@ -46,27 +60,35 @@ struct ManagementView: View {
                                 .font(.footnote)
                         }
                     }
-                    .listRowBackground(Noir.surface)
+                    .listRowBackground(Palette.surface)
                 } else if !status.available {
                     Section {
-                        Text("El ayudante con privilegios no está instalado en la Pi, así que no se puede reiniciar ni apagar nada desde acá.")
+                        Text("El ayudante con privilegios no está instalado en el servidor, así que no se puede reiniciar ni apagar nada desde acá.")
                             .font(.footnote)
-                            .foregroundStyle(Noir.muted)
+                            .foregroundStyle(Palette.muted)
                     }
-                    .listRowBackground(Noir.surface)
+                    .listRowBackground(Palette.surface)
                 } else {
                     actionsSection(status)
                 }
             }
             .scrollContentBackground(.hidden)
         }
-        .background(Noir.bg)
-        .navigationTitle("ObiWan")
+        .background(Palette.bg)
+        .navigationTitle(state.value?.machine ?? "Gestión")
         .refreshable { await load() }
         .task { if case .idle = state { await load() } }
     }
 
     // MARK: - Sections
+
+    private func lastActionText(_ a: LastAction, machine: String?) -> String {
+        let name = machine ?? "el servidor"
+        let what = a.action == "poweroff" ? "Apagar \(name)" : "Reiniciar \(name)"
+        return a.ok
+            ? "\(what): el servidor lo aceptó."
+            : "\(what): el servidor lo rechazó porque \(a.reason)."
+    }
 
     @ViewBuilder
     private func preflightSection(_ status: ManageStatus) -> some View {
@@ -75,32 +97,32 @@ struct ManagementView: View {
                 ForEach(status.warnings, id: \.self) { warning in
                     Label(warning, systemImage: "exclamationmark.triangle")
                         .font(.footnote)
-                        .foregroundStyle(Noir.accent300)
+                        .foregroundStyle(Palette.accent300)
                 }
             } else if status.checked {
                 Label("Nada en curso: no hay nadie reproduciendo ni torrents activos.",
                       systemImage: "checkmark.circle")
                     .font(.footnote)
-                    .foregroundStyle(Noir.ok)
+                    .foregroundStyle(Palette.ok)
             } else {
                 // Not the same as an all-clear, and shown differently on
                 // purpose: an empty list because nothing is happening and an
                 // empty list because nothing could be asked look identical.
                 Text("No se pudo consultar qué está en curso, así que no hay forma de saber si esto interrumpe algo.")
                     .font(.footnote)
-                    .foregroundStyle(Noir.muted)
+                    .foregroundStyle(Palette.muted)
             }
         } header: {
             Text("Ahora mismo")
         }
-        .listRowBackground(Noir.surface)
+        .listRowBackground(Palette.surface)
     }
 
     @ViewBuilder
     private func actionsSection(_ status: ManageStatus) -> some View {
         ForEach(status.actions) { action in
             Section {
-                if action.needsToken && !settings.isOnHomeNetwork {
+                if action.needsToken && (status.remote ?? true) {
                     strandGate(action)
                 } else if action.needsToken {
                     HoldToConfirmButton(label: action.label) {
@@ -118,9 +140,9 @@ struct ManagementView: View {
                 }
                 Text(action.detail)
                     .font(.caption2)
-                    .foregroundStyle(Noir.muted)
+                    .foregroundStyle(Palette.muted)
             }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
         }
     }
 
@@ -133,10 +155,10 @@ struct ManagementView: View {
     private func strandGate(_ action: ManageAction) -> some View {
         let armed = acknowledged.contains(action.key)
         return VStack(alignment: .leading, spacing: 10) {
-            Label("Estás entrando por la dirección pública",
+            Label("Estás entrando desde afuera de casa",
                   systemImage: "antenna.radiowaves.left.and.right")
                 .font(.caption)
-                .foregroundStyle(Noir.accent300)
+                .foregroundStyle(Palette.accent300)
 
             Toggle(isOn: Binding(
                 get: { acknowledged.contains(action.key) },
@@ -144,10 +166,10 @@ struct ManagementView: View {
                     if on { acknowledged.insert(action.key) } else { acknowledged.remove(action.key) }
                 }
             )) {
-                Text("Entiendo que no se puede encender a distancia y que queda apagada hasta que alguien vaya hasta ella.")
+                Text("Entiendo que no se puede encender a distancia y que el equipo queda apagado hasta que alguien vaya a prenderlo.")
                     .font(.caption)
             }
-            .tint(Noir.danger)
+            .tint(Palette.danger)
 
             HoldToConfirmButton(label: action.label, enabled: armed) {
                 Task { await run(action) }
@@ -194,10 +216,10 @@ struct ManagementView: View {
 
     private func afterword(_ action: ManageAction) -> String {
         if action.key == "poweroff" {
-            return "Cuando deje de responder, ya está apagada."
+            return "Cuando deje de responder, ya está apagado."
         }
         if action.interrupts {
-            return "Va a dejar de responder un rato y vuelve sola."
+            return "Va a dejar de responder un rato y vuelve solo."
         }
         return "Vuelve solo en unos segundos."
     }
@@ -223,13 +245,13 @@ private struct HoldToConfirmButton: View {
         VStack(alignment: .leading, spacing: 6) {
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Noir.surface2)
+                    .fill(Palette.surface2)
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Noir.danger.opacity(0.35))
+                    .fill(Palette.danger.opacity(0.35))
                     .scaleEffect(x: progress, y: 1, anchor: .leading)
                 Label(progress > 0 ? "Mantené apretado…" : label, systemImage: "power")
                     .font(.callout.weight(.semibold))
-                    .foregroundStyle(enabled ? Noir.danger : Noir.muted)
+                    .foregroundStyle(enabled ? Palette.danger : Palette.muted)
                     .padding(.horizontal, 12)
             }
             .frame(height: 44)
@@ -252,7 +274,7 @@ private struct HoldToConfirmButton: View {
 
             Text(enabled ? "Mantené apretado para confirmar" : "Aceptá la advertencia para habilitarlo")
                 .font(.caption2)
-                .foregroundStyle(Noir.muted)
+                .foregroundStyle(Palette.muted)
         }
         .padding(.vertical, 4)
         .onDisappear { cancel() }

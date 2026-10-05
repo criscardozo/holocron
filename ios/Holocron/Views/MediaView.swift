@@ -25,7 +25,7 @@ struct MediaView: View {
                 content(library)
             }
         }
-        .background(Noir.bg)
+        .background(Palette.bg)
         .navigationTitle("Medios")
         .refreshable { await load() }
         .task { if case .idle = state { await load() } }
@@ -37,10 +37,10 @@ struct MediaView: View {
                 stats(library)
                 actions(library)
                 if let banner {
-                    Text(banner).font(.footnote).foregroundStyle(Noir.muted)
+                    Text(banner).font(.footnote).foregroundStyle(Palette.muted)
                 }
             }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
 
             if !disks.isEmpty {
                 Section("Disco") {
@@ -54,21 +54,21 @@ struct MediaView: View {
                                 if disk.available {
                                     Text("\(disk.usedPercent)%")
                                         .font(.callout).monospacedDigit()
-                                        .foregroundStyle(disk.isHot ? Noir.accent300 : Noir.muted)
+                                        .foregroundStyle(disk.isHot ? Palette.accent300 : Palette.muted)
                                 }
                             }
                         }
                     }
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
             }
 
             if library.items.isEmpty {
                 Section {
                     Text("Sin inventario. Tocá «Sincronizar».")
-                        .foregroundStyle(Noir.muted)
+                        .foregroundStyle(Palette.muted)
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
             } else {
                 Section {
                     ForEach(library.items) { item in
@@ -81,7 +81,7 @@ struct MediaView: View {
                         Text("Mostrando \(library.items.count) de \(library.total ?? 0) ítems.")
                     }
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
             }
         }
         .scrollContentBackground(.hidden)
@@ -101,8 +101,8 @@ struct MediaView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
                 .font(.title2.weight(.bold)).monospacedDigit()
-                .foregroundStyle(tinted ? Noir.accent : Noir.text)
-            Text(caption).font(.caption2).foregroundStyle(Noir.muted)
+                .foregroundStyle(tinted ? Palette.accent : Palette.text)
+            Text(caption).font(.caption2).foregroundStyle(Palette.muted)
         }
     }
 
@@ -132,7 +132,7 @@ struct MediaView: View {
             Text(item.title).font(.callout)
             Text(item.path)
                 .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Noir.muted)
+                .foregroundStyle(Palette.muted)
                 .lineLimit(1)
             HStack(spacing: 6) {
                 Pill(text: item.type == "movie" ? "Peli" : "Serie", kind: .neutral)

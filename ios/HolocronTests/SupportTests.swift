@@ -60,7 +60,7 @@ struct FormatTests {
 struct APIErrorTests {
     @Test func everyCaseExplainsItselfInSpanish() {
         let cases: [APIError] = [
-            .notConfigured, .unauthorized, .noToken, .notReachable, .accessDenied,
+            .notConfigured, .unauthorized, .noToken, .notReachable,
             .server(status: 500, message: ""), .decoding,
         ]
         for error in cases {
@@ -76,92 +76,6 @@ struct APIErrorTests {
 }
 
 
-/// Cloudflare Access does not fail like the API does: URLSession follows its
-/// redirect and hands back the login page with status 200, so without this the
-/// user would see "el servidor respondió algo inesperado" and go looking in the
-/// wrong place.
-struct AccessChallengeTests {
-    private func response(_ url: String, _ status: Int, contentType: String?,
-                          challenge: String? = nil, accessAUD: Bool = false) -> HTTPURLResponse {
-        var headers: [String: String] = [:]
-        if let contentType { headers["Content-Type"] = contentType }
-        if let challenge { headers["WWW-Authenticate"] = challenge }
-        if accessAUD {
-            headers["cf-access-aud"] = String(repeating: "d", count: 64)
-            headers["cf-access-domain"] = "holocron.merli.store"
-        }
-        return HTTPURLResponse(url: URL(string: url)!, statusCode: status,
-                               httpVersion: nil, headerFields: headers)!
-    }
-
-    @Test func serviceAuthRefusalIsCaughtEvenWhenItAnswersJSON() {
-        // The measured shape of a Service Auth refusal when the client asks for
-        // JSON: 403, application/json, {"message":"Forbidden…"} — no redirect
-        // and no WWW-Authenticate. Every rule except the cf-access headers
-        // misses this one, and it is the request the app actually makes.
-        let http = response("https://holocron.merli.store/api/v1/system", 403,
-                            contentType: "application/json; charset=utf-8", accessAUD: true)
-        #expect(APIClient.isAccessChallenge(http))
-    }
-
-    @Test func serviceAuthRefusalInHTMLIsCaughtToo() {
-        // Same refusal without an explicit Accept, which is what URLSession
-        // sends by default.
-        let http = response("https://holocron.merli.store/api/v1/system", 403,
-                            contentType: "text/html", accessAUD: true)
-        #expect(APIClient.isAccessChallenge(http))
-    }
-
-    @Test func theLoginHostIsAChallenge() {
-        let http = response("https://example.cloudflareaccess.com/cdn-cgi/access/login/x", 200,
-                            contentType: "text/html; charset=utf-8")
-        #expect(APIClient.isAccessChallenge(http))
-    }
-
-    @Test func theChallengeHeaderIsEnoughOnItsOwn() {
-        // What Access actually answers to an API-shaped request with no
-        // credentials: 401, HTML, and this header. Measured, not assumed.
-        let http = response("https://holocron.merli.store/api/v1/system", 401,
-                            contentType: "text/html; charset=UTF-8",
-                            challenge: #"Cloudflare-Access resource_metadata="https://holocron.merli.store/.well-known""#)
-        #expect(APIClient.isAccessChallenge(http))
-    }
-
-    @Test func aRedirectToTheLoginIsAChallenge() {
-        // And this is what it answers when the service token headers are wrong
-        // — the likely case in practice, someone mis-pasting the secret. The
-        // status is 302, which is why the rule cannot be a list of codes.
-        let http = response("https://holocron.merli.store/api/v1/system", 302,
-                            contentType: "text/html; charset=UTF-8")
-        #expect(APIClient.isAccessChallenge(http))
-    }
-
-    @Test func htmlOnAForbiddenIsAChallenge() {
-        let http = response("https://holocron.merli.store/api/v1/system", 403,
-                            contentType: "text/html")
-        #expect(APIClient.isAccessChallenge(http))
-    }
-
-    @Test func holocronsOwnUnauthorizedIsNot() {
-        // Holocron answers 401 as JSON when the bearer token is wrong. Calling
-        // that an Access problem would send the user to fix the wrong setting.
-        let http = response("https://holocron.merli.store/api/v1/system", 401,
-                            contentType: "application/json")
-        #expect(!APIClient.isAccessChallenge(http))
-    }
-
-    @Test func aNormalResponseIsNot() {
-        let http = response("https://holocron.merli.store/api/v1/system", 200,
-                            contentType: "application/json")
-        #expect(!APIClient.isAccessChallenge(http))
-    }
-
-    @Test func aResponseWithoutAContentTypeIsNot() {
-        let http = response("https://holocron.merli.store/api/v1/media/sync", 202, contentType: nil)
-        #expect(!APIClient.isAccessChallenge(http))
-    }
-}
-
 /// Every SF Symbol the app names has to resolve. A misspelt symbol renders as
 /// nothing at all — no crash, no warning, just a gap where an icon should be,
 /// which is easy to ship and hard to notice.
@@ -170,60 +84,21 @@ struct SymbolTests {
     @Test func everySymbolResolves() {
         let symbols = [
             "arrow.clockwise", "arrow.down", "arrow.down.circle",
-            "arrow.triangle.2.circlepath", "arrow.up", "captions.bubble",
+            "arrow.triangle.2.circlepath", "arrow.up",
             "checkmark.circle", "diamond", "exclamationmark.triangle",
             "exclamationmark.triangle.fill", "film", "gearshape",
             "gauge.with.dots.needle.bottom.50percent", "internaldrive",
             "power", "slider.horizontal.3",
             "magnifyingglass", "plus.circle", "powerplug", "trash",
             "waveform.path.ecg",
+            // The live screens.
+            "battery.25", "battery.100.bolt", "bolt.slash.fill", "calendar",
+            "chevron.right", "clock.arrow.circlepath", "cpu", "exclamationmark.circle",
+            "hand.raised", "info.circle", "memorychip", "network", "play.tv",
+            "server.rack", "sparkles",
         ]
         for name in symbols {
             #expect(UIImage(systemName: name) != nil, "SF Symbol \(name) does not exist")
-        }
-    }
-}
-
-/// The power-off button is withheld when the app is not on the home network.
-/// A Raspberry Pi 4 has no wake-on-LAN, so pressing it from outside the house
-/// means no server until somebody gets home — a mistake the app can see coming,
-/// unlike a dialog, which only works if it is read.
-struct HomeNetworkTests {
-    @Test func recognisesTheLocalAddresses() {
-        for host in [
-            "192.168.0.2", "192.168.1.10",
-            "10.0.0.5",
-            "172.16.0.1", "172.31.255.254",   // the /12 people forget
-            "obiwan.local", "localhost",
-        ] {
-            #expect(AppSettings.isPrivateHost(host), "\(host) should count as home")
-        }
-    }
-
-    @Test func treatsEverythingElseAsAway() {
-        for host in [
-            "holocron.merli.store",           // the real public address
-            "172.32.0.1", "172.15.0.1",       // just outside the private /12
-            "192.169.0.1",                    // one off from 192.168
-            "8.8.8.8",
-            "example.com",
-            // Tailscale's CGNAT range. A private network, but not a nearby
-            // one: over the VPN from another country the request looks exactly
-            // like one from the couch. Kept in step with netaddr.IsPrivateHost
-            // on the Go side, where the same case is pinned.
-            "100.94.171.18", "100.64.0.1",
-            "",
-        ] {
-            #expect(!AppSettings.isPrivateHost(host), "\(host) should count as away")
-        }
-    }
-
-    @Test func aMalformedAddressIsNotHome() {
-        // Conservative on purpose. Being wrong this way adds a confirmation
-        // that was not needed; being wrong the other way powers the machine
-        // off without mentioning that nothing on the network can wake it.
-        for host in ["192.168.0", "192.168.0.1.5", "1.2.3.x", "192.168.0.doscientos"] {
-            #expect(!AppSettings.isPrivateHost(host), "\(host) should not count as home")
         }
     }
 }

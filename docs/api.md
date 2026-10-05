@@ -32,64 +32,14 @@ Respuestas de error de auth:
 Los errores siempre son `{"error": "mensaje"}`, genéricos hacia afuera; el
 detalle queda en el log del servidor.
 
-### Detrás de Cloudflare Access
+### Detrás de Caddy
 
-Cuando el servidor se publica por un túnel con **Access** adelante, la API pide
-además el service token, en dos headers:
-
-```
-CF-Access-Client-Id: <algo>.access
-CF-Access-Client-Secret: <secreto>
-```
-
-Los valida Cloudflare antes de que el pedido llegue a la Pi; el bearer token se
-sigue validando después. Ver la sección de seguridad en
-[arquitectura.md](arquitectura.md) para las dos aplicaciones de Access que hacen
-falta y por qué son dos.
-
-Un rechazo de Access **no** se parece a un error de la API, y ni el código de
-estado ni el formato del cuerpo sirven para reconocerlo. Medido contra el
-despliegue real:
-
-| Ruta | Cómo se pide | Código | `Content-Type` | Señales |
-|---|---|---|---|---|
-| `/api` | `Accept: application/json` | `403` | **`application/json`** | `cf-access-aud`, `cf-access-domain` |
-| `/api` | `Accept: */*`, o sin `Accept` | `403` | `text/html` | `cf-access-aud`, `cf-access-domain` |
-| `/api` | con headers de service token inválidos | `403` | `text/html` | `cf-access-aud`, `cf-access-domain` |
-| raíz | navegación normal, o `Accept: application/json` | `302` | `text/html` | `location` a `*.cloudflareaccess.com`, `WWW-Authenticate` |
-| raíz | con `X-Requested-With: XMLHttpRequest` | `401` | `text/html` | `WWW-Authenticate: Cloudflare-Access` |
-
-Dos asimetrías medidas que conviene no razonar por analogía:
-
-- **La negociación de contenido existe sólo en la app de Service Auth.** En la
-  raíz el `Accept` no cambia nada: siempre redirige con HTML.
-- **Lo que dispara el `401` en lugar del `302` es `X-Requested-With`**, no el
-  `Accept`. Y `WWW-Authenticate` está en **todas** las respuestas de la raíz,
-  también en el `302`, pero en **ninguna** de `/api`.
-
-Cuidado con la tentación de asumir que **Access nunca devuelve JSON**: es falso,
-y el esquema no se parece en nada al de Holocron:
-
-```json
-{"message": "Forbidden. You don't have permission to view this…",
- "status_code": 403, "aud": "<id de la aplicación>", "ray_id": "<id del pedido>",
- "ip_address": "…", "is_warp": false, "is_gateway": false, "mtls_status": "NONE"}
-```
-
-Usa `message`, no el `error` de Holocron, así que un cliente que sólo lea
-`error` muestra un mensaje vacío. Y **trae `ip_address` con la IP pública de
-quien llamó**: no loguear el cuerpo crudo de un error ni mostrarlo en pantalla.
-El `aud` del cuerpo repite el header, así que en el caso JSON la señal viene
-duplicada.
-
-Lo único presente en **todos** los rechazos son los headers propios de Access
-(`cf-access-aud`, `cf-access-domain`), que no dependen del código, del cuerpo ni
-del redirect. Es la señal en la que conviene apoyarse; el resto quedan como
-respaldo por si alguna versión deja de anunciarse.
-
-Con las dos capas puestas y **sin** el bearer token de Holocron, la respuesta es
-`401 application/json {"error":"missing bearer token"}`: Access dejó pasar y
-Holocron pidió lo suyo. Que se distingan es justamente el punto.
+Holocron escucha en `127.0.0.1:8090` y se entra por Caddy, con HTTPS, desde
+casa o por Tailscale; nada queda expuesto a internet. El servidor confía en
+`X-Forwarded-For` **sólo** si el pedido llega por loopback, y toma la última
+entrada, que es la que agregó Caddy. Con eso decide si un pedido viene de casa
+(ver `remote` en Gestión); el rango de Tailscale (`100.64.0.0/10`) cuenta como
+afuera.
 
 ## Endpoints
 
@@ -97,7 +47,7 @@ Holocron pidió lo suyo. Que se distingan es justamente el punto.
 
 `GET /api/v1/system`
 
-Métricas de la Pi. Cada valor es `null` cuando no se puede leer (fuera de Linux
+Métricas del equipo. Cada valor es `null` cuando no se puede leer (fuera de Linux
 no existe `/proc`), así que el cliente debe tolerar nulos.
 
 ```json
@@ -218,7 +168,7 @@ uno corriendo, y `412` si Jellyfin no está vinculado.
 | Método | Ruta | Qué hace |
 |---|---|---|
 | `GET` | `/api/v1/manage` | Acciones disponibles y qué se interrumpiría |
-| `POST` | `/api/v1/manage/action` | Pide una acción (202). `action=<clave>`; `ack=1` es obligatorio para `poweroff` si el `Host` no es de la red local, si no responde 428 |
+| `POST` | `/api/v1/manage/action` | Pide una acción (202). `action=<clave>`; `ack=1` es obligatorio para `poweroff` si el pedido no viene de casa; si no, responde 428 |
 
 ```json
 {
@@ -226,11 +176,14 @@ uno corriendo, y `412` si Jellyfin no está vinculado.
   "actions": [
     {"key": "restart-jellyfin", "label": "Reiniciar Jellyfin",
      "detail": "…", "needsToken": false, "interrupts": false},
-    {"key": "poweroff", "label": "Apagar la Pi",
+    {"key": "poweroff", "label": "Apagar el equipo",
      "detail": "…", "needsToken": true, "interrupts": true}
   ],
   "warnings": ["Se está reproduciendo Chernobyl · S01E01 (cris)"],
-  "checked": true
+  "checked": true,
+  "remote": false,
+  "machine": "Ginebra",
+  "lastAction": {"action": "reboot", "ok": true, "reason": "", "at": "2026-10-05T21:14:03Z"}
 }
 ```
 
@@ -241,9 +194,14 @@ uno significa que es seguro apagar.
 `interrupts` marca las que se llevan la máquina entera. `needsToken` marca la
 única irreversible: la API ya está autenticada por bearer, así que el campo no
 cambia lo que valida el server — **le dice al cliente que esa acción merece
-ceremonia propia**. La app la pide manteniendo apretado y no la ofrece cuando la
-dirección configurada no es de la red local, porque un Pi 4 no se enciende a
+ceremonia propia**. La app la pide manteniendo apretado y, cuando `remote` es
+`true`, además con un interruptor que dice que el equipo no se puede encender a
 distancia.
+
+`remote` dice si **este** pedido llegó desde afuera de casa, según el servidor
+(ver «Detrás de Caddy»). `machine` es el nombre del equipo para los títulos.
+`lastAction` es el resultado de la última acción que corrió el ayudante con
+privilegios, y falta si nunca corrió ninguna.
 
 `action=<key>` va form-encoded. El `202` llega **antes** de que la máquina
 actúe: la unit espera un par de segundos justamente para que la respuesta
@@ -289,19 +247,25 @@ informe vigente: el id llega del cliente y termina en una escritura sobre el
 servidor de medios. Responde `404` si no lo reconoce y `403` si la cuenta de
 Jellyfin vinculada no es administradora (releer metadata lo requiere).
 
-### Subtítulos
+### Pantallas en vivo
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| `GET` | `/api/v1/subtitles` | Medios sin subtítulo en español |
-| `GET` | `/api/v1/subtitles/search?title=…&year=…` | Busca en OpenSubtitles |
-| `POST` | `/api/v1/subtitles/download` | Descarga uno al directorio del medio |
+| `GET` | `/api/v1/hardware` | CPU por núcleo, memoria, red, discos y batería |
+| `GET` | `/api/v1/activity` | Reproducciones, descargas, pedidos de Seerr, calendario y avisos |
+| `GET` | `/api/v1/services` | Unidades de systemd, tareas programadas y SMART |
 
-`missing` es el total real, que puede ser mayor que `items` (cortado en 500).
+Devuelven **el mismo view model que renderiza la web**, ya formateado en el
+servidor (`"7 %"`, `"146.5 KiB/s"`, `"hace 3 h"`), así el teléfono y el
+navegador dicen lo mismo y el cliente no decide qué significa cada estado. Los
+largos de barra vienen como texto sobre un lienzo de 0 a 100 (`"width": "20.0"`)
+y los sparklines como los puntos del polyline sobre un lienzo de 100×24.
 
-El `POST` recibe `{"fileId": 123, "path": "/mnt/media/…"}`. **`path` se valida
-contra el inventario**: sólo se puede escribir en carpetas que Holocron
-registró desde Jellyfin; cualquier otra cosa es `400`.
+Las listas vacías pueden llegar como `null`: el cliente tiene que tolerarlo.
+
+La web recibe esto mismo por SSE (`/events/…`); la API se consulta. El servidor
+muestrea sólo mientras alguien pregunta, así que un cliente que deja de preguntar
+cuando la pantalla no se ve no le cuesta nada al equipo.
 
 ### Torrents
 

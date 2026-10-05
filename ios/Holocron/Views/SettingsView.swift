@@ -6,7 +6,6 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
 
-    @State private var editingSecret = false
     @State private var testResult: String?
     @State private var testOK = false
     @State private var testing = false
@@ -24,15 +23,15 @@ struct SettingsView: View {
                             .font(.callout.weight(.semibold))
                         Text("Con la dirección y el token, las demás pestañas empiezan a funcionar.")
                             .font(.footnote)
-                            .foregroundStyle(Noir.muted)
+                            .foregroundStyle(Palette.muted)
                     }
                     .padding(.vertical, 2)
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
             }
 
             Section {
-                TextField("192.168.1.10:8090", text: $settings.serverURL)
+                TextField("https://holocron.merli.store", text: $settings.serverURL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
@@ -40,9 +39,9 @@ struct SettingsView: View {
             } header: {
                 Text("Servidor")
             } footer: {
-                Text("La dirección de tu Raspberry Pi en la red local. Si no ponés esquema, se asume http://")
+                Text("La dirección de Holocron, por ejemplo https://holocron.merli.store. Se llega desde casa o por Tailscale. Si no ponés esquema, se asume http://")
             }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
 
             Section {
                 SecureField("Pegá el token", text: $settings.token)
@@ -54,37 +53,7 @@ struct SettingsView: View {
             } footer: {
                 Text("Generalo en la web de Holocron: Ajustes → App iOS. Se muestra una sola vez y queda guardado en el Keychain.")
             }
-            .listRowBackground(Noir.surface)
-
-            Section {
-                TextField("algo.access", text: $settings.accessClientID)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .font(.system(.callout, design: .monospaced))
-                if settings.accessClientSecret.isEmpty || editingSecret {
-                    SecureField("Client Secret", text: $settings.accessClientSecret)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .font(.system(.callout, design: .monospaced))
-                } else {
-                    // Once saved it is only shown by its tail: enough to tell
-                    // which secret is loaded, not enough to leak in a
-                    // screenshot or over someone's shoulder.
-                    HStack {
-                        Text(Self.masked(settings.accessClientSecret))
-                            .font(.system(.callout, design: .monospaced))
-                            .foregroundStyle(Noir.muted)
-                        Spacer()
-                        Button("Cambiar") { editingSecret = true }
-                            .font(.footnote)
-                    }
-                }
-            } header: {
-                Text("Cloudflare Access")
-            } footer: {
-                Text("Sólo si entrás por el dominio público. Access exige estos dos y Holocron sigue exigiendo el token: dos capas. En la red local dejalos vacíos.")
-            }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
 
             Section {
                 Button {
@@ -100,10 +69,10 @@ struct SettingsView: View {
                 if let testResult {
                     Label(testResult, systemImage: testOK ? "checkmark.circle" : "exclamationmark.triangle")
                         .font(.footnote)
-                        .foregroundStyle(testOK ? Noir.ok : Noir.danger)
+                        .foregroundStyle(testOK ? Palette.ok : Palette.danger)
                 }
             }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
 
             Section {
                 NavigationLink {
@@ -117,25 +86,18 @@ struct SettingsView: View {
             } footer: {
                 Text("Aprobás un código en Jellyfin y el token queda guardado en el servidor, sin buscar API keys a mano. La dirección se carga desde la web.")
             }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
 
             Section {
                 Text("Holocron \(appVersion)")
                     .font(.footnote)
-                    .foregroundStyle(Noir.muted)
+                    .foregroundStyle(Palette.muted)
             }
-            .listRowBackground(Noir.surface)
+            .listRowBackground(Palette.surface)
         }
         .scrollContentBackground(.hidden)
-        .background(Noir.bg)
+        .background(Palette.bg)
         .navigationTitle("Ajustes")
-    }
-
-    /// Shows only the tail of a stored secret: enough to tell which one is
-    /// loaded, not enough to leak in a screenshot.
-    private static func masked(_ secret: String) -> String {
-        let tail = secret.suffix(4)
-        return tail.isEmpty ? "" : "••••••••" + tail
     }
 
     private var appVersion: String {

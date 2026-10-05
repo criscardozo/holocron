@@ -16,16 +16,16 @@ struct DiskDetailView: View {
                     gauge(detail.folder)
                     scanRow(detail)
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
 
                 if detail.top.isEmpty {
                     Section {
                         Text(detail.scanning
                              ? "Escaneando…"
                              : "Todavía no se escaneó esta carpeta.")
-                            .foregroundStyle(Noir.muted)
+                            .foregroundStyle(Palette.muted)
                     }
-                    .listRowBackground(Noir.surface)
+                    .listRowBackground(Palette.surface)
                 } else {
                     Section("Carpetas más grandes") {
                         ForEach(detail.top) { entry in
@@ -36,12 +36,12 @@ struct DiskDetailView: View {
                             }
                         }
                     }
-                    .listRowBackground(Noir.surface)
+                    .listRowBackground(Palette.surface)
                 }
             }
             .scrollContentBackground(.hidden)
         }
-        .background(Noir.bg)
+        .background(Palette.bg)
         .navigationTitle(folder.label)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
@@ -53,14 +53,14 @@ struct DiskDetailView: View {
             Text("\(folder.usedPercent)%")
                 .font(.system(size: 44, weight: .bold))
                 .monospacedDigit()
-                .foregroundStyle(Noir.accent)
+                .foregroundStyle(Palette.accent)
             ProgressBar(value: Double(folder.usedPercent) / 100, hot: folder.isHot)
             Text("\(Format.bytes(folder.usedBytes)) usados · \(Format.bytes(folder.freeBytes)) libres de \(Format.bytes(folder.totalBytes))")
                 .font(.caption)
-                .foregroundStyle(Noir.muted)
+                .foregroundStyle(Palette.muted)
             Text(folder.path)
                 .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Noir.muted)
+                .foregroundStyle(Palette.muted)
         }
         .padding(.vertical, 4)
     }
@@ -69,7 +69,7 @@ struct DiskDetailView: View {
         HStack {
             if detail.scanning || scanning {
                 ProgressView().controlSize(.small)
-                Text("Escaneando…").font(.callout).foregroundStyle(Noir.muted)
+                Text("Escaneando…").font(.callout).foregroundStyle(Palette.muted)
             } else {
                 Button {
                     Task { await startScan() }
@@ -81,7 +81,7 @@ struct DiskDetailView: View {
                     Spacer()
                     Text(Format.relative(fromUTC: scannedAt))
                         .font(.caption2)
-                        .foregroundStyle(Noir.muted)
+                        .foregroundStyle(Palette.muted)
                 }
             }
         }
@@ -92,7 +92,7 @@ struct DiskDetailView: View {
             HStack {
                 Image(systemName: entry.isDir ? "folder" : "doc")
                     .font(.caption)
-                    .foregroundStyle(entry.isDir ? Noir.accent : Noir.muted)
+                    .foregroundStyle(entry.isDir ? Palette.accent : Palette.muted)
                 Text(entry.name).font(.system(.footnote, design: .monospaced)).lineLimit(1)
                 Spacer()
                 Text(Format.bytes(entry.bytes))
@@ -146,11 +146,11 @@ struct BrowseView: View {
                 Section {
                     Text(listing.path)
                         .font(.system(.caption2, design: .monospaced))
-                        .foregroundStyle(Noir.muted)
+                        .foregroundStyle(Palette.muted)
                     Text("Total: \(Format.bytes(listing.totalBytes))")
                         .font(.caption)
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
 
                 Section {
                     ForEach(listing.entries) { entry in
@@ -165,11 +165,11 @@ struct BrowseView: View {
                         }
                     }
                 }
-                .listRowBackground(Noir.surface)
+                .listRowBackground(Palette.surface)
             }
             .scrollContentBackground(.hidden)
         }
-        .background(Noir.bg)
+        .background(Palette.bg)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .task { if case .idle = state { await load() } }
@@ -180,7 +180,7 @@ struct BrowseView: View {
             HStack {
                 Image(systemName: entry.isDir ? "folder" : "doc")
                     .font(.caption)
-                    .foregroundStyle(entry.isDir ? Noir.accent : Noir.muted)
+                    .foregroundStyle(entry.isDir ? Palette.accent : Palette.muted)
                 Text(entry.name).font(.system(.footnote, design: .monospaced)).lineLimit(1)
                 Spacer()
                 Text(Format.bytes(entry.bytes)).font(.caption).monospacedDigit()

@@ -8,7 +8,7 @@ struct HolocronApp: App {
         WindowGroup {
             RootView()
                 .environment(settings)
-                .tint(Noir.accent)
+                .tint(Palette.accent)
                 .preferredColorScheme(.dark)
         }
     }

@@ -7,7 +7,6 @@ enum APIError: LocalizedError, Equatable {
     case unauthorized
     case noToken
     case notReachable
-    case accessDenied
     case server(status: Int, message: String)
     case decoding
 
@@ -24,8 +23,6 @@ enum APIError: LocalizedError, Equatable {
             // reachable through the public domain, where the answer would be no
             // and the advice wrong.
             "No se pudo conectar con el servidor. Revisá la dirección en Ajustes."
-        case .accessDenied:
-            "Cloudflare Access rechazó el pedido. Revisá el service token en Ajustes."
         case let .server(status, message):
             message.isEmpty ? "El servidor respondió \(status)." : message
         case .decoding:
@@ -39,17 +36,10 @@ enum APIError: LocalizedError, Equatable {
 struct APIClient: Sendable {
     let baseURL: URL
     let token: String
-    /// Cloudflare Access service token, for when the server is published
-    /// through a tunnel with Access in front. Empty on a LAN install, where
-    /// there is nothing in the way.
-    let accessClientID: String
-    let accessClientSecret: String
 
-    init(baseURL: URL, token: String, accessClientID: String = "", accessClientSecret: String = "") {
+    init(baseURL: URL, token: String) {
         self.baseURL = baseURL
         self.token = token
-        self.accessClientID = accessClientID
-        self.accessClientSecret = accessClientSecret
     }
 
     private static let decoder = JSONDecoder()
@@ -146,28 +136,18 @@ struct APIClient: Sendable {
         try await send("media/sync", method: "POST")
     }
 
-    // MARK: - Subtitles
+    // MARK: - Live screens
 
-    func subtitles() async throws -> SubtitlesReport {
-        try await get("subtitles")
+    func hardware() async throws -> HardwareReading {
+        try await get("hardware")
     }
 
-    func searchSubtitles(title: String, year: Int) async throws -> [SubtitleResult] {
-        var query = [URLQueryItem(name: "title", value: title)]
-        if year > 0 {
-            query.append(URLQueryItem(name: "year", value: String(year)))
-        }
-        return try await get("subtitles/search", query: query, as: SubtitleResults.self).results
+    func activity() async throws -> ActivityReading {
+        try await get("activity")
     }
 
-    func downloadSubtitle(fileID: String, path: String) async throws {
-        struct Body: Encodable {
-            let fileId: Int
-            let path: String
-        }
-        guard let numeric = Int(fileID) else { throw APIError.decoding }
-        try await send("subtitles/download", method: "POST",
-                       body: Body(fileId: numeric, path: path))
+    func services() async throws -> ServicesReading {
+        try await get("services")
     }
 
     // MARK: - Torrents
@@ -230,12 +210,6 @@ struct APIClient: Sendable {
         var req = URLRequest(url: url)
         req.httpMethod = method
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        // Access checks these before the request ever reaches the Pi. Holocron
-        // still checks the bearer token afterwards: two layers, on purpose.
-        if !accessClientID.isEmpty, !accessClientSecret.isEmpty {
-            req.setValue(accessClientID, forHTTPHeaderField: "CF-Access-Client-Id")
-            req.setValue(accessClientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
-        }
         req.timeoutInterval = 20
         return req
     }
@@ -277,14 +251,6 @@ struct APIClient: Sendable {
 
         guard let http = response as? HTTPURLResponse else { throw APIError.decoding }
 
-        // An Access challenge does not look like an API error: URLSession
-        // follows the redirect and hands back the login page with status 200,
-        // so decoding would fail with "el servidor respondió algo inesperado"
-        // and send the user looking in the wrong place.
-        if Self.isAccessChallenge(http) {
-            throw APIError.accessDenied
-        }
-
         switch http.statusCode {
         case 200..<300:
             return data
@@ -295,34 +261,6 @@ struct APIClient: Sendable {
         default:
             throw APIError.server(status: http.statusCode, message: Self.serverMessage(data))
         }
-    }
-
-    /// Recognises Cloudflare Access getting in the way.
-    ///
-    /// Access stamps `cf-access-aud` and `cf-access-domain` on its own
-    /// responses, and that is the only signal present in every rejection
-    /// measured against the real deployment. Everything else varies: the status
-    /// is 403 for a Service Auth refusal and 302 for a browser with no session,
-    /// `WWW-Authenticate` appears only on the AJAX-style 401, there is no
-    /// redirect to follow on the 403 — and the body is **not** always HTML.
-    /// Asked with `Accept: application/json`, Access answers 403 with
-    /// `{"message":"Forbidden…"}`, which is why "it never speaks JSON" cannot
-    /// be the rule even though it is tempting. Ordered by how much each signal
-    /// can be trusted.
-    static func isAccessChallenge(_ http: HTTPURLResponse) -> Bool {
-        // 1. Access identifying itself, regardless of status, body or redirect.
-        if http.value(forHTTPHeaderField: "cf-access-aud") != nil { return true }
-        if http.value(forHTTPHeaderField: "cf-access-domain") != nil { return true }
-        // 2. The redirect was followed and we landed on the login host.
-        if http.url?.host()?.hasSuffix(".cloudflareaccess.com") == true { return true }
-        // 3. The challenge header, on the AJAX-shaped 401.
-        if http.value(forHTTPHeaderField: "WWW-Authenticate")?
-            .lowercased().contains("cloudflare-access") == true { return true }
-        // 4. Last resort, for an Access version that stops announcing itself:
-        // HTML where this API only ever answers JSON.
-        guard http.value(forHTTPHeaderField: "Content-Type")?
-            .lowercased().contains("text/html") == true else { return false }
-        return http.statusCode == 401 || http.statusCode == 403 || (300..<400).contains(http.statusCode)
     }
 
     /// Pulls the `error` field out of an error response, if present.

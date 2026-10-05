@@ -1,0 +1,116 @@
+{
+ "playing": [
+  {
+   "title": "The Bear",
+   "subtitle": "T2E04 Honeydew",
+   "who": "cristian · Living (Jellyfin Android TV)",
+   "client": "Jellyfin Android TV",
+   "paused": false,
+   "position": "15:00 de 30:00",
+   "width": "50.0",
+   "method": "transcodificando",
+   "transcode": true,
+   "hardware": "Quick Sync",
+   "onCPU": false,
+   "reasons": [
+    "video de 10 bits"
+   ],
+   "detail": "1080p · h264 · 8.0 Mb/s"
+  }
+ ],
+ "idle": 2,
+ "downloads": [
+  {
+   "app": "Sonarr",
+   "subject": "The Bear · T2E05",
+   "release": "",
+   "pct": "100 %",
+   "width": "100.0",
+   "speed": "",
+   "eta": "",
+   "state": "importación trabada",
+   "problem": true,
+   "messages": [
+    "No se encontraron archivos aptos para importar"
+   ]
+  },
+  {
+   "app": "Radarr",
+   "subject": "Dune (2021)",
+   "release": "",
+   "pct": "42 %",
+   "width": "42.0",
+   "speed": "4.8 MiB/s",
+   "eta": "faltan 20m",
+   "state": "bajando",
+   "problem": false,
+   "messages": null
+  }
+ ],
+ "recent": [
+  {
+   "title": "The Social Dilemma",
+   "subtitle": "(2020)",
+   "when": "hace 3 h"
+  }
+ ],
+ "down": "4.8 MiB/s",
+ "up": "0 B/s",
+ "errors": null,
+ "hasJellyfin": true,
+ "hasTorrents": true,
+ "hasArr": true,
+ "requests": [
+  {
+   "title": "Street Fighter (2026)",
+   "kind": "película",
+   "by": "cristian",
+   "when": "hace 2 días",
+   "state": "en cines en 8 días",
+   "done": false,
+   "stuck": false
+  },
+  {
+   "title": "Deadloch (2023)",
+   "kind": "serie",
+   "by": "cristian",
+   "when": "hace 3 días",
+   "state": "disponible en parte",
+   "done": false,
+   "stuck": false
+  }
+ ],
+ "reqSummary": "21 pedidos",
+ "hasSeerr": true,
+ "upcoming": [
+  {
+   "subject": "Street Fighter (2026)",
+   "when": "en 8 días",
+   "kind": "cines",
+   "app": "Radarr"
+  }
+ ],
+ "attention": [
+  {
+   "text": "Radarr sigue buscando 14 películas",
+   "href": "",
+   "warn": false
+  },
+  {
+   "text": "Sonarr sigue buscando 4 episodios",
+   "href": "",
+   "warn": false
+  },
+  {
+   "text": "Sin subtítulos según Bazarr (sólo lo que gestionan Radarr y Sonarr): 11 películas y 499 episodios",
+   "href": "",
+   "warn": false
+  },
+  {
+   "text": "Prowlarr: 5 de 5 indexadores activos, ninguno fallando",
+   "href": "",
+   "warn": false
+  }
+ ],
+ "libAge": "actualizado recién"
+}
