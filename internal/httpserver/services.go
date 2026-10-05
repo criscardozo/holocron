@@ -56,19 +56,6 @@ func servicesView(sn services.Snapshot, configured bool, now time.Time) template
 		}
 		v.Timers = append(v.Timers, st)
 	}
-	if d := sn.Drift; d != nil {
-		sd := &templates.SvcDrift{
-			Age:    "revisado " + ago(now.Sub(d.Generated)),
-			Commit: strings.Fields(d.Commit + " ")[0],
-			// Hourly by design: three hours without a report means the check
-			// stopped, and "0 differences" from then is no longer news.
-			Stale: now.Sub(d.Generated) > 3*time.Hour,
-		}
-		for _, it := range d.Differ {
-			sd.Differ = append(sd.Differ, templates.SvcDiffer{File: it.File, Problem: it.Problem})
-		}
-		v.Drift = sd
-	}
 	if sm := sn.Smart; sm != nil {
 		v.SmartAge = "medido " + ago(now.Sub(sm.Generated))
 		for _, d := range sm.Disks {

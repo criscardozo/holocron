@@ -106,8 +106,6 @@ func TestWriteIOSFixtures(t *testing.T) {
 			{Name: "ginebra-vigia", Last: now.Add(-7 * time.Minute), Next: now.Add(8 * time.Minute), Result: "success"},
 			{Name: "ginebra-respaldo-config", Last: now.Add(-26 * time.Hour), Next: now.Add(124 * time.Hour), Result: "success"},
 		},
-		Drift: &services.Drift{Generated: now.Add(-20 * time.Minute), Commit: "3187b01 2026-10-06T01:28:53+11:00",
-			Differ: []services.DriftItem{{File: "/usr/local/bin/ginebra-trampa", Problem: "no está instalado"}}},
 		Smart: &services.Smart{Generated: now.Add(-3 * time.Hour), Disks: []services.SmartDisk{
 			{Disk: "/dev/nvme0n1", Model: "KINGSTON", Health: "ok", TempC: i64(34), Hours: i64(1351), WearPct: i64(7), Capacity: 256060514304},
 			{Disk: "/dev/sdb", Asleep: true},

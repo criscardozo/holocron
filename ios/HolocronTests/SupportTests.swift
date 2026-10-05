@@ -93,7 +93,7 @@ struct SymbolTests {
             "waveform.path.ecg",
             // The live screens.
             "battery.25", "battery.100.bolt", "bolt.slash.fill", "calendar",
-            "chevron.right", "clock.arrow.circlepath", "checklist", "cpu", "house", "memorychip", "square.grid.2x2", "tag", "thermometer.medium", "exclamationmark.circle",
+            "chevron.right", "clock.arrow.circlepath", "cpu", "house", "memorychip", "square.grid.2x2", "tag", "thermometer.medium", "exclamationmark.circle",
             "hand.raised", "info.circle", "memorychip", "network", "play.tv",
             "server.rack", "sparkles",
         ]

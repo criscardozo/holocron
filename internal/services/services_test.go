@@ -151,32 +151,3 @@ func TestMountUnitsReadAsTheirFolder(t *testing.T) {
 		}
 	}
 }
-
-// TestReadsTheDriftReport reads a capture of Ginebra's deriva.json, and treats
-// a missing file as a server that does not check itself rather than an error.
-func TestReadsTheDriftReport(t *testing.T) {
-	t.Parallel()
-	r := fakeReader(t)
-	r.cfg.DriftFile = "testdata/deriva.json"
-	s := r.Read(t.Context())
-	if s.Drift == nil || len(s.Drift.Differ) != 1 {
-		t.Fatalf("drift = %+v", s.Drift)
-	}
-	if d := s.Drift.Differ[0]; d.File != "/usr/local/bin/ginebra-trampa" || d.Problem != "no está instalado" {
-		t.Errorf("difference = %+v", d)
-	}
-	if s.Drift.Generated.IsZero() || s.Drift.Commit == "" {
-		t.Errorf("drift header = %+v", s.Drift)
-	}
-
-	r.cfg.DriftFile = "testdata/no-such-file.json"
-	s = r.Read(t.Context())
-	if s.Drift != nil {
-		t.Error("a missing report produced a drift card")
-	}
-	for _, e := range s.Errors {
-		if strings.Contains(e, "deriva") {
-			t.Errorf("a missing report was an error: %q", e)
-		}
-	}
-}

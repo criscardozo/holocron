@@ -858,12 +858,6 @@ salud de los discos. En vivo por SSE, cada 15 segundos.
   despertaría el disco SMR. Un disco que estaba dormido cuando se midió dice
   «sin lectura todavía», no error. Los sectores reasignados o pendientes se
   dicen aparte, porque SMART puede seguir diciendo «sano» con 217 reasignados.
-- **Instalación**: el chequeo que Ginebra corre cada hora (`ginebra-deriva`)
-  de lo instalado contra su repo, leído de `HOLOCRON_DRIFT_FILE` o, si no está,
-  de `deriva.json` junto al archivo de SMART. Sin diferencias dice «coincide con
-  el repo» y el commit; con diferencias, cada archivo y el problema con las
-  palabras del servidor, y la baldosa de Servicios en Inicio lo marca. Un
-  reporte de más de tres horas se avisa como viejo: el chequeo dejó de correr.
 
 Dos llamadas a `systemctl` por lectura, sin privilegios, probado dentro del
 mismo sandbox que la unit de Holocron. Las dos formas se midieron antes de

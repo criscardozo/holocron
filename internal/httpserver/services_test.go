@@ -75,23 +75,3 @@ func TestTheServicesPageExplainsWhenNothingIsConfigured(t *testing.T) {
 		t.Errorf("services page = %q", body)
 	}
 }
-
-func TestDriftReadsAsTheServerSaysIt(t *testing.T) {
-	t.Parallel()
-	gen := time.Date(2026, 10, 6, 1, 0, 0, 0, time.UTC)
-	sn := services.Snapshot{Drift: &services.Drift{
-		Generated: gen, Commit: "3187b01 2026-10-06T01:28:53+11:00",
-		Differ: []services.DriftItem{{File: "/usr/local/bin/ginebra-trampa", Problem: "no está instalado"}},
-	}}
-	v := servicesView(sn, true, gen.Add(20*time.Minute))
-	if v.Drift == nil || v.Drift.Commit != "3187b01" || v.Drift.Stale || len(v.Drift.Differ) != 1 {
-		t.Fatalf("drift = %+v", v.Drift)
-	}
-	if tile := servicesTile(v); !tile.Warn || !strings.Contains(tile.Sub, "1 diferencia con el repo") {
-		t.Errorf("tile = %+v", tile)
-	}
-	// Hourly by design: a report from four hours ago is a check that stopped.
-	if old := servicesView(sn, true, gen.Add(4*time.Hour)); !old.Drift.Stale {
-		t.Error("a four-hour-old report was not stale")
-	}
-}
