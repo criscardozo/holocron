@@ -2,7 +2,7 @@
 #
 # Holocron installer / updater for the Raspberry Pi (headless, over the terminal).
 #
-# Downloads the latest published arm64 binary, creates the service user, installs
+# Downloads the latest published binary for this machine (amd64 or arm64), creates the service user, installs
 # the systemd unit and starts the service. Re-running it updates in place. The Pi
 # never compiles anything — it only ever receives the prebuilt binary.
 #
@@ -31,7 +31,9 @@ SYSTEMD_DIR="${SYSTEMD_DIR:-/etc/systemd/system}"
 SERVICE_PATH="$SYSTEMD_DIR/holocron.service"
 SERVICE_USER="holocron"
 STATE_DIR="/var/lib/holocron"
-ASSET="holocron-linux-arm64"
+# Chosen in check_arch from `uname -m`. amd64 is Ginebra, the server; arm64 is
+# the Pi kept as a fallback.
+ASSET=""
 
 UPDATER_PATH="/usr/local/bin/holocron-update"
 UPDATER_UNIT="$SYSTEMD_DIR/holocron-update.path"
@@ -78,8 +80,9 @@ check_arch() {
 	local arch
 	arch="$(uname -m)"
 	case "$arch" in
-		aarch64 | arm64) : ;;
-		*) die "unsupported architecture '$arch'. Holocron ships an arm64 (64-bit) build; a 64-bit Raspberry Pi OS is required." ;;
+		x86_64 | amd64) ASSET="holocron-linux-amd64" ;;
+		aarch64 | arm64) ASSET="holocron-linux-arm64" ;;
+		*) die "unsupported architecture '$arch'. Holocron ships 64-bit builds for x86-64 and arm64 only." ;;
 	esac
 }
 
@@ -282,7 +285,6 @@ power_actions() {
 	cat <<-'ACTIONS'
 	restart-jellyfin	/usr/bin/systemctl restart jellyfin	no	jellyfin.service
 	restart-qbittorrent	/usr/bin/systemctl restart qbittorrent	no	qbittorrent.service
-	restart-cloudflared	/usr/bin/systemctl restart cloudflared	yes	cloudflared.service
 	restart-holocron	/usr/bin/systemctl restart holocron	yes
 	reboot	/usr/bin/systemctl reboot	yes
 	poweroff	/usr/bin/systemctl poweroff	yes

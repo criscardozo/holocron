@@ -1,6 +1,6 @@
 name: Release
 
-# Publishes the arm64 binary the Pi installer downloads. Trigger by pushing a
+# Publishes the amd64 and arm64 binaries the installer downloads. Trigger by pushing a
 # semver tag, e.g.:  git tag v0.1.0 && git push origin v0.1.0
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   release:
-    name: Build & publish arm64 binary
+    name: Build & publish linux binaries
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,18 +25,23 @@ jobs:
       - name: Generate templates
         run: go tool templ generate
 
-      - name: Cross-compile for linux/arm64
+      # Both architectures from the same job: the server moved from a Pi 4
+      # (arm64) to an x86 laptop (amd64), and the Pi is kept as a fallback.
+      # One job, two `go build` runs — no extra runner, no extra minutes worth
+      # counting.
+      - name: Cross-compile for linux/amd64 and linux/arm64
         env:
           CGO_ENABLED: "0"
           GOOS: linux
-          GOARCH: arm64
         run: |
           # Stamp the tag so the running binary can compare itself against the
           # latest published release.
-          go build -trimpath \
-            -ldflags="-s -w -X github.com/cristian/holocron/internal/version.Version=${GITHUB_REF_NAME}" \
-            -o holocron-linux-arm64 ./cmd/holocron
-          sha256sum holocron-linux-arm64 > holocron-linux-arm64.sha256
+          for arch in amd64 arm64; do
+            GOARCH=$arch go build -trimpath \
+              -ldflags="-s -w -X github.com/cristian/holocron/internal/version.Version=${GITHUB_REF_NAME}" \
+              -o holocron-linux-$arch ./cmd/holocron
+            sha256sum holocron-linux-$arch > holocron-linux-$arch.sha256
+          done
 
       # The installer ships with the release too. It runs as root on the Pi, and
       # downloading it from main means running whatever is on main at that
@@ -52,7 +57,7 @@ jobs:
           # Idempotent: re-running the workflow on an existing tag, or moving a
           # tag, updates the assets instead of failing with "release already
           # exists" and leaving a red run behind.
-          assets=(holocron-linux-arm64 holocron-linux-arm64.sha256 scripts/install.sh install.sh.sha256)
+          assets=(holocron-linux-amd64 holocron-linux-amd64.sha256 holocron-linux-arm64 holocron-linux-arm64.sha256 scripts/install.sh install.sh.sha256)
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "${assets[@]}" --clobber
           else

@@ -35,28 +35,28 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 HOLOCRON_LIB_ONLY=1 . "$here/install.sh"
 
 # ── 1. Everything enabled: every control is installed ────────────────────────
-printf 'jellyfin.service\nqbittorrent.service\ncloudflared.service\n' >"$ENABLED_UNITS"
-install_power_helpers >/dev/null
-
-for a in restart-jellyfin restart-qbittorrent restart-cloudflared restart-holocron reboot poweroff; do
-	[ -f "$SYSTEMD_DIR/holocron-$a.path" ] || fail "$a was not installed"
-done
-
-# ── 2. cloudflared disabled: the control goes, and takes its Before= with it ──
-# This is the regression. The tunnel was taken down on purpose; an install must
-# not hand back a button that starts it again.
 printf 'jellyfin.service\nqbittorrent.service\n' >"$ENABLED_UNITS"
 install_power_helpers >/dev/null
 
-[ -f "$SYSTEMD_DIR/holocron-restart-cloudflared.path" ] &&
-	fail "the cloudflared control came back after a reinstall"
-[ -f "$SYSTEMD_DIR/holocron-restart-cloudflared.service" ] &&
-	fail "the cloudflared service unit came back after a reinstall"
+for a in restart-jellyfin restart-qbittorrent restart-holocron reboot poweroff; do
+	[ -f "$SYSTEMD_DIR/holocron-$a.path" ] || fail "$a was not installed"
+done
 
-grep -q 'Before=holocron-restart-cloudflared.path' "$SYSTEMD_DIR/holocron-action-reset.service" &&
+# ── 2. A service turned off: its control goes, and takes its Before= with it ─
+# This is the regression. `systemctl restart` starts a disabled unit, so an
+# install must not hand back a button for a service somebody stopped on purpose
+# (it happened with cloudflared when the public tunnel was taken down).
+printf 'jellyfin.service\n' >"$ENABLED_UNITS"
+install_power_helpers >/dev/null
+
+[ -f "$SYSTEMD_DIR/holocron-restart-qbittorrent.path" ] &&
+	fail "the control for a disabled service came back after a reinstall"
+[ -f "$SYSTEMD_DIR/holocron-restart-qbittorrent.service" ] &&
+	fail "the service unit for a disabled service came back after a reinstall"
+
+grep -q 'Before=holocron-restart-qbittorrent.path' "$SYSTEMD_DIR/holocron-action-reset.service" &&
 	fail "the reset unit still orders itself before a unit that does not exist"
 
-# The ones that should still be there, are.
 for a in restart-jellyfin restart-holocron reboot poweroff; do
 	[ -f "$SYSTEMD_DIR/holocron-$a.path" ] || fail "$a disappeared"
 	grep -q "Before=holocron-$a.path" "$SYSTEMD_DIR/holocron-action-reset.service" ||
@@ -77,10 +77,10 @@ for a in restart-jellyfin restart-qbittorrent; do
 done
 
 # ── 4. Re-enabling brings it back, so the rule is a rule and not a one-way door ─
-printf 'cloudflared.service\n' >"$ENABLED_UNITS"
+printf 'qbittorrent.service\n' >"$ENABLED_UNITS"
 install_power_helpers >/dev/null
-[ -f "$SYSTEMD_DIR/holocron-restart-cloudflared.path" ] ||
-	fail "re-enabling cloudflared did not bring its control back"
+[ -f "$SYSTEMD_DIR/holocron-restart-qbittorrent.path" ] ||
+	fail "re-enabling qbittorrent did not bring its control back"
 
 # ── 5. The trigger a unit watches is still empty and still per-action ────────
 grep -q "PathExists=$STATE_DIR/.reboot-requested" "$SYSTEMD_DIR/holocron-reboot.path" ||

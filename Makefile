@@ -9,7 +9,7 @@ LDFLAGS  = -X github.com/cristian/holocron/internal/version.Version=$(VERSION)
 # templ is pinned as a module tool (see go.mod), so no global install is needed.
 TEMPL := go tool templ
 
-.PHONY: generate build build-pi run test lint vet vulncheck tidy check clean deploy release \
+.PHONY: generate build build-linux build-pi run test lint vet vulncheck tidy check clean deploy release \
 	ios-project ios-build ios-test
 
 IOS_DIR         := ios
@@ -24,10 +24,18 @@ generate:
 build: generate
 	go build -o $(DIST)/$(BINARY) $(PKG)
 
-## build-pi: cross-compile a static arm64 binary for the Raspberry Pi
-build-pi: generate
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
-		-ldflags="-s -w $(if $(VERSION),$(LDFLAGS),)" -o $(DIST)/$(BINARY)-arm64 $(PKG)
+# The server is Ginebra (x86-64) now; the Pi is kept as a fallback, so both
+# targets stay buildable. Override with GOARCH=arm64.
+GOARCH ?= amd64
+
+## build-linux: cross-compile a static linux binary (GOARCH=amd64 by default, or arm64)
+build-linux: generate
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(GOARCH) go build -trimpath \
+		-ldflags="-s -w $(if $(VERSION),$(LDFLAGS),)" -o $(DIST)/$(BINARY)-$(GOARCH) $(PKG)
+
+## build-pi: kept for the fallback Pi (same as build-linux GOARCH=arm64)
+build-pi:
+	$(MAKE) build-linux GOARCH=arm64
 
 ## run: run locally
 run: generate
@@ -77,11 +85,12 @@ ios-install: ios-project
 	xcrun devicectl device install app --device "$(IOS_DEVICE)" \
 		$(DIST)/ios/Build/Products/Release-iphoneos/Holocron.app
 
-## deploy: build the arm64 binary and copy it to the Pi (usage: make deploy PI=user@host)
-deploy: build-pi
-	@test -n "$(PI)" || (echo "set PI=user@host" && exit 1)
-	scp $(DIST)/$(BINARY)-arm64 $(PI):/tmp/holocron
-	@echo "Copied. On the Pi: sudo mv /tmp/holocron /usr/local/bin/holocron && sudo systemctl restart holocron"
+## deploy: build and copy the binary to the server (usage: make deploy HOST=ginebra [GOARCH=arm64])
+HOST ?= $(PI)
+deploy: build-linux
+	@test -n "$(HOST)" || (echo "set HOST=user@host" && exit 1)
+	scp $(DIST)/$(BINARY)-$(GOARCH) $(HOST):/tmp/holocron
+	@echo "Copied. On the server: sudo install -m 0755 /tmp/holocron /usr/local/bin/holocron && sudo systemctl restart holocron"
 
 ## ios-project: regenerate the Xcode project from ios/project.yml
 ios-project:
@@ -98,12 +107,15 @@ ios-test: ios-project
 	cd $(IOS_DIR) && xcodebuild -project $(IOS_SCHEME).xcodeproj -scheme $(IOS_SCHEME) \
 		-destination '$(IOS_DESTINATION)' test
 
-## release: cross-compile arm64, checksum it and publish a GitHub release (usage: make release VERSION=v0.1.0)
-release: build-pi
+## release: prefer pushing a tag (CI publishes both architectures); this is the manual fallback
+release:
 	@test -n "$(VERSION)" || (echo "set VERSION=vX.Y.Z" && exit 1)
 	@command -v gh >/dev/null || (echo "missing 'gh' CLI (https://cli.github.com/)" && exit 1)
-	cp $(DIST)/$(BINARY)-arm64 $(DIST)/$(BINARY)-linux-arm64
-	cd $(DIST) && shasum -a 256 $(BINARY)-linux-arm64 > $(BINARY)-linux-arm64.sha256
+	$(MAKE) build-linux GOARCH=amd64
+	$(MAKE) build-linux GOARCH=arm64
+	for a in amd64 arm64; do cp $(DIST)/$(BINARY)-$$a $(DIST)/$(BINARY)-linux-$$a; \
+		(cd $(DIST) && shasum -a 256 $(BINARY)-linux-$$a > $(BINARY)-linux-$$a.sha256); done
 	gh release create $(VERSION) \
+		$(DIST)/$(BINARY)-linux-amd64 $(DIST)/$(BINARY)-linux-amd64.sha256 \
 		$(DIST)/$(BINARY)-linux-arm64 $(DIST)/$(BINARY)-linux-arm64.sha256 \
 		--title "Holocron $(VERSION)" --generate-notes
