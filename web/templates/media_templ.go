@@ -219,7 +219,7 @@ func MediaBody(v MediaCardView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div><div class=\"cap\">sin subs ES</div></div></div><div class=\"w-foot\"><a class=\"w-link\" href=\"/media\">Ver inventario")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div><div class=\"cap\" title=\"Según Jellyfin, en toda la biblioteca (incluye lo que no gestionan Radarr ni Sonarr)\">sin subs ES (Jellyfin)</div></div></div><div class=\"w-foot\"><a class=\"w-link\" href=\"/media\">Ver inventario")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -356,7 +356,7 @@ func MediaDetailSection(v MediaPageView) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div><div class=\"cap\">sin subtítulos ES</div></div></div><div class=\"actions\"><form hx-post=\"/media/sync\" hx-target=\"#media-status\" hx-swap=\"innerHTML\"><button class=\"btn btn-primary\" type=\"submit\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div><div class=\"cap\" title=\"Según Jellyfin, en toda la biblioteca (incluye lo que no gestionan Radarr ni Sonarr). Bazarr cuenta aparte, en Actividad, sólo lo suyo.\">sin subtítulos ES, según Jellyfin</div></div></div><div class=\"actions\"><form hx-post=\"/media/sync\" hx-target=\"#media-status\" hx-swap=\"innerHTML\"><button class=\"btn btn-primary\" type=\"submit\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

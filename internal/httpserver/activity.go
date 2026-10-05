@@ -138,7 +138,7 @@ func libraryView(v *templates.ActivityView, l activity.Library, now time.Time) {
 	if b := l.Subs; b != nil {
 		if b.Movies > 0 || b.Episodes > 0 {
 			v.Attention = append(v.Attention, templates.ActAttention{
-				Text: "Sin subtítulos según Bazarr: " + templates.Plural(b.Movies, "película", "películas") +
+				Text: "Sin subtítulos según Bazarr (sólo lo que gestionan Radarr y Sonarr): " + templates.Plural(b.Movies, "película", "películas") +
 					" y " + templates.Plural(b.Episodes, "episodio", "episodios"),
 			})
 		}
