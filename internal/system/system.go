@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -175,15 +176,77 @@ func memory() (total, used uint64, err error) {
 	return memTotal, memTotal - memAvailable, nil
 }
 
-// tempC reads the SoC temperature from the first thermal zone (milli-Celsius).
+// sysRoot is where /sys is read from. A variable so the sensor search can be
+// tested against a fake tree.
+var sysRoot = "/sys"
+
+// tempC reads the CPU temperature (milli-Celsius in sysfs).
+//
+// thermal_zone0 was right on the Pi, where the only zone is the SoC. On an x86
+// laptop zone 0 is often acpitz — the motherboard's idea of "the system", not
+// the CPU — and reads tens of degrees off. So the search goes, in order:
+//
+//  1. hwmon named coretemp, the input labelled "Package id 0" (the whole CPU
+//     package, which is what throttles);
+//  2. a thermal zone of type x86_pkg_temp, the same number by another route;
+//  3. thermal_zone0, the old behaviour, so the Pi keeps working.
 func tempC() (float64, error) {
-	b, err := os.ReadFile("/sys/class/thermal/thermal_zone0/temp")
+	if v, ok := coretempPackage(); ok {
+		return v, nil
+	}
+	if v, ok := thermalZoneOfType("x86_pkg_temp"); ok {
+		return v, nil
+	}
+	v, err := readMilli(filepath.Join(sysRoot, "class/thermal/thermal_zone0/temp"))
 	if err != nil {
 		return 0, fmt.Errorf("read thermal zone: %w", err)
 	}
+	return v, nil
+}
+
+func coretempPackage() (float64, bool) {
+	dirs, _ := filepath.Glob(filepath.Join(sysRoot, "class/hwmon/hwmon*"))
+	for _, d := range dirs {
+		name, err := os.ReadFile(filepath.Join(d, "name")) //#nosec G304 -- sysfs paths found by glob under sysRoot
+		if err != nil || strings.TrimSpace(string(name)) != "coretemp" {
+			continue
+		}
+		labels, _ := filepath.Glob(filepath.Join(d, "temp*_label"))
+		for _, l := range labels {
+			b, err := os.ReadFile(l) //#nosec G304 -- sysfs paths found by glob under sysRoot
+			if err != nil || !strings.HasPrefix(strings.TrimSpace(string(b)), "Package id") {
+				continue
+			}
+			if v, err := readMilli(strings.TrimSuffix(l, "_label") + "_input"); err == nil {
+				return v, true
+			}
+		}
+	}
+	return 0, false
+}
+
+func thermalZoneOfType(want string) (float64, bool) {
+	zones, _ := filepath.Glob(filepath.Join(sysRoot, "class/thermal/thermal_zone*"))
+	for _, z := range zones {
+		b, err := os.ReadFile(filepath.Join(z, "type")) //#nosec G304 -- sysfs paths found by glob under sysRoot
+		if err != nil || strings.TrimSpace(string(b)) != want {
+			continue
+		}
+		if v, err := readMilli(filepath.Join(z, "temp")); err == nil {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+func readMilli(path string) (float64, error) {
+	b, err := os.ReadFile(path) //#nosec G304 -- fixed sysfs paths built from sysRoot
+	if err != nil {
+		return 0, err
+	}
 	milli, err := strconv.ParseFloat(strings.TrimSpace(string(b)), 64)
 	if err != nil {
-		return 0, fmt.Errorf("parse temp: %w", err)
+		return 0, fmt.Errorf("parse %s: %w", path, err)
 	}
 	return milli / 1000, nil
 }
