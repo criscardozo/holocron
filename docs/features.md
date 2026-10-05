@@ -907,8 +907,14 @@ reproduciendo, los pedidos de Seerr y la grilla de Medios.
   los baja una vez a 300 px, los guarda en `artwork/` junto a la base y los sirve
   de ahí; el navegador los cachea una semana. Jellyfin y TMDb no se enteran de
   cada visita, y la API key no sale del servidor.
-- **Peso**: unos 25–35 KB por póster. Una biblioteca de mil títulos son unos
-  30 MB en disco, que se llenan de a poco, a medida que se miran.
+- **Peso y costo, medidos en Ginebra** (366 ítems): 13 MB en disco, unos 36 KB
+  por póster. La primera vez que se piden todos, Jellyfin escala cada uno y se
+  lleva la CPU (21 s de CPU en 9,5 s con 4 en paralelo; por eso quedaron en 2);
+  la segunda sale todo del disco y Jellyfin no se entera. La grilla carga con
+  `loading="lazy"`, así que un navegador pide sólo lo que se ve.
+- **Agregado hace poco** junta los episodios de una serie en una entrada
+  («Deadloch · 8 episodios nuevos»), con el póster de la serie: una temporada
+  entera no tapa el resto.
 - **Lo que falta** se sirve como un SVG en blanco, no como un 404, y se recuerda
   una hora. Detalle en [ui.md](ui.md#pósters).
 

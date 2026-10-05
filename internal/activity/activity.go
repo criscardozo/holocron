@@ -79,8 +79,11 @@ type Snapshot struct {
 // polling the house rule is about.
 const recentEvery = 5 * time.Minute
 
-// recentLimit is how many recent items are shown.
-const recentLimit = 12
+// recentLimit is how many recent items are read. More than are shown: the
+// episodes of one series become a single entry, and a season dropped at once
+// would otherwise leave the row with one title on it. One request every
+// recentEvery either way.
+const recentLimit = 40
 
 // Sampler reads a Snapshot. It keeps the recently-added list between readings.
 //

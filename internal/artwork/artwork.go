@@ -42,8 +42,10 @@ const maxAge = 30 * 24 * time.Hour
 const missTTL = time.Hour
 
 // maxFetches caps concurrent requests to the sources. A first visit to the
-// media grid asks for dozens of posters at once.
-const maxFetches = 4
+// media grid asks for dozens of posters at once, and Jellyfin scales each one:
+// measured on Ginebra, four at a time kept more than two of its cores busy for
+// the whole pass. Two halves that peak, and it happens once per poster.
+const maxFetches = 2
 
 // maxBody caps a TMDb response read into memory.
 const maxBody = 4 << 20

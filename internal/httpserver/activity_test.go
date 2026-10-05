@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -161,5 +162,38 @@ func TestProcessingSaysWhatIsReallyHappening(t *testing.T) {
 		if v.Requests[i].State != w {
 			t.Errorf("%s = %q, want %q", v.Requests[i].Title, v.Requests[i].State, w)
 		}
+	}
+}
+
+// TestASeasonDropIsOneEntry. Eight episodes of one series arriving together
+// read as one thing that happened, not as eight copies of the same poster.
+func TestASeasonDropIsOneEntry(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
+	ep := func(n int) jellyfin.Added {
+		season := 1
+		return jellyfin.Added{
+			ID: "e" + strconv.Itoa(n), Name: "Episodio " + strconv.Itoa(n), Type: jellyfin.TypeEpisode,
+			SeriesName: "Deadloch", SeriesID: "f27caa37e5142225cceded48f6553502",
+			ParentIndexNumber: &season, IndexNumber: &n, DateCreated: now.Add(-time.Duration(n) * time.Hour),
+		}
+	}
+	items := []jellyfin.Added{ep(8), ep(7), {ID: "m", Name: "Twister", Type: "Movie", ProductionYear: 1996, DateCreated: now}, ep(6)}
+	got := recentView(items, now)
+	if len(got) != 2 {
+		t.Fatalf("got %d entries, want 2: %+v", len(got), got)
+	}
+	if got[0].Title != "Deadloch" || got[0].Subtitle != "3 episodios nuevos" || got[0].When != "hace 8 h" {
+		t.Errorf("series entry = %+v", got[0])
+	}
+	if got[0].Art != "/art/jf/f27caa37e5142225cceded48f6553502" {
+		t.Errorf("series poster = %q, want the series' own", got[0].Art)
+	}
+	if got[1].Title != "Twister" || got[1].Subtitle != "(1996)" {
+		t.Errorf("film entry = %+v", got[1])
+	}
+	one := recentView([]jellyfin.Added{ep(2)}, now)
+	if len(one) != 1 || one[0].Subtitle != "T1E02 Episodio 2" {
+		t.Errorf("a single episode keeps its label: %+v", one)
 	}
 }

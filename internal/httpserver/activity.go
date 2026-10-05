@@ -39,23 +39,52 @@ func activityView(a activity.Snapshot, now time.Time) templates.ActivityView {
 	for _, d := range a.Downloads {
 		v.Downloads = append(v.Downloads, downloadView(d, now))
 	}
-	for _, it := range a.Recent {
+	v.Recent = recentView(a.Recent, now)
+	libraryView(&v, a.Library, now)
+	refineRequests(&v, a, now)
+	return v
+}
+
+// recentView lists what arrived, one entry per film and one per series. A
+// season dropped at once is eight episodes with the same poster, which would
+// push everything else off the row; as one entry it says what happened —
+// "Deadloch · 8 episodios nuevos" — and leaves room for the rest. Items come
+// newest first, so each series sits where its newest episode did.
+func recentView(items []jellyfin.Added, now time.Time) []templates.ActRecent {
+	var out []templates.ActRecent
+	bySeries := map[string]int{} // series → index in out
+	counts := map[string]int{}
+	for _, it := range items {
 		r := templates.ActRecent{
 			Title: it.Name, When: ago(now.Sub(it.DateCreated)),
 			Art: artwork.URL(artwork.KindJellyfin, it.PosterID()),
 		}
 		if it.Type == jellyfin.TypeEpisode && it.SeriesName != "" {
+			key := it.SeriesID
+			if key == "" {
+				key = it.SeriesName
+			}
+			if i, ok := bySeries[key]; ok {
+				counts[key]++
+				out[i].Subtitle = templates.Plural(counts[key], "episodio nuevo", "episodios nuevos")
+				continue
+			}
+			bySeries[key], counts[key] = len(out), 1
 			r.Title = it.SeriesName
-			r.Subtitle = episodeLabel(it.ParentIndexNumber, it.IndexNumber) + " " + it.Name
+			r.Subtitle = strings.TrimSpace(episodeLabel(it.ParentIndexNumber, it.IndexNumber) + " " + it.Name)
 		} else if it.ProductionYear > 0 {
 			r.Subtitle = fmt.Sprintf("(%d)", it.ProductionYear)
 		}
-		v.Recent = append(v.Recent, r)
+		out = append(out, r)
 	}
-	libraryView(&v, a.Library, now)
-	refineRequests(&v, a, now)
-	return v
+	if len(out) > recentShown {
+		out = out[:recentShown]
+	}
+	return out
 }
+
+// recentShown caps the entries: a row of posters, and a card in the app.
+const recentShown = 16
 
 // refineRequests replaces Seerr's "processing" with what is actually going on.
 //
