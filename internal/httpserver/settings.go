@@ -104,6 +104,10 @@ func (s *Server) handleSaveQbit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
+	if s.deps.Settings.Managed(settings.KeyQbitPass) {
+		s.redirect(w, r, "/settings?notice="+url.QueryEscape("qBittorrent lo gestiona el servidor: no se cambia desde acá."))
+		return
+	}
 	// Normalised, not stored as typed: a bare "192.168.0.2:8080" is not a URL
 	// and would fail every later call. Same trap as the Jellyfin address.
 	address, err := netaddr.Normalise(r.PostFormValue("url"))

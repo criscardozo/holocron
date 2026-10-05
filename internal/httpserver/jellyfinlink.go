@@ -49,6 +49,10 @@ func (s *Server) handleJellyfinLinkCancel(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Server) handleJellyfinUnlink(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Settings.Managed(settings.KeyJellyfinToken) {
+		s.redirect(w, r, "/settings?notice="+url.QueryEscape("Jellyfin lo gestiona el servidor: no se desvincula desde acá."))
+		return
+	}
 	if err := s.deps.JellyfinLink.Unlink(r.Context()); err != nil {
 		s.serverError(w, r, err)
 		return
@@ -75,6 +79,10 @@ func (s *Server) handleSaveJellyfinURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.deps.Settings.Set(r.Context(), settings.KeyJellyfinURL, address); err != nil {
+		if errors.Is(err, settings.ErrManaged) {
+			s.redirect(w, r, "/settings?notice="+url.QueryEscape("Jellyfin lo gestiona el servidor: la dirección no se cambia desde acá."))
+			return
+		}
 		s.serverError(w, r, err)
 		return
 	}

@@ -65,9 +65,8 @@ func LoadCredentials(dir string) (Credentials, error) {
 // Manage installs the credentials as read-only settings.
 //
 // Only what Holocron already stored as settings is mapped here: Jellyfin and
-// qBittorrent. The *arr keys are read directly by their clients through Get.
-// Service addresses default to loopback, where Ginebra runs them, unless a
-// value was saved by hand.
+// qBittorrent. The *arr keys are read directly by their clients through
+// Credential. Their addresses are pinned to loopback, where Ginebra runs them.
 func (s *Store) Manage(c Credentials) {
 	m := map[string]string{}
 	if v := c[CredJellyfin]; v != "" {
@@ -82,17 +81,22 @@ func (s *Store) Manage(c Credentials) {
 		m[KeyQbitUser] = strings.TrimSpace(user)
 		m[KeyQbitPass] = strings.TrimRight(pass, "\r\n")
 	}
+	// The address is pinned along with the key, never left editable. Without
+	// this a credential provided by the server would be sent to whatever host
+	// was typed into the settings form — and that form has no login on the
+	// LAN, so anyone on the network or the tailnet could point it at a machine
+	// of theirs and collect the server's own Jellyfin admin key from the next
+	// request. A key the server manages only ever goes where the server says.
+	if _, ok := m[KeyJellyfinToken]; ok {
+		m[KeyJellyfinURL] = "http://127.0.0.1:8096"
+	}
+	if _, ok := m[KeyQbitUser]; ok {
+		m[KeyQbitURL] = "http://127.0.0.1:8080"
+	}
 	for name, v := range c {
 		m["cred."+name] = v
 	}
 	s.managed = m
-	s.defaults = map[string]string{}
-	if _, ok := m[KeyJellyfinToken]; ok {
-		s.defaults[KeyJellyfinURL] = "http://127.0.0.1:8096"
-	}
-	if _, ok := m[KeyQbitUser]; ok {
-		s.defaults[KeyQbitURL] = "http://127.0.0.1:8080"
-	}
 }
 
 // Managed reports whether a setting comes from the server.

@@ -37,9 +37,6 @@ type Store struct {
 	// as API keys systemd hands over with LoadCredential. They are consulted
 	// before the database and never written to it. See credentials.go.
 	managed map[string]string
-	// defaults fill in a setting nobody saved, such as a service address that
-	// is loopback on Ginebra. A saved value always wins.
-	defaults map[string]string
 }
 
 // NewStore creates a Store.
@@ -53,9 +50,6 @@ func (s *Store) Get(ctx context.Context, key string) (string, bool, error) {
 	var v string
 	err := s.db.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, key).Scan(&v)
 	if errors.Is(err, sql.ErrNoRows) {
-		if d, ok := s.defaults[key]; ok {
-			return d, true, nil
-		}
 		return "", false, nil
 	}
 	if err != nil {

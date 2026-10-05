@@ -39,7 +39,7 @@ func TestCredentialsFromSystemdAreReadOnlySettings(t *testing.T) {
 		KeyJellyfinToken: "abc123",
 		KeyQbitUser:      "admin",
 		KeyQbitPass:      "secreto",
-		// Loopback by default, where Ginebra runs them.
+		// Pinned to loopback, where Ginebra runs them.
 		KeyJellyfinURL: "http://127.0.0.1:8096",
 		KeyQbitURL:     "http://127.0.0.1:8080",
 	} {
@@ -54,12 +54,17 @@ func TestCredentialsFromSystemdAreReadOnlySettings(t *testing.T) {
 	if err := st.Set(ctx, KeyJellyfinToken, "otro"); !errors.Is(err, ErrManaged) {
 		t.Errorf("Set on a managed key: %v, want ErrManaged", err)
 	}
-	// But a hand-saved address still wins over the loopback default.
-	if err := st.Set(ctx, KeyJellyfinURL, "http://10.0.0.5:8096"); err != nil {
-		t.Fatal(err)
+	// Nor can it redirect a managed key somewhere else. The settings form
+	// has no login on the LAN: if the address stayed editable, anyone on the
+	// network could point it at a host of theirs and receive the server's
+	// Jellyfin admin key on the next request.
+	for _, key := range []string{KeyJellyfinURL, KeyQbitURL} {
+		if err := st.Set(ctx, key, "http://203.0.113.9:8096"); !errors.Is(err, ErrManaged) {
+			t.Errorf("Set(%s) on a managed service: %v, want ErrManaged", key, err)
+		}
 	}
-	if got := st.GetDefault(ctx, KeyJellyfinURL, ""); got != "http://10.0.0.5:8096" {
-		t.Errorf("saved URL lost to the default: %q", got)
+	if got := st.GetDefault(ctx, KeyJellyfinURL, ""); got != "http://127.0.0.1:8096" {
+		t.Errorf("the managed key would go to %q", got)
 	}
 }
 
