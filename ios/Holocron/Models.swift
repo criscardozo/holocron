@@ -161,6 +161,9 @@ struct JellyfinLinkStatus: Codable {
     /// Whether the account that authorised is a Jellyfin administrator. Worth
     /// surfacing: asking the server to re-read metadata requires one.
     var admin: Bool?
+    /// The server provides Jellyfin's key itself, as Ginebra does: there is
+    /// no code to approve and nothing to link.
+    var managed: Bool?
 
     var isPending: Bool { state == "pending" }
     var isLinked: Bool { state == "linked" }

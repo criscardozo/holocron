@@ -84,7 +84,7 @@ struct SettingsView: View {
             } header: {
                 Text("Jellyfin")
             } footer: {
-                Text("Aprobás un código en Jellyfin y el token queda guardado en el servidor, sin buscar API keys a mano. La dirección se carga desde la web.")
+                Text("Aprobás un código en Jellyfin y el token queda guardado en el servidor, sin buscar API keys a mano. Si el servidor ya trae la clave de Jellyfin, como Ginebra, no hace falta.")
             }
             .listRowBackground(Palette.surface)
 

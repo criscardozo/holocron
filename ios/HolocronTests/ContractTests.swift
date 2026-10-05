@@ -174,6 +174,14 @@ struct ContractTests {
         #expect(status.admin == true)
     }
 
+    @Test func jellyfinLinkManaged() throws {
+        let status = try decode(JellyfinLinkStatus.self, "jellyfin_link_managed")
+        // The server's own key: linked, and nothing for the app to offer.
+        #expect(status.isLinked)
+        #expect(status.managed == true)
+        #expect(status.admin == true)
+    }
+
     // The live screens. Their fixtures come from the Go encoder over readings
     // measured on Ginebra (internal/httpserver/fixtures_test.go).
 

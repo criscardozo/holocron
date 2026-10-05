@@ -35,6 +35,10 @@ var (
 	// is no cloud service to discover the server through, so the URL comes
 	// first and the code second.
 	ErrNoServerURL = errors.New("set the jellyfin address first")
+	// ErrServerManaged means the server provides Jellyfin's key itself, so
+	// there is nothing to link: a Quick Connect token could not be stored over
+	// it, and would add nothing if it could.
+	ErrServerManaged = errors.New("jellyfin key is managed by the server")
 )
 
 // Status is the snapshot the UI renders while linking.
@@ -45,6 +49,9 @@ type Status struct {
 	// asking Jellyfin to write metadata requires an administrator.
 	User  string
 	Admin bool
+	// Managed says the link is the server's own key, not a Quick Connect
+	// token: there is nothing to approve, and nothing to unlink.
+	Managed bool
 }
 
 // LinkService drives Quick Connect and persists its result. The pending secret
@@ -105,8 +112,26 @@ func (s *LinkService) client(ctx context.Context) (*Client, error) {
 	return s.newClient(base, "", device), nil
 }
 
+// managedStatus is what a link looks like when the server provides the key.
+func (s *LinkService) managedStatus(ctx context.Context) (Status, bool) {
+	if !s.settings.Managed(settings.KeyJellyfinToken) {
+		return Status{}, false
+	}
+	return Status{
+		State: StateLinked, Managed: true,
+		User:  s.settings.GetDefault(ctx, settings.KeyJellyfinUser, ""),
+		Admin: IsAdmin(ctx, s.settings),
+	}, true
+}
+
 // Start requests a code for the user to approve in Jellyfin.
 func (s *LinkService) Start(ctx context.Context) (Status, error) {
+	// Before asking Jellyfin for anything: on Ginebra the approval used to
+	// succeed and then fail to store the token, which read as a code that
+	// was never approved.
+	if _, ok := s.managedStatus(ctx); ok {
+		return Status{}, ErrServerManaged
+	}
 	c, err := s.client(ctx)
 	if err != nil {
 		return Status{}, err
@@ -127,6 +152,9 @@ func (s *LinkService) Start(ctx context.Context) (Status, error) {
 // Check asks Jellyfin once whether the code was approved, and on success stores
 // the token.
 func (s *LinkService) Check(ctx context.Context) (Status, error) {
+	if st, ok := s.managedStatus(ctx); ok {
+		return st, nil
+	}
 	s.mu.Lock()
 	secret, code, started, linked, user, admin := s.secret, s.code, s.started, s.linked, s.user, s.admin
 	s.mu.Unlock()

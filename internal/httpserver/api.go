@@ -528,7 +528,11 @@ func (s *Server) apiQualityRefresh(w http.ResponseWriter, r *http.Request) {
 // The app drives the same flow as the web UI: start, then poll.
 func (s *Server) apiJellyfinLinkStart(w http.ResponseWriter, r *http.Request) {
 	status, err := s.deps.JellyfinLink.Start(r.Context())
-	if err != nil {
+	switch {
+	case errors.Is(err, jellyfin.ErrServerManaged):
+		s.apiError(w, http.StatusConflict, linkErrorMessage(err))
+		return
+	case err != nil:
 		s.log.Warn("api jellyfin link start", "error", err)
 		s.apiError(w, http.StatusBadGateway, linkErrorMessage(err))
 		return
@@ -555,6 +559,8 @@ func jellyfinLinkPayload(status jellyfin.Status) map[string]any {
 		"code":  status.Code,
 		"user":  status.User,
 		"admin": status.Admin,
+		// The server's own key: the app says so instead of offering a code.
+		"managed": status.Managed,
 	}
 }
 

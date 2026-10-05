@@ -35,3 +35,8 @@ HOLOCRON_WRITE_FIXTURES=$PWD/ios/HolocronTests/Fixtures \
 Las sesiones de Jellyfin y la cola de descargas son sintéticas (armadas a partir
 de los esquemas de las APIs), porque cuando se generaron no había nada
 reproduciéndose ni bajándose.
+
+`jellyfin_link_managed.json` también está escrito a mano, a partir de
+`jellyfinLinkPayload` en `internal/httpserver/api.go`: es lo que responde un
+servidor que trae la clave de Jellyfin por credenciales, como Ginebra, y
+capturarlo pide ese servidor.

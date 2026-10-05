@@ -89,19 +89,30 @@ struct JellyfinLinkView: View {
 
     private func linkedSection(_ status: JellyfinLinkStatus) -> some View {
         Section {
-            Label(linkedMessage(status), systemImage: "checkmark.circle")
-                .font(.callout)
-                .foregroundStyle(Palette.ok)
-            // Said here rather than after a 403 later: the metadata refresh in
-            // the quality panel needs an administrator.
-            if status.admin == false {
-                Text("Esa cuenta no es administradora, así que no se le puede pedir a Jellyfin que vuelva a leer metadata.")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.muted)
+            if status.managed == true {
+                Label("Jellyfin ya está conectado con la clave del servidor. No hace falta vincular nada.", systemImage: "checkmark.circle")
+                    .font(.callout)
+                    .foregroundStyle(Palette.ok)
+                Button("Listo") { dismiss() }
+            } else {
+                linkedByCode(status)
             }
-            Button("Listo") { dismiss() }
         }
         .listRowBackground(Palette.surface)
+    }
+
+    @ViewBuilder private func linkedByCode(_ status: JellyfinLinkStatus) -> some View {
+        Label(linkedMessage(status), systemImage: "checkmark.circle")
+            .font(.callout)
+            .foregroundStyle(Palette.ok)
+        // Said here rather than after a 403 later: the metadata refresh in
+        // the quality panel needs an administrator.
+        if status.admin == false {
+            Text("Esa cuenta no es administradora, así que no se le puede pedir a Jellyfin que vuelva a leer metadata.")
+                .font(.footnote)
+                .foregroundStyle(Palette.muted)
+        }
+        Button("Listo") { dismiss() }
     }
 
     private func linkedMessage(_ status: JellyfinLinkStatus) -> String {
@@ -134,7 +145,18 @@ struct JellyfinLinkView: View {
     @MainActor private func poll() async {
         guard let client = settings.client else { return }
         while !Task.isCancelled {
-            guard let current = try? await client.jellyfinLinkStatus() else { return }
+            let current: JellyfinLinkStatus
+            do {
+                current = try await client.jellyfinLinkStatus()
+            } catch {
+                // Said, not swallowed: a failed check used to leave the
+                // spinner on "Esperando que lo autorices…" for good, even
+                // after the code had been approved.
+                if Task.isCancelled { return }
+                self.error = message(for: error)
+                status = nil
+                return
+            }
             status = current
             if current.isLinked { return }
             if current.isExpired {

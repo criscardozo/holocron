@@ -145,6 +145,8 @@ func jobFailureMessage(job jobs.Job, fallback string) string {
 // user which of the few actionable problems they have.
 func linkErrorMessage(err error) string {
 	switch {
+	case errors.Is(err, jellyfin.ErrServerManaged):
+		return "Jellyfin ya está conectado con la clave del servidor: no hace falta vincularlo."
 	case errors.Is(err, jellyfin.ErrNoServerURL):
 		return "Cargá primero la dirección de Jellyfin."
 	case errors.Is(err, jellyfin.ErrQuickConnectDisabled):
