@@ -13,7 +13,8 @@
 #   HOLOCRON_VERSION       release tag to install (default: latest)
 #   HOLOCRON_ADDR          listen address (default: :8090)
 #   HOLOCRON_MEDIA_PATHS   space-separated dirs to grant the service RW access to
-#                          (systemd ReadWritePaths; needed to write subtitles)
+#                          (systemd ReadWritePaths; Holocron no longer writes
+#                          the library, so this is normally left unset)
 #   HOLOCRON_BINARY_URL    override the download URL (skips release resolution)
 #   HOLOCRON_LOCAL_BINARY  path to an already-present binary (skips the download)
 #
@@ -557,7 +558,7 @@ start_service() {
 access_url() {
 	local ip
 	ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
-	[ -n "$ip" ] || ip="<ip-de-la-pi>"
+	[ -n "$ip" ] || ip="<ip-del-server>"
 	local port="${ADDR##*:}"
 	[ -n "$port" ] || port="8090"
 	printf 'http://%s:%s' "$ip" "$port"
@@ -600,14 +601,16 @@ do_install() {
 	fi
 	systemctl --no-pager status "$SERVICE_NAME" | head -n 4 || true
 	echo
-	log "Open $(access_url) from another machine on the LAN."
-	if [ -z "$(effective_media_paths)" ]; then
-		echo
-		warn "The service is hardened with ProtectSystem=strict: it cannot write"
-		warn "subtitles outside its state dir until you grant access to the media"
-		warn "folders. Re-run with HOLOCRON_MEDIA_PATHS=\"/path/one /path/two\","
-		warn "or add a drop-in under $SERVICE_NAME.d/ (which survives reinstalls)."
-	fi
+	# On loopback the address printed for "another machine on the LAN" would
+	# not work: the service is reachable only through a proxy in front of it.
+	case "${ADDR%:*}" in
+		127.0.0.1 | localhost | "[::1]")
+			log "Listening on $ADDR only: reach it through the reverse proxy in front of it."
+			;;
+		*)
+			log "Open $(access_url) from another machine on the LAN."
+			;;
+	esac
 }
 
 do_uninstall() {

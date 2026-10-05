@@ -20,6 +20,11 @@ templ Layout(title string) {
 			<link rel="icon" href="/static/favicon.svg"/>
 			<link rel="stylesheet" href="/static/styles.css"/>
 			<script src="/static/htmx.min.js" defer></script>
+			// htmx-ext-sse 2.2.4, vendored from npm with its sha512 integrity
+			// checked. Deferred scripts run in document order, so it registers
+			// after htmx itself. It is what lets the live screens receive data
+			// over one connection instead of polling every few seconds.
+			<script src="/static/htmx-ext-sse.min.js" defer></script>
 		</head>
 		<body hx-boost="true">
 			@iconSprite()

@@ -10,11 +10,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/db"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
+	"github.com/cristian/holocron/internal/hardware"
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
@@ -59,6 +61,7 @@ func newTestServer(t *testing.T) *testServer {
 		Log:          logger,
 		Folders:      folderStore,
 		Disk:         diskusage.NewService(database, folderStore, jobManager),
+		Hardware:     hardware.NewHub(20 * time.Millisecond),
 		Naming:       naming.NewService(database, folderStore),
 		Settings:     settingsStore,
 		Library:      library.NewService(database, settingsStore, jobManager),

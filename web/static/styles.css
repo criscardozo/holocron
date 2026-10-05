@@ -502,3 +502,43 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 }
 .hint-body p { margin: 0; line-height: 1.5; }
 .w-140 { width: 140px; }
+
+/* ── hardware en vivo ───────────────────────────────────────────────── */
+.hw-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.hw-card { display: grid; gap: var(--space-3); align-content: start; }
+.hw-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.hw-head h2 { margin: 0; font-size: 15px; }
+.hw-big { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hw-note { margin: 0; font-size: 12.5px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Bars are SVG with a width attribute, not a CSS width: the CSP forbids
+   inline styles, and an SVG attribute is not one. */
+.hw-bar { width: 100%; height: 6px; display: block; }
+.hw-bar-bg { fill: color-mix(in srgb, var(--color-text) 10%, transparent); }
+.hw-bar-fg { fill: var(--color-accent); }
+.hw-bar.hot .hw-bar-fg { fill: var(--danger); }
+
+.hw-cores { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.hw-cores li {
+	display: grid; grid-template-columns: 1.4em 1fr 3.4em 4.6em;
+	align-items: center; gap: var(--space-2); font-size: 12.5px;
+}
+.hw-core-name { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+
+.hw-meter { display: grid; gap: 4px; }
+.hw-meter-head { display: flex; justify-content: space-between; font-size: 13px; }
+
+.hw-disks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.hw-disks li { display: grid; gap: 4px; font-size: 12.5px; }
+.hw-disk-name { display: flex; gap: var(--space-2); align-items: baseline; }
+
+.spark-wrap { position: relative; }
+.spark { width: 100%; height: 48px; display: block; }
+.spark polyline { stroke: var(--color-accent); stroke-width: 1.5; }
+.spark-net polyline { stroke: var(--color-accent-300); }
+.spark-max { position: absolute; top: 0; right: 0; font-size: 11px; }
+
+.stat-val.hot { color: var(--danger); }
+.hw-ups-off { border-color: var(--danger); }
+.ups-alert { font-size: 15px; }

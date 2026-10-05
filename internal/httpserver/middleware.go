@@ -147,7 +147,10 @@ func securityHeaders(next http.Handler) http.Handler {
 // sets Content-Length up front, which would disagree with a compressed body.
 func gzipMW(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Event streams are skipped too: gzip buffers until it has a block
+		// worth compressing, so a live screen would sit blank behind it.
 		if strings.HasPrefix(r.URL.Path, "/static/") ||
+			strings.HasPrefix(r.URL.Path, "/events/") ||
 			!strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
 			return
@@ -179,6 +182,10 @@ func (r *statusRecorder) WriteHeader(code int) {
 	r.wrote = true
 	r.ResponseWriter.WriteHeader(code)
 }
+
+// Unwrap lets http.ResponseController reach the real writer, which is how the
+// event stream flushes and lifts its write deadline through this wrapper.
+func (r *statusRecorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
 
 func (r *statusRecorder) Write(b []byte) (int, error) {
 	if !r.wrote {

@@ -700,3 +700,53 @@ Las carpetas que llegan del formulario se comparan contra el último escaneo, no
 se resuelven como rutas. Una carpeta que Holocron no encontró él mismo leyendo
 una carpeta de medios configurada es una carpeta en la que no va a escribir, así
 que no hay aritmética de rutas entre un request y una descarga.
+
+## Feature 10 — Hardware en vivo (`/hardware`)
+
+CPU por núcleo con su frecuencia, temperatura del paquete, carga, RAM, swap y
+zram, cada interfaz de red con su velocidad de enlace y su tráfico, cada disco
+con su lectura, escritura y ocupación, y la batería, que en Ginebra hace de UPS.
+
+### Por qué SSE y no polling
+
+La pantalla se conecta una vez a `/events/hardware` y el servidor le empuja la
+lectura nueva cada 2 segundos, ya renderizada. Con polling serían un request
+por widget cada pocos segundos.
+
+Y lo que más importa en Ginebra, donde Jellyfin manda en la CPU: **el muestreo
+corre sólo mientras alguien está mirando.** `hardware.Hub` arranca el bucle con
+el primer suscriptor, todas las pestañas comparten la misma lectura (diez
+pestañas cuestan lo que una), y el bucle termina con la última. Una pantalla
+abierta unos minutos por semana no puede costar CPU el resto del tiempo.
+
+El stream sobrevive al `WriteTimeout` de 60 s del servidor porque el handler
+corre el plazo antes de cada escritura en vez de sacarlo: un cliente que deja
+de leer igual se corta. El middleware de gzip lo saltea (gzip junta bytes antes
+de mandar, y la pantalla quedaría en blanco), y el de logging deja pasar el
+`Flush` con `Unwrap`.
+
+### Qué se lee y qué no
+
+Todo sale de `/proc` y `/sys`, sin privilegios, y **nada toca un disco**:
+`/proc/diskstats` es contabilidad del kernel, así que leerlo no despierta el
+SMR que se fue a dormir. Se cuentan sólo los discos enteros: una partición
+contaría dos veces y zram es memoria.
+
+Dos cosas quedan afuera a propósito. **SMART** necesita root y despertaría el
+disco, así que lo escribe un timer de Ginebra en un archivo. **El uso de la
+GPU** necesita `CAP_PERFMON`; si Jellyfin transcodifica por hardware lo dicen
+sus propias sesiones, que es la pregunta que importa.
+
+### El corte de luz
+
+La batería de la notebook es el UPS. Cuando se desenchufa la corriente, la
+tarjeta se pone roja, aparece un aviso arriba de todo con el tiempo estimado
+que queda, y **el dashboard muestra un chip en cualquier pantalla**, porque es
+lo único de esta sección con un reloj corriendo.
+
+### Las barras son SVG
+
+Un ancho que depende de un número no puede ir en `style=""`: la CSP lo
+bloquea. Las barras y las líneas son SVG generado en el servidor, con el largo
+como atributo `width` o como puntos de una `polyline`, que no son estilos.
+

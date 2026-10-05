@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/cristian/holocron/internal/folders"
+	"github.com/cristian/holocron/internal/hardware"
 	"github.com/cristian/holocron/internal/scanner"
+	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/web/templates"
 )
 
@@ -15,6 +17,17 @@ import (
 // omits its chip rather than breaking the dashboard.
 func (s *Server) attentionChips(ctx context.Context) []templates.AttnChip {
 	var chips []templates.AttnChip
+
+	// First, because it is the only chip with a clock running. On Ginebra the
+	// laptop's battery is the UPS: a power cut shows here on every screen the
+	// dashboard is, not only on /hardware where nobody might be looking.
+	if b := hardware.ReadBattery(); b.Discharging() {
+		label := fmt.Sprintf("Sin luz: batería al %d %%", b.Percent)
+		if b.Left > 0 {
+			label += ", quedan unos " + system.HumanDuration(b.Left)
+		}
+		chips = append(chips, templates.AttnChip{Label: label, Href: "/hardware", Icon: "power"})
+	}
 
 	if n, err := s.deps.Naming.Count(ctx); err == nil && n > 0 {
 		chips = append(chips, templates.AttnChip{

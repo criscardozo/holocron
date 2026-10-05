@@ -1,0 +1,174 @@
+package templates
+
+// HardwarePage is the live hardware screen.
+//
+// The section below connects to /events/hardware and is replaced with a new
+// reading every couple of seconds. One connection per tab, and the server
+// stops sampling when the last tab closes — Jellyfin owns the CPU on Ginebra,
+// and a screen nobody is looking at should cost nothing.
+templ HardwarePage(v HardwareView) {
+	@Layout("Hardware") {
+		<div class="page-head">
+			<div>
+				<h1>Hardware</h1>
+				<p class="sub">Ginebra en vivo: CPU, memoria, red, discos y batería</p>
+			</div>
+		</div>
+		<div hx-ext="sse" sse-connect="/events/hardware">
+			<div sse-swap="hardware" hx-swap="innerHTML">
+				@HardwareLive(v)
+			</div>
+		</div>
+	}
+}
+
+// HardwareLive is one reading, sent whole over the event stream.
+templ HardwareLive(v HardwareView) {
+	if v.Battery.Discharging {
+		// The one thing on this screen that is an alarm rather than a reading.
+		<div class="notice error ups-alert mb-6">
+			@IconSm("power")
+			<span>
+				<strong>Se cortó la luz: Ginebra está andando con la batería.</strong>
+				{ v.Battery.Percent }
+				if v.Battery.Left != "" {
+					· quedan unos { v.Battery.Left }
+				}
+			</span>
+		</div>
+	}
+	<div class="hw-grid">
+		<section class="card elev-sm hw-card">
+			<header class="hw-head">
+				<h2>CPU</h2>
+				if v.Live {
+					<span class="hw-big">{ v.CPU }</span>
+				} else {
+					<span class="muted">midiendo…</span>
+				}
+			</header>
+			@sparkline(v.CPUSpark, "spark-cpu")
+			<ul class="hw-cores">
+				for _, c := range v.Cores {
+					<li>
+						<span class="hw-core-name mono">{ c.Name }</span>
+						@hwBar(c.Width, c.Hot)
+						<span class="mono num">{ c.Busy }</span>
+						<span class="mono num muted">{ c.MHz }</span>
+					</li>
+				}
+			</ul>
+			<ul class="stat-list">
+				<li>
+					<span class="stat-key">Temperatura</span>
+					if v.Temp != "" {
+						<span class={ "stat-val", templ.KV("hot", v.TempHot) }>{ v.Temp }</span>
+					} else {
+						<span class="stat-val muted">—</span>
+					}
+				</li>
+				<li><span class="stat-key">Carga 1 · 5 · 15 min</span><span class="stat-val mono">{ v.Load }</span></li>
+				<li><span class="stat-key">Encendida hace</span><span class="stat-val">{ v.Uptime }</span></li>
+			</ul>
+		</section>
+
+		<section class="card elev-sm hw-card">
+			<header class="hw-head"><h2>Memoria</h2><span class="hw-big">{ v.RAM.Pct }</span></header>
+			@meter("RAM", v.RAM)
+			if v.HasSwap {
+				@meter("Swap", v.Swap)
+			}
+			if v.Zram != "" {
+				<p class="muted hw-note">zram: { v.Zram }</p>
+			}
+		</section>
+
+		<section class="card elev-sm hw-card">
+			<header class="hw-head"><h2>Red</h2></header>
+			@sparkline(v.NetSpk, "spark-net")
+			<ul class="stat-list">
+				for _, l := range v.Links {
+					<li>
+						<span class="stat-key mono">
+							{ l.Name }
+							if !l.Up {
+								<span class="badge badge-no">caído</span>
+							} else if l.Speed != "" {
+								<span class="muted">{ l.Speed }</span>
+							}
+						</span>
+						<span class="stat-val mono">↓ { l.Rx } · ↑ { l.Tx }</span>
+					</li>
+				}
+			</ul>
+		</section>
+
+		<section class="card elev-sm hw-card">
+			<header class="hw-head"><h2>Discos</h2></header>
+			<ul class="hw-disks">
+				for _, d := range v.Disks {
+					<li>
+						<div class="hw-disk-name">
+							<span class="mono">{ d.Name }</span>
+							if d.Model != "" {
+								<span class="muted">{ d.Model }</span>
+							}
+						</div>
+						@hwBar(d.Width, false)
+						if d.Idle {
+							<span class="muted">sin actividad</span>
+						} else {
+							<span class="mono num">{ d.Busy } · ↓ { d.Read } · ↑ { d.Write }</span>
+						}
+					</li>
+				}
+			</ul>
+		</section>
+
+		if v.Battery.Present {
+			<section class={ "card", "elev-sm", "hw-card", templ.KV("hw-ups-off", v.Battery.Discharging) }>
+				<header class="hw-head"><h2>Batería</h2><span class="hw-big">{ v.Battery.Percent }</span></header>
+				@hwBar(v.Battery.Width, v.Battery.Low)
+				<ul class="stat-list">
+					<li><span class="stat-key">Estado</span><span class="stat-val">{ v.Battery.Status }</span></li>
+					if v.Battery.Health != "" {
+						<li><span class="stat-key">Salud</span><span class="stat-val">{ v.Battery.Health } de la capacidad original</span></li>
+					}
+					if v.Battery.Left != "" {
+						<li><span class="stat-key">Queda</span><span class="stat-val">{ v.Battery.Left }</span></li>
+					}
+				</ul>
+				<p class="muted hw-note">Hace de UPS: si se corta la luz, esta tarjeta se pone roja.</p>
+			</section>
+		}
+	</div>
+}
+
+templ hwBar(width string, hot bool) {
+	{{ if width == "" { width = "0" } }}
+	<svg class={ "hw-bar", templ.KV("hot", hot) } viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true">
+		<rect class="hw-bar-bg" width="100" height="6" rx="3"></rect>
+		<rect class="hw-bar-fg" width={ width } height="6" rx="3"></rect>
+	</svg>
+}
+
+templ meter(label string, m HWMeter) {
+	<div class="hw-meter">
+		<div class="hw-meter-head">
+			<span class="stat-key">{ label }</span>
+			<span class="mono num">{ m.Used } de { m.Total }</span>
+		</div>
+		@hwBar(m.Width, m.High)
+	</div>
+}
+
+templ sparkline(s Spark, class string) {
+	if s.Points != "" {
+		<div class="spark-wrap">
+			<svg class={ "spark", class } viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+				<polyline points={ s.Points } fill="none" vector-effect="non-scaling-stroke"></polyline>
+			</svg>
+			<span class="spark-max muted mono">{ s.Max }</span>
+		</div>
+	}
+}

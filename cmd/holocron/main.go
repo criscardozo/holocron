@@ -20,6 +20,7 @@ import (
 	"github.com/cristian/holocron/internal/db"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
+	"github.com/cristian/holocron/internal/hardware"
 	"github.com/cristian/holocron/internal/httpserver"
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
@@ -95,6 +96,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Widgets:      registry,
 		Folders:      folderStore,
 		Disk:         diskService,
+		Hardware:     hardware.NewHub(2 * time.Second),
 		Naming:       namingService,
 		Settings:     settingsStore,
 		Library:      libraryService,
