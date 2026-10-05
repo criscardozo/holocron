@@ -75,6 +75,67 @@ templ ActivityLive(v ActivityView) {
 			}
 		</section>
 
+		if len(v.Attention) > 0 {
+			<section class="card elev-sm act-card">
+				<header class="hw-head">
+					<h2>Para mirar</h2>
+					<span class="muted">{ v.LibAge }</span>
+				</header>
+				<ul class="act-recent">
+					for _, a := range v.Attention {
+						<li class={ templ.KV("act-warn", a.Warn) }>
+							if a.Href != "" {
+								<a href={ templ.SafeURL(a.Href) }>{ a.Text }</a>
+							} else {
+								<span>{ a.Text }</span>
+							}
+						</li>
+					}
+				</ul>
+			</section>
+		}
+
+		if v.HasSeerr {
+			<section class="card elev-sm act-card">
+				<header class="hw-head">
+					<h2>Pedidos</h2>
+					<span class="muted">{ v.ReqSummary }</span>
+				</header>
+				if len(v.Requests) == 0 {
+					<p class="muted">Nadie pidió nada todavía.</p>
+				} else {
+					<ul class="act-recent">
+						for _, r := range v.Requests {
+							<li>
+								<span>
+									{ r.Title }
+									<span class="muted">· { r.Kind } · { r.By }</span>
+								</span>
+								<span class={ "badge", templ.KV("badge-yes", r.Done), templ.KV("badge-no", r.Stuck), templ.KV("badge-neutral", !r.Done && !r.Stuck) }>{ r.State }</span>
+							</li>
+						}
+					</ul>
+				}
+			</section>
+		}
+
+		if len(v.Upcoming) > 0 {
+			<section class="card elev-sm act-card">
+				<header class="hw-head"><h2>Próximos estrenos</h2><span class="muted">30 días</span></header>
+				<ul class="act-recent">
+					for _, u := range v.Upcoming {
+						<li>
+							<span>
+								{ u.Subject }
+								<span class="muted">· { u.Kind }</span>
+							</span>
+							<span class="muted num">{ u.When }</span>
+						</li>
+					}
+				</ul>
+			</section>
+		}
+
 		if len(v.Recent) > 0 {
 			<section class="card elev-sm act-card">
 				<header class="hw-head"><h2>Agregado hace poco</h2></header>

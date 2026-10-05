@@ -8,7 +8,10 @@ import (
 
 	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/arr"
+	"github.com/cristian/holocron/internal/bazarr"
 	"github.com/cristian/holocron/internal/jellyfin"
+	"github.com/cristian/holocron/internal/seerr"
+	"github.com/cristian/holocron/web/templates"
 )
 
 // session decodes a /Sessions entry shaped by Jellyfin 12.1's SessionInfoDto.
@@ -82,5 +85,53 @@ func TestTheActivityPageRenders(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("the page is missing %q", want)
 		}
+	}
+}
+
+// TestRequestStateAnswersCanIWatchItYet. A request and its media each have a
+// status, and the media's is the one that answers the question — a request
+// marked approved can be days from available.
+func TestRequestStateAnswersCanIWatchItYet(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		req, media int
+		want       string
+		done       bool
+	}{
+		{seerr.RequestCompleted, seerr.MediaAvailable, "disponible", true},
+		{seerr.RequestApproved, seerr.MediaProcessing, "descargando", false},
+		{seerr.RequestCompleted, seerr.MediaPartiallyAvailable, "disponible en parte", false},
+		{seerr.RequestPending, seerr.MediaUnknown, "esperando aprobación", false},
+		{seerr.RequestDeclined, seerr.MediaUnknown, "rechazado", false},
+	}
+	for _, c := range cases {
+		got, done, _ := requestState(seerr.Request{Status: c.req, MediaStatus: c.media})
+		if got != c.want || done != c.done {
+			t.Errorf("request %d / media %d = %q (%v), want %q (%v)", c.req, c.media, got, done, c.want, c.done)
+		}
+	}
+}
+
+// TestALostBazarrLinkIsAWarning: Bazarr hears about new files over a live link
+// to each *arr, and when it drops new downloads stop getting subtitles with
+// nothing saying so.
+func TestALostBazarrLinkIsAWarning(t *testing.T) {
+	t.Parallel()
+	var v templates.ActivityView
+	libraryView(&v, activity.Library{
+		At:   time.Now(),
+		Subs: &bazarr.Badges{Movies: 11, Episodes: 499, RadarrSignalR: "LIVE", SonarrSignalR: "CONNECTING"},
+	}, time.Now())
+	var warned, counted bool
+	for _, a := range v.Attention {
+		if strings.Contains(a.Text, "Sonarr") && a.Warn {
+			warned = true
+		}
+		if strings.Contains(a.Text, "11 películas") && strings.Contains(a.Text, "499 episodios") {
+			counted = true
+		}
+	}
+	if !warned || !counted {
+		t.Errorf("attention = %+v", v.Attention)
 	}
 }

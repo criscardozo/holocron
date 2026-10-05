@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 )
 
 // The fixtures follow QueueResource from each project's openapi.json. They are
@@ -82,5 +83,31 @@ func TestARefusedKeyIsReportedAsSuch(t *testing.T) {
 	defer srv.Close()
 	if _, err := New(Radarr, srv.URL, "wrong").Queue(t.Context()); !errors.Is(err, ErrUnauthorized) {
 		t.Errorf("err = %v, want ErrUnauthorized", err)
+	}
+}
+
+// TestRadarrCalendarTakesTheReleaseAHomeCanUse runs against a real capture from
+// Ginebra: a film is listed when any of its dates is in the window, and the one
+// shown is the digital release when it is there — cinemas are no use at home.
+func TestRadarrCalendarTakesTheReleaseAHomeCanUse(t *testing.T) {
+	t.Parallel()
+	srv := serve(t, "radarr_calendar.json")
+	defer srv.Close()
+	from := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
+	to := from.AddDate(0, 0, 60)
+	up, err := New(Radarr, srv.URL, "k").Calendar(t.Context(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(up) == 0 {
+		t.Fatal("nothing upcoming from a calendar with entries")
+	}
+	for _, u := range up {
+		if u.When.Before(from) || u.When.After(to) {
+			t.Errorf("%s: %s is outside the window", u.Subject, u.When)
+		}
+		if u.Subject == "Therapy Done Right (2026)" && u.Kind != "digital" {
+			t.Errorf("Therapy Done Right shown as %q, want its digital release", u.Kind)
+		}
 	}
 }

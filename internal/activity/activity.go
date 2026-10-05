@@ -28,6 +28,8 @@ type Sources struct {
 	// Queues are the *arr clients that are configured. Absent ones are simply
 	// not there, which is different from one that fails.
 	Queues []*arr.Client
+	// Slow is the lane for what changes a few times a day. Nil means none.
+	Slow *Slow
 }
 
 // Download is one thing being downloaded, joined across the *arr that asked
@@ -65,6 +67,9 @@ type Snapshot struct {
 	// whether there is nothing or nobody to ask.
 	HasJellyfin, HasTorrents bool
 	Apps                     []arr.App
+
+	// Library is the slow lane: requests, the calendar, what is missing.
+	Library Library
 }
 
 // recentEvery is how often "recently added" is refreshed. It changes a few
@@ -173,6 +178,9 @@ func (s *Sampler) Sample(ctx context.Context) Snapshot {
 	}
 	snap.Downloads, snap.DownSpeed, snap.UpSpeed = join(queue, torrents)
 	snap.Recent = s.recentList(ctx, src.Recent)
+	if src.Slow != nil {
+		snap.Library = src.Slow.Read(ctx, snap.At)
+	}
 	return snap
 }
 

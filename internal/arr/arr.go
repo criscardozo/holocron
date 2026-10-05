@@ -24,16 +24,30 @@ import (
 type App string
 
 const (
-	Radarr App = "radarr"
-	Sonarr App = "sonarr"
+	Radarr   App = "radarr"
+	Sonarr   App = "sonarr"
+	Prowlarr App = "prowlarr"
 )
 
 // Label is the name shown on screen.
 func (a App) Label() string {
-	if a == Sonarr {
+	switch a {
+	case Sonarr:
 		return "Sonarr"
+	case Prowlarr:
+		return "Prowlarr"
+	default:
+		return "Radarr"
 	}
-	return "Radarr"
+}
+
+// api is the path prefix of the app's API. Prowlarr is a generation newer and
+// on v1; the other two on v3.
+func (a App) api() string {
+	if a == Prowlarr {
+		return "/api/v1"
+	}
+	return "/api/v3"
 }
 
 // ErrUnauthorized means the API key was refused.
@@ -172,7 +186,7 @@ func (c *Client) Queue(ctx context.Context) ([]QueueItem, error) {
 		q.Set("includeMovie", "true")
 	}
 	var page queuePage
-	if err := c.get(ctx, "/api/v3/queue", q, &page); err != nil {
+	if err := c.get(ctx, c.app.api()+"/queue", q, &page); err != nil {
 		return nil, err
 	}
 	out := make([]QueueItem, 0, len(page.Records))
@@ -221,8 +235,124 @@ type HealthIssue struct {
 // Health returns what the *arr itself reports as wrong.
 func (c *Client) Health(ctx context.Context) ([]HealthIssue, error) {
 	var out []HealthIssue
-	if err := c.get(ctx, "/api/v3/health", nil, &out); err != nil {
+	if err := c.get(ctx, c.app.api()+"/health", nil, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+// Upcoming is one release the *arr is waiting for.
+type Upcoming struct {
+	App     App
+	Subject string
+	// When is the release that matters for a home library: the digital one
+	// for a film (cinemas are no use here), the air date for an episode.
+	When    time.Time
+	Kind    string // "digital", "físico", "cines" or "emisión"
+	HasFile bool
+}
+
+// Calendar lists what comes out between from and to.
+func (c *Client) Calendar(ctx context.Context, from, to time.Time) ([]Upcoming, error) {
+	q := url.Values{
+		"start": {from.UTC().Format("2006-01-02")},
+		"end":   {to.UTC().Format("2006-01-02")},
+	}
+	if c.app == Sonarr {
+		q.Set("includeSeries", "true")
+		var eps []struct {
+			SeasonNumber  int       `json:"seasonNumber"`
+			EpisodeNumber int       `json:"episodeNumber"`
+			Title         string    `json:"title"`
+			AirDateUtc    time.Time `json:"airDateUtc"`
+			HasFile       bool      `json:"hasFile"`
+			Series        *struct {
+				Title string `json:"title"`
+			} `json:"series"`
+		}
+		if err := c.get(ctx, c.app.api()+"/calendar", q, &eps); err != nil {
+			return nil, err
+		}
+		out := make([]Upcoming, 0, len(eps))
+		for _, e := range eps {
+			name := e.Title
+			if e.Series != nil {
+				name = fmt.Sprintf("%s · T%dE%02d", e.Series.Title, e.SeasonNumber, e.EpisodeNumber)
+			}
+			out = append(out, Upcoming{App: c.app, Subject: name, When: e.AirDateUtc, Kind: "emisión", HasFile: e.HasFile})
+		}
+		return out, nil
+	}
+
+	var movies []struct {
+		Title           string     `json:"title"`
+		Year            int        `json:"year"`
+		InCinemas       *time.Time `json:"inCinemas"`
+		DigitalRelease  *time.Time `json:"digitalRelease"`
+		PhysicalRelease *time.Time `json:"physicalRelease"`
+		HasFile         bool       `json:"hasFile"`
+	}
+	if err := c.get(ctx, c.app.api()+"/calendar", q, &movies); err != nil {
+		return nil, err
+	}
+	var out []Upcoming
+	for _, m := range movies {
+		name := m.Title
+		if m.Year > 0 {
+			name = fmt.Sprintf("%s (%d)", m.Title, m.Year)
+		}
+		// Radarr lists a film when any of its dates falls in the window. Take
+		// the one in the window that a home library can act on, digital
+		// before physical before cinemas.
+		for _, cand := range []struct {
+			t    *time.Time
+			kind string
+		}{{m.DigitalRelease, "digital"}, {m.PhysicalRelease, "físico"}, {m.InCinemas, "cines"}} {
+			if cand.t != nil && !cand.t.Before(from) && !cand.t.After(to) {
+				out = append(out, Upcoming{App: c.app, Subject: name, When: *cand.t, Kind: cand.kind, HasFile: m.HasFile})
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
+// MissingCount is how many monitored items the *arr is still looking for.
+func (c *Client) MissingCount(ctx context.Context) (int, error) {
+	var page struct {
+		TotalRecords int `json:"totalRecords"`
+	}
+	err := c.get(ctx, c.app.api()+"/wanted/missing", url.Values{"pageSize": {"1"}}, &page)
+	return page.TotalRecords, err
+}
+
+// Indexer is one indexer configured in Prowlarr.
+type Indexer struct {
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	Enable   bool   `json:"enable"`
+	Protocol string `json:"protocol"`
+}
+
+// IndexerStatus is Prowlarr's record of an indexer that has been failing.
+type IndexerStatus struct {
+	IndexerID         int        `json:"indexerId"`
+	DisabledTill      *time.Time `json:"disabledTill"`
+	MostRecentFailure *time.Time `json:"mostRecentFailure"`
+}
+
+// Indexers lists Prowlarr's indexers. Only the four fields above are decoded:
+// the rest of each record is the indexer's configuration, which can hold its
+// own cookies and keys and has no business leaving Prowlarr.
+func (c *Client) Indexers(ctx context.Context) ([]Indexer, error) {
+	var out []Indexer
+	err := c.get(ctx, c.app.api()+"/indexer", nil, &out)
+	return out, err
+}
+
+// IndexerStatuses lists the indexers Prowlarr is backing off from.
+func (c *Client) IndexerStatuses(ctx context.Context) ([]IndexerStatus, error) {
+	var out []IndexerStatus
+	err := c.get(ctx, c.app.api()+"/indexerstatus", nil, &out)
+	return out, err
 }

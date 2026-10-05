@@ -1,0 +1,239 @@
+{
+ "pageInfo": {
+  "pages": 4,
+  "pageSize": 6,
+  "results": 21,
+  "page": 1
+ },
+ "results": [
+  {
+   "id": 35,
+   "status": 5,
+   "createdAt": "2026-10-03T03:06:48.000Z",
+   "updatedAt": "2026-10-03T03:20:10.000Z",
+   "type": "movie",
+   "is4k": false,
+   "serverId": 0,
+   "profileId": 4,
+   "rootFolder": "/mnt/biblioteca/Peliculas",
+   "languageProfileId": null,
+   "tags": [],
+   "isAutoRequest": false,
+   "ignoreQuota": false,
+   "media": {
+    "id": 443,
+    "mediaType": "movie",
+    "tmdbId": 656690,
+    "tvdbId": null,
+    "status": 5,
+    "status4k": 1,
+    "createdAt": "2026-10-03T03:06:48.000Z",
+    "updatedAt": "2026-10-05T10:25:09.000Z"
+   },
+   "seasons": [],
+   "requestedBy": {
+    "id": 1,
+    "displayName": "Merli",
+    "username": null
+   },
+   "seasonCount": 0,
+   "profileName": "HD-1080p",
+   "canRemove": true
+  },
+  {
+   "id": 34,
+   "status": 2,
+   "createdAt": "2026-10-03T03:06:14.000Z",
+   "updatedAt": "2026-10-03T03:06:14.000Z",
+   "type": "movie",
+   "is4k": false,
+   "serverId": 0,
+   "profileId": 4,
+   "rootFolder": "/mnt/biblioteca/Peliculas",
+   "languageProfileId": null,
+   "tags": [],
+   "isAutoRequest": false,
+   "ignoreQuota": false,
+   "media": {
+    "id": 442,
+    "mediaType": "movie",
+    "tmdbId": 1159596,
+    "tvdbId": null,
+    "status": 3,
+    "status4k": 1,
+    "createdAt": "2026-10-03T03:06:14.000Z",
+    "updatedAt": "2026-10-03T03:06:16.000Z"
+   },
+   "seasons": [],
+   "requestedBy": {
+    "id": 1,
+    "displayName": "Merli",
+    "username": null
+   },
+   "seasonCount": 0,
+   "profileName": "HD-1080p",
+   "canRemove": true
+  },
+  {
+   "id": 33,
+   "status": 5,
+   "createdAt": "2026-10-01T12:20:27.000Z",
+   "updatedAt": "2026-10-01T17:01:32.000Z",
+   "type": "tv",
+   "is4k": false,
+   "serverId": null,
+   "profileId": null,
+   "rootFolder": null,
+   "languageProfileId": null,
+   "tags": null,
+   "isAutoRequest": false,
+   "ignoreQuota": false,
+   "media": {
+    "id": 441,
+    "mediaType": "tv",
+    "tmdbId": 225780,
+    "tvdbId": 403092,
+    "status": 4,
+    "status4k": 1,
+    "createdAt": "2026-10-01T12:20:27.000Z",
+    "updatedAt": "2026-10-05T10:20:14.000Z"
+   },
+   "seasons": [
+    {
+     "id": 8,
+     "seasonNumber": 1,
+     "status": 5,
+     "createdAt": "2026-10-01T12:20:27.000Z",
+     "updatedAt": "2026-10-01T17:01:31.000Z"
+    }
+   ],
+   "requestedBy": {
+    "id": 1,
+    "displayName": "Merli",
+    "username": null
+   },
+   "seasonCount": 1,
+   "canRemove": true
+  },
+  {
+   "id": 32,
+   "status": 5,
+   "createdAt": "2026-10-01T12:19:31.000Z",
+   "updatedAt": "2026-10-01T17:01:32.000Z",
+   "type": "tv",
+   "is4k": false,
+   "serverId": null,
+   "profileId": null,
+   "rootFolder": null,
+   "languageProfileId": null,
+   "tags": null,
+   "isAutoRequest": false,
+   "ignoreQuota": false,
+   "media": {
+    "id": 440,
+    "mediaType": "tv",
+    "tmdbId": 203614,
+    "tvdbId": 421974,
+    "status": 4,
+    "status4k": 1,
+    "createdAt": "2026-10-01T12:19:31.000Z",
+    "updatedAt": "2026-10-05T10:20:14.000Z"
+   },
+   "seasons": [
+    {
+     "id": 7,
+     "seasonNumber": 1,
+     "status": 5,
+     "createdAt": "2026-10-01T12:19:31.000Z",
+     "updatedAt": "2026-10-01T17:01:32.000Z"
+    }
+   ],
+   "requestedBy": {
+    "id": 1,
+    "displayName": "Merli",
+    "username": null
+   },
+   "seasonCount": 1,
+   "canRemove": true
+  },
+  {
+   "id": 31,
+   "status": 2,
+   "createdAt": "2026-10-01T11:59:09.000Z",
+   "updatedAt": "2026-10-01T11:59:09.000Z",
+   "type": "tv",
+   "is4k": false,
+   "serverId": null,
+   "profileId": null,
+   "rootFolder": null,
+   "languageProfileId": null,
+   "tags": null,
+   "isAutoRequest": false,
+   "ignoreQuota": false,
+   "media": {
+    "id": 439,
+    "mediaType": "tv",
+    "tmdbId": 209332,
+    "tvdbId": 423781,
+    "status": 4,
+    "status4k": 1,
+    "createdAt": "2026-10-01T11:59:09.000Z",
+    "updatedAt": "2026-10-05T10:20:14.000Z"
+   },
+   "seasons": [
+    {
+     "id": 6,
+     "seasonNumber": 1,
+     "status": 2,
+     "createdAt": "2026-10-01T11:59:09.000Z",
+     "updatedAt": "2026-10-01T11:59:09.000Z"
+    }
+   ],
+   "requestedBy": {
+    "id": 1,
+    "displayName": "Merli",
+    "username": null
+   },
+   "seasonCount": 1,
+   "canRemove": true
+  },
+  {
+   "id": 30,
+   "status": 2,
+   "createdAt": "2026-09-30T01:37:57.000Z",
+   "updatedAt": "2026-09-30T01:37:57.000Z",
+   "type": "movie",
+   "is4k": false,
+   "serverId": 0,
+   "profileId": 4,
+   "rootFolder": "/mnt/biblioteca/Peliculas",
+   "languageProfileId": null,
+   "tags": [],
+   "isAutoRequest": false,
+   "ignoreQuota": false,
+   "media": {
+    "id": 438,
+    "mediaType": "movie",
+    "tmdbId": 1153576,
+    "tvdbId": null,
+    "status": 3,
+    "status4k": 1,
+    "createdAt": "2026-09-30T01:37:57.000Z",
+    "updatedAt": "2026-09-30T01:37:58.000Z"
+   },
+   "seasons": [],
+   "requestedBy": {
+    "id": 1,
+    "displayName": "Merli",
+    "username": null
+   },
+   "seasonCount": 0,
+   "profileName": "HD-1080p",
+   "canRemove": true
+  }
+ ],
+ "serviceErrors": {
+  "radarr": [],
+  "sonarr": []
+ }
+}

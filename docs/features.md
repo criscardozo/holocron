@@ -792,3 +792,34 @@ Radarr y Sonarr se leen en `127.0.0.1:7878` y `:8989` con las keys que pone
 systemd. Las direcciones no se editan desde la web, por la misma razón que la de
 Jellyfin: una dirección editable es una forma de mandar la key a otro lado.
 
+### El carril lento: pedidos, estrenos y lo que conviene mirar
+
+Lo que cambia unas pocas veces por día va aparte y se lee cada 5 minutos, no
+en cada lectura de 5 segundos:
+
+- **Pedidos de Seerr**, los últimos con su estado. Un pedido y su media tienen
+  cada uno un estado, y el que responde «¿ya lo puedo ver?» es el de la media:
+  un pedido «aprobado» puede estar a días de «disponible». Los números se
+  traducen según el **código fuente de Seerr** (`server/constants/media.ts`),
+  no su YAML publicado, que va atrasado: no tiene los estados 4 y 5 de un
+  pedido y llama «borrado» al 6, que en el código es «en lista negra». Seerr
+  no manda el título en el pedido, así que se pide por TMDb una vez por
+  película y se guarda: un título no cambia. Del solicitante se toma sólo el
+  nombre visible; Seerr también manda su email, que no tiene nada que hacer en
+  una pantalla de estado.
+- **Próximos estrenos** de Radarr y Sonarr, 30 días, sólo lo que todavía no
+  está en disco. De una película se muestra el estreno digital antes que el
+  físico y éste antes que el de cines, que en casa no sirve.
+- **Para mirar**: lo que Radarr y Sonarr siguen buscando, lo que según Bazarr
+  no tiene subtítulos, los indexadores de Prowlarr que están en backoff, y las
+  advertencias de salud de cada *arr. Un aviso especial si Bazarr pierde su
+  conexión en vivo con Radarr o Sonarr: a partir de ahí los archivos nuevos no
+  reciben subtítulos y nada lo dice.
+
+De Prowlarr se decodifican sólo cuatro campos por indexador. El resto del
+registro es su configuración, que puede tener cookies y keys propias.
+
+Los fixtures de esta parte son capturas reales de Ginebra, limpiadas en el
+servidor antes de salir (sin emails, sin avatares, sin configuración de
+indexadores).
+

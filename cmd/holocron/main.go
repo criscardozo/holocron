@@ -18,6 +18,7 @@ import (
 	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/arr"
+	"github.com/cristian/holocron/internal/bazarr"
 	"github.com/cristian/holocron/internal/config"
 	"github.com/cristian/holocron/internal/db"
 	"github.com/cristian/holocron/internal/diskusage"
@@ -31,6 +32,7 @@ import (
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
+	"github.com/cristian/holocron/internal/seerr"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/torrents"
 	"github.com/cristian/holocron/internal/updates"
@@ -172,8 +174,11 @@ func newLogger(level string) *slog.Logger {
 // for the same reason the Jellyfin address is pinned when the server manages
 // its key: an editable address is a way to send the key somewhere else.
 const (
-	radarrAddr = "http://127.0.0.1:7878"
-	sonarrAddr = "http://127.0.0.1:8989"
+	radarrAddr   = "http://127.0.0.1:7878"
+	sonarrAddr   = "http://127.0.0.1:8989"
+	prowlarrAddr = "http://127.0.0.1:9696"
+	seerrAddr    = "http://127.0.0.1:5055"
+	bazarrAddr   = "http://127.0.0.1:6767"
 )
 
 // newActivityHub builds the live "what is happening" hub. Sessions change
@@ -187,8 +192,20 @@ func newActivityHub(lib *library.Service, tor *torrents.Service, st *settings.St
 	if key, ok := st.Credential(settings.CredSonarr); ok {
 		queues = append(queues, arr.New(arr.Sonarr, sonarrAddr, key))
 	}
+	slowSrc := activity.SlowSources{Arrs: queues}
+	if key, ok := st.Credential(settings.CredSeerr); ok {
+		slowSrc.Seerr = seerr.New(seerrAddr, key)
+	}
+	if key, ok := st.Credential(settings.CredBazarr); ok {
+		slowSrc.Bazarr = bazarr.New(bazarrAddr, key)
+	}
+	if key, ok := st.Credential(settings.CredProwlarr); ok {
+		slowSrc.Prowlarr = arr.New(arr.Prowlarr, prowlarrAddr, key)
+	}
+	slow := activity.NewSlow(slowSrc)
+
 	sampler := activity.NewSampler(func(ctx context.Context) activity.Sources {
-		src := activity.Sources{Queues: queues}
+		src := activity.Sources{Queues: queues, Slow: slow}
 		if lib.Configured(ctx) {
 			src.Sessions = lib.Sessions
 			src.Recent = lib.RecentlyAdded

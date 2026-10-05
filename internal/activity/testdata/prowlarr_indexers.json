@@ -1,0 +1,37 @@
+[
+ {
+  "id": 1,
+  "name": "1337x",
+  "enable": true,
+  "protocol": "torrent",
+  "privacy": "public"
+ },
+ {
+  "id": 3,
+  "name": "LimeTorrents",
+  "enable": true,
+  "protocol": "torrent",
+  "privacy": "public"
+ },
+ {
+  "id": 4,
+  "name": "Nyaa.si",
+  "enable": true,
+  "protocol": "torrent",
+  "privacy": "public"
+ },
+ {
+  "id": 2,
+  "name": "Uindex",
+  "enable": true,
+  "protocol": "torrent",
+  "privacy": "public"
+ },
+ {
+  "id": 5,
+  "name": "YTS",
+  "enable": true,
+  "protocol": "torrent",
+  "privacy": "public"
+ }
+]

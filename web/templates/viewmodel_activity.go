@@ -15,6 +15,42 @@ type ActivityView struct {
 	HasJellyfin bool
 	HasTorrents bool
 	HasArr      bool
+
+	// The slow lane, refreshed every few minutes.
+	Requests   []ActRequest
+	ReqSummary string // "21 pedidos · 0 esperando aprobación"
+	HasSeerr   bool
+	Upcoming   []ActUpcoming
+	// Attention is what someone might want to act on: what the *arrs are still
+	// looking for, what lacks subtitles, failing indexers, health warnings.
+	Attention []ActAttention
+	LibAge    string // "hace 3 min"
+}
+
+// ActRequest is one Seerr request.
+type ActRequest struct {
+	Title string
+	Kind  string // película | serie
+	By    string
+	When  string
+	State string
+	Done  bool
+	Stuck bool
+}
+
+// ActUpcoming is one release on the calendar.
+type ActUpcoming struct {
+	Subject string
+	When    string
+	Kind    string
+	App     string
+}
+
+// ActAttention is one line of things worth a look.
+type ActAttention struct {
+	Text string
+	Href string // where to go about it, when Holocron has a page for it
+	Warn bool
 }
 
 // ActPlaying is one session playing something.

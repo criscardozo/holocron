@@ -11,6 +11,7 @@ import (
 	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/arr"
 	"github.com/cristian/holocron/internal/jellyfin"
+	"github.com/cristian/holocron/internal/seerr"
 	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/web/templates"
 )
@@ -47,7 +48,130 @@ func activityView(a activity.Snapshot, now time.Time) templates.ActivityView {
 		}
 		v.Recent = append(v.Recent, r)
 	}
+	libraryView(&v, a.Library, now)
 	return v
+}
+
+// libraryView fills in the slow lane: requests, upcoming releases, and what is
+// worth a look.
+func libraryView(v *templates.ActivityView, l activity.Library, now time.Time) {
+	if l.At.IsZero() {
+		return
+	}
+	v.LibAge = "actualizado " + ago(now.Sub(l.At))
+	if now.Sub(l.At) < time.Minute {
+		v.LibAge = "actualizado recién"
+	}
+	if l.Counts != nil {
+		v.HasSeerr = true
+		v.ReqSummary = templates.Plural(l.Counts.Total, "pedido", "pedidos")
+		if l.Counts.Pending > 0 {
+			v.ReqSummary += " · " + templates.Plural(l.Counts.Pending, "esperando aprobación", "esperando aprobación")
+		}
+	}
+	for _, r := range l.Requests {
+		ar := templates.ActRequest{Title: r.Title, By: r.By, When: ago(now.Sub(r.CreatedAt)), Kind: "película"}
+		if r.Type == "tv" {
+			ar.Kind = "serie"
+		}
+		if r.Year > 0 {
+			ar.Title = fmt.Sprintf("%s (%d)", r.Title, r.Year)
+		}
+		ar.State, ar.Done, ar.Stuck = requestState(r)
+		v.Requests = append(v.Requests, ar)
+	}
+	for _, u := range l.Upcoming {
+		v.Upcoming = append(v.Upcoming, templates.ActUpcoming{
+			Subject: u.Subject, Kind: u.Kind, App: u.App.Label(), When: until(u.When, now),
+		})
+	}
+
+	if n := l.Missing[arr.Radarr]; n > 0 {
+		v.Attention = append(v.Attention, templates.ActAttention{Text: "Radarr sigue buscando " + templates.Plural(n, "película", "películas")})
+	}
+	if n := l.Missing[arr.Sonarr]; n > 0 {
+		v.Attention = append(v.Attention, templates.ActAttention{Text: "Sonarr sigue buscando " + templates.Plural(n, "episodio", "episodios")})
+	}
+	if b := l.Subs; b != nil {
+		if b.Movies > 0 || b.Episodes > 0 {
+			v.Attention = append(v.Attention, templates.ActAttention{
+				Text: "Sin subtítulos según Bazarr: " + templates.Plural(b.Movies, "película", "películas") +
+					" y " + templates.Plural(b.Episodes, "episodio", "episodios"),
+			})
+		}
+		// Bazarr hears about new files over a live link to each *arr. When
+		// it drops, new downloads stop getting subtitles and nothing says so.
+		for app, state := range map[string]string{"Radarr": b.RadarrSignalR, "Sonarr": b.SonarrSignalR} {
+			if state != "" && state != "LIVE" {
+				v.Attention = append(v.Attention, templates.ActAttention{Text: "Bazarr perdió la conexión con " + app + ": los archivos nuevos no van a recibir subtítulos", Warn: true})
+			}
+		}
+		if b.Providers > 0 {
+			v.Attention = append(v.Attention, templates.ActAttention{Text: templates.Plural(b.Providers, "proveedor de subtítulos con problemas", "proveedores de subtítulos con problemas"), Warn: true})
+		}
+	}
+	if l.Indexers > 0 {
+		if len(l.Failing) > 0 {
+			v.Attention = append(v.Attention, templates.ActAttention{
+				Text: "Indexadores fallando en Prowlarr: " + strings.Join(l.Failing, ", "), Warn: true,
+			})
+		} else {
+			v.Attention = append(v.Attention, templates.ActAttention{
+				Text: fmt.Sprintf("Prowlarr: %d de %d indexadores activos, ninguno fallando", l.IndexersEnabled, l.Indexers),
+			})
+		}
+	}
+	for _, h := range l.Health {
+		v.Attention = append(v.Attention, templates.ActAttention{Text: h, Warn: true})
+	}
+	for _, e := range l.Errors {
+		v.Attention = append(v.Attention, templates.ActAttention{Text: e + " no responde", Warn: true})
+	}
+}
+
+// requestState says where a Seerr request is. The request and the media each
+// have a status, and the media's is the one that answers "can I watch it yet".
+func requestState(r seerr.Request) (state string, done, stuck bool) {
+	switch r.Status {
+	case seerr.RequestPending:
+		return "esperando aprobación", false, false
+	case seerr.RequestDeclined:
+		return "rechazado", false, true
+	case seerr.RequestFailed:
+		return "falló", false, true
+	}
+	switch r.MediaStatus {
+	case seerr.MediaAvailable:
+		return "disponible", true, false
+	case seerr.MediaPartiallyAvailable:
+		return "disponible en parte", false, false
+	case seerr.MediaProcessing:
+		return "descargando", false, false
+	case seerr.MediaPending:
+		return "buscando", false, false
+	case seerr.MediaBlocklisted:
+		return "en lista negra", false, true
+	case seerr.MediaDeleted:
+		return "borrado", false, true
+	}
+	if r.Status == seerr.RequestCompleted {
+		return "completado", true, false
+	}
+	return "aprobado", false, false
+}
+
+func until(t, now time.Time) string {
+	d := t.Sub(now)
+	switch {
+	case d < 0:
+		return "ya salió"
+	case d < 24*time.Hour:
+		return "hoy"
+	case d < 48*time.Hour:
+		return "mañana"
+	default:
+		return fmt.Sprintf("en %d días", int(d.Hours()/24))
+	}
 }
 
 // ticksPerSecond: Jellyfin counts time in 100-nanosecond ticks.
