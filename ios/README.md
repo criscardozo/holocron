@@ -99,23 +99,22 @@ acordate de `make ios-test` después de tocar la API. Para regenerar los fixture
 ## El ícono
 
 `Holocron/Assets.xcassets/AppIcon.appiconset/icon-1024.png`, un solo tamaño de
-1024 px del que Xcode deriva el resto. Es la marca de Ginebra, la misma que usa
-la web (`web/static/ginebra.svg`): la G y el ▶ en facetas rosa y violeta sobre
-`#141a26`. Se genera así:
+1024 px del que Xcode deriva el resto. Es el holocrón, el cubo isométrico que
+dibujó Ginebra con los colores del G▶ (`web/static/holocron.svg`, el mismo de la
+web), centrado sobre `#141a26` con un 18 % de margen. Se genera así:
 
 ```sh
-sed 's/rx="30" //' web/static/ginebra.svg > /tmp/g.svg
-rsvg-convert -w 1024 -h 1024 /tmp/g.svg -o /tmp/g.png
-magick /tmp/g.png -background '#141a26' -alpha remove -alpha off \
-  PNG24:ios/Holocron/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+rsvg-convert -w 656 -h 656 web/static/holocron.svg -o /tmp/cube.png
+magick -size 1024x1024 xc:'#141a26' /tmp/cube.png -gravity center -composite \
+  -alpha off PNG24:ios/Holocron/Assets.xcassets/AppIcon.appiconset/icon-1024.png
 ```
 
 Dos cosas a respetar si se rehace:
 
 - **Sin canal alfa y sin esquinas redondeadas.** iOS rechaza el alfa y aplica su
   propia máscara; venir con esquinas propias se ve mal.
-- **El dibujo queda adentro del centro del lienzo.** La G▶ ya viene con margen
-  de sobra para la máscara de iOS; no agrandarlo.
+- **El margen no se achica.** El 18 % es lo que deja al cubo entero adentro de
+  la máscara de iOS; agrandarlo le corta las puntas.
 
 ## Instalarla en el teléfono
 
