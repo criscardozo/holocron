@@ -155,6 +155,15 @@ func (s *Store) Get(ctx context.Context, kind, id string) (Image, error) {
 		s.mu.Unlock()
 		return c.wait(ctx)
 	}
+	// Looked again with the lock held: a fetch that finished between the
+	// first read and here has written the file and left pending, and without
+	// this the poster would be fetched a second time. CI caught it; it shows
+	// up locally with -cpu=1,2 under -race. Only a cache miss gets here, so
+	// the read under the lock costs nothing that matters.
+	if again, fresh := s.read(name); fresh {
+		s.mu.Unlock()
+		return again, nil
+	}
 	c := &call{done: make(chan struct{})}
 	s.pending[name] = c
 	s.mu.Unlock()
