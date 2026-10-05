@@ -7,6 +7,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Config holds the server startup configuration. Application-level settings
@@ -21,6 +22,14 @@ type Config struct {
 	DBPath string
 	// LogLevel is one of: debug, info, warn, error.
 	LogLevel string
+
+	// What the services screen watches. Configuration of the server, not of
+	// the app: on Ginebra it is the same list ginebra-vigia uses, so the
+	// screen and the alerting cannot disagree about what should be running.
+	// Set in a systemd drop-in; empty means the screen has nothing to show.
+	WatchUnits  []string // HOLOCRON_WATCH_UNITS, space-separated, e.g. "jellyfin caddy mnt-biblioteca.mount"
+	WatchTimers string   // HOLOCRON_WATCH_TIMERS, a name prefix, e.g. "ginebra-"
+	SmartFile   string   // HOLOCRON_SMART_FILE, the JSON a root timer writes
 }
 
 // Load parses flags and environment variables into a Config. It is meant to be
@@ -30,6 +39,10 @@ func Load() Config {
 		Addr:     envOr("HOLOCRON_ADDR", ":8090"),
 		DBPath:   envOr("HOLOCRON_DB", defaultDBPath()),
 		LogLevel: envOr("HOLOCRON_LOG_LEVEL", "info"),
+
+		WatchUnits:  strings.Fields(os.Getenv("HOLOCRON_WATCH_UNITS")),
+		WatchTimers: os.Getenv("HOLOCRON_WATCH_TIMERS"),
+		SmartFile:   os.Getenv("HOLOCRON_SMART_FILE"),
 	}
 
 	flag.StringVar(&c.Addr, "addr", c.Addr, "listen address (host:port)")

@@ -258,3 +258,22 @@ func TestActionsAreOfferedIndividually(t *testing.T) {
 		t.Errorf("Request without its unit = %v, want ErrNoHelper", err)
 	}
 }
+
+// TestARefusalFromTheServerIsReadable uses the exact shape the Ginebra session
+// wrote when its preflight refused a real request: Jellyfin was running tasks.
+func TestARefusalFromTheServerIsReadable(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	s := NewService(dir)
+	if _, ok := s.Last(); ok {
+		t.Fatal("a missing file must read as no answer, not as one")
+	}
+	body := `{"action": "poweroff", "ok": false, "reason": "tarea en curso: ActorPlus: Update the actors' photos…,Refresh People", "at": "2026-10-05T12:04:33+00:00"}`
+	if err := os.WriteFile(filepath.Join(dir, ".last-action.json"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a, ok := s.Last()
+	if !ok || a.OK || a.Action != "poweroff" || a.Reason == "" || a.At.IsZero() {
+		t.Errorf("last = %+v, %v", a, ok)
+	}
+}

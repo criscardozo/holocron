@@ -49,7 +49,50 @@ func activityView(a activity.Snapshot, now time.Time) templates.ActivityView {
 		v.Recent = append(v.Recent, r)
 	}
 	libraryView(&v, a.Library, now)
+	refineRequests(&v, a, now)
 	return v
+}
+
+// refineRequests replaces Seerr's "processing" with what is actually going on.
+//
+// For Seerr, media status 3 means it accepted the request and handed it to
+// Radarr or Sonarr — not that anything is downloading. Read literally, a film
+// that has not even come out yet showed as "descargando", and anyone who went
+// to look found an empty queue. Holocron has the queue and the calendar in the
+// same reading, so it can say which of the three it really is: in the queue,
+// waiting for a release date, or watched and not found yet. (Reported by the
+// Ginebra session, comparing the screen against the APIs.)
+func refineRequests(v *templates.ActivityView, a activity.Snapshot, now time.Time) {
+	for i, r := range a.Library.Requests {
+		if i >= len(v.Requests) || r.MediaStatus != seerr.MediaProcessing || r.Status == seerr.RequestDeclined {
+			continue
+		}
+		matches := func(tmdb, tvdb int) bool {
+			if r.Type == "tv" {
+				return r.TvdbID != 0 && tvdb == r.TvdbID
+			}
+			return r.TmdbID != 0 && tmdb == r.TmdbID
+		}
+		state := "buscando"
+		for _, d := range a.Downloads {
+			if matches(d.TmdbID, d.TvdbID) {
+				state = "descargando " + pct(d.Progress*100)
+				break
+			}
+		}
+		if state == "buscando" {
+			for _, u := range a.Library.Upcoming {
+				if matches(u.TmdbID, u.TvdbID) && u.When.After(now) {
+					state = "sale " + until(u.When, now)
+					if u.Kind == "cines" {
+						state = "en cines " + until(u.When, now)
+					}
+					break
+				}
+			}
+		}
+		v.Requests[i].State = state
+	}
 }
 
 // libraryView fills in the slow lane: requests, upcoming releases, and what is
@@ -146,7 +189,8 @@ func requestState(r seerr.Request) (state string, done, stuck bool) {
 	case seerr.MediaPartiallyAvailable:
 		return "disponible en parte", false, false
 	case seerr.MediaProcessing:
-		return "descargando", false, false
+		// Refined against the queue and the calendar in refineRequests.
+		return "buscando", false, false
 	case seerr.MediaPending:
 		return "buscando", false, false
 	case seerr.MediaBlocklisted:

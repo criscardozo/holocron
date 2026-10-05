@@ -1,0 +1,118 @@
+package templates
+
+// ServicesPage is the state of everything that should be running on the
+// server. Live over /events/services, refreshed every 15 s.
+templ ServicesPage(v ServicesView) {
+	@Layout("Servicios") {
+		<div class="page-head">
+			<div>
+				<h1>Servicios</h1>
+				<p class="sub">Lo que tiene que estar corriendo en Ginebra, las tareas programadas y la salud de los discos</p>
+			</div>
+		</div>
+		<div hx-ext="sse" sse-connect="/events/services">
+			<div sse-swap="services" hx-swap="innerHTML">
+				@ServicesLive(v)
+			</div>
+		</div>
+	}
+}
+
+templ ServicesLive(v ServicesView) {
+	for _, e := range v.Errors {
+		<div class="notice error mb-6">
+			@IconSm("alert")
+			<span>{ e }</span>
+		</div>
+	}
+	if !v.Configured {
+		<p class="muted">
+			No hay servicios configurados para vigilar. Se configuran en el servidor con
+			<span class="mono">HOLOCRON_WATCH_UNITS</span>,
+			<span class="mono">HOLOCRON_WATCH_TIMERS</span> y
+			<span class="mono">HOLOCRON_SMART_FILE</span>.
+		</p>
+	} else {
+		<div class="act-grid">
+			if len(v.Units) > 0 {
+				<section class="card elev-sm act-card">
+					<header class="hw-head">
+						<h2>Unidades</h2>
+						if v.Down > 0 {
+							<span class="badge badge-no">{ Plural(v.Down, "caída", "caídas") }</span>
+						} else {
+							<span class="badge badge-yes">todo arriba</span>
+						}
+					</header>
+					<ul class="stat-list">
+						for _, u := range v.Units {
+							<li>
+								<span class="stat-key mono">{ u.Name }</span>
+								<span class="stat-val">
+									<span class={ "badge", templ.KV("badge-yes", u.OK), templ.KV("badge-no", !u.OK) }>{ u.State }</span>
+									if u.Since != "" {
+										<span class="muted">{ u.Since }</span>
+									}
+								</span>
+							</li>
+						}
+					</ul>
+				</section>
+			}
+			if len(v.Timers) > 0 {
+				<section class="card elev-sm act-card">
+					<header class="hw-head"><h2>Tareas programadas</h2></header>
+					<ul class="act-list">
+						for _, t := range v.Timers {
+							<li class={ "act-item", templ.KV("act-problem", t.Failed) }>
+								<div class="act-title">
+									<strong class="mono">{ t.Name }</strong>
+									<span class={ "badge", templ.KV("badge-yes", !t.Failed), templ.KV("badge-no", t.Failed) }>{ t.Result }</span>
+								</div>
+								<div class="act-meta muted">
+									<span>última: { t.Last }</span>
+									<span>· próxima: { t.Next }</span>
+								</div>
+							</li>
+						}
+					</ul>
+				</section>
+			}
+			if len(v.Disks) > 0 {
+				<section class="card elev-sm act-card">
+					<header class="hw-head">
+						<h2>Discos (SMART)</h2>
+						<span class="muted">{ v.SmartAge }</span>
+					</header>
+					<ul class="act-list">
+						for _, d := range v.Disks {
+							<li class={ "act-item", templ.KV("act-problem", d.Bad) }>
+								<div class="act-title">
+									<strong class="mono">{ d.Disk }</strong>
+									if d.Model != "" {
+										<span class="muted">{ d.Model }</span>
+									}
+								</div>
+								if d.Asleep {
+									// Not an error: the timer reads with -n standby so it never
+									// wakes a sleeping disk, and this one was asleep.
+									<div class="muted act-small">Sin lectura todavía: el disco estaba dormido cuando se midió, y no se lo despierta para esto.</div>
+								} else {
+									<div class="act-meta">
+										<span class={ "badge", templ.KV("badge-yes", !d.Bad), templ.KV("badge-no", d.Bad) }>{ d.Health }</span>
+										for _, f := range d.Facts {
+											<span class="muted mono num">{ f }</span>
+										}
+									</div>
+									for _, w := range d.Warn {
+										<div class="act-small act-warn">{ w }</div>
+									}
+								}
+							</li>
+						}
+					</ul>
+				</section>
+			}
+		</div>
+	}
+}

@@ -122,6 +122,10 @@ type QueueItem struct {
 	ETA        time.Time
 	Messages   []string
 	Error      string
+	// TmdbID (films) and TvdbID (series) say what the download is for in the
+	// terms Seerr uses, which is how a request finds its download.
+	TmdbID int
+	TvdbID int
 }
 
 // Progress is the fraction downloaded, 0..1.
@@ -159,11 +163,13 @@ type queueResource struct {
 		Messages []string `json:"messages"`
 	} `json:"statusMessages"`
 	Movie *struct {
-		Title string `json:"title"`
-		Year  int    `json:"year"`
+		Title  string `json:"title"`
+		Year   int    `json:"year"`
+		TmdbID int    `json:"tmdbId"`
 	} `json:"movie"`
 	Series *struct {
-		Title string `json:"title"`
+		Title  string `json:"title"`
+		TvdbID int    `json:"tvdbId"`
 	} `json:"series"`
 	Episode *struct {
 		SeasonNumber  int    `json:"seasonNumber"`
@@ -200,6 +206,12 @@ func (c *Client) Queue(ctx context.Context) ([]QueueItem, error) {
 			it.Messages = append(it.Messages, m.Messages...)
 		}
 		it.Subject = subject(r)
+		if r.Movie != nil {
+			it.TmdbID = r.Movie.TmdbID
+		}
+		if r.Series != nil {
+			it.TvdbID = r.Series.TvdbID
+		}
 		out = append(out, it)
 	}
 	return out, nil
@@ -250,6 +262,8 @@ type Upcoming struct {
 	When    time.Time
 	Kind    string // "digital", "físico", "cines" or "emisión"
 	HasFile bool
+	TmdbID  int
+	TvdbID  int
 }
 
 // Calendar lists what comes out between from and to.
@@ -267,7 +281,8 @@ func (c *Client) Calendar(ctx context.Context, from, to time.Time) ([]Upcoming, 
 			AirDateUtc    time.Time `json:"airDateUtc"`
 			HasFile       bool      `json:"hasFile"`
 			Series        *struct {
-				Title string `json:"title"`
+				Title  string `json:"title"`
+				TvdbID int    `json:"tvdbId"`
 			} `json:"series"`
 		}
 		if err := c.get(ctx, c.app.api()+"/calendar", q, &eps); err != nil {
@@ -275,11 +290,12 @@ func (c *Client) Calendar(ctx context.Context, from, to time.Time) ([]Upcoming, 
 		}
 		out := make([]Upcoming, 0, len(eps))
 		for _, e := range eps {
-			name := e.Title
+			name, tvdb := e.Title, 0
 			if e.Series != nil {
 				name = fmt.Sprintf("%s · T%dE%02d", e.Series.Title, e.SeasonNumber, e.EpisodeNumber)
+				tvdb = e.Series.TvdbID
 			}
-			out = append(out, Upcoming{App: c.app, Subject: name, When: e.AirDateUtc, Kind: "emisión", HasFile: e.HasFile})
+			out = append(out, Upcoming{App: c.app, Subject: name, When: e.AirDateUtc, Kind: "emisión", HasFile: e.HasFile, TvdbID: tvdb})
 		}
 		return out, nil
 	}
@@ -291,6 +307,7 @@ func (c *Client) Calendar(ctx context.Context, from, to time.Time) ([]Upcoming, 
 		DigitalRelease  *time.Time `json:"digitalRelease"`
 		PhysicalRelease *time.Time `json:"physicalRelease"`
 		HasFile         bool       `json:"hasFile"`
+		TmdbID          int        `json:"tmdbId"`
 	}
 	if err := c.get(ctx, c.app.api()+"/calendar", q, &movies); err != nil {
 		return nil, err
@@ -309,7 +326,7 @@ func (c *Client) Calendar(ctx context.Context, from, to time.Time) ([]Upcoming, 
 			kind string
 		}{{m.DigitalRelease, "digital"}, {m.PhysicalRelease, "físico"}, {m.InCinemas, "cines"}} {
 			if cand.t != nil && !cand.t.Before(from) && !cand.t.After(to) {
-				out = append(out, Upcoming{App: c.app, Subject: name, When: *cand.t, Kind: cand.kind, HasFile: m.HasFile})
+				out = append(out, Upcoming{App: c.app, Subject: name, When: *cand.t, Kind: cand.kind, HasFile: m.HasFile, TmdbID: m.TmdbID})
 				break
 			}
 		}

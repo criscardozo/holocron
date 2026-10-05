@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/power"
@@ -143,6 +144,21 @@ func (s *Server) manageView(r *http.Request, base templates.ManagePageView) temp
 	// answer withholds a warning rather than blocking the page.
 	pre := power.Check(ctx, s.deps.Library, s.deps.Torrents)
 	v.Warnings, v.Checked = pre.Warnings, pre.Checked
+
+	// Only recent answers: yesterday's refusal is history, not news.
+	if a, ok := s.deps.Power.Last(); ok && time.Since(a.At) < 24*time.Hour {
+		what := "Reiniciar la Pi"
+		if a.Action == "poweroff" {
+			what = "Apagar la Pi"
+		}
+		when := a.At.Local().Format("15:04")
+		if a.OK {
+			v.LastAction = what + ": el servidor lo aceptó a las " + when + "."
+		} else {
+			v.LastActionFailed = true
+			v.LastAction = what + ": el servidor lo rechazó a las " + when + " porque " + a.Reason + "."
+		}
+	}
 
 	if pending, ok := s.deps.Power.Pending(); ok {
 		v.Pending = pending.Label() + " — pedido, esperando a que el sistema lo tome…"

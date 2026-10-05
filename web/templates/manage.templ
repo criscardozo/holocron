@@ -46,6 +46,12 @@ templ ManageSection(v ManagePageView) {
 			</ul>
 		</div>
 
+		if v.LastAction != "" {
+			<div class={ "notice", "mb-6", templ.KV("error", v.LastActionFailed) }>
+				@IconSm(noticeIcon(v.LastActionFailed))
+				<span>{ v.LastAction }</span>
+			</div>
+		}
 		@preflight(v)
 
 		if v.Pending != "" {

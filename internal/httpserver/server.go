@@ -21,6 +21,7 @@ import (
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
+	"github.com/cristian/holocron/internal/services"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/torrents"
 	"github.com/cristian/holocron/internal/updates"
@@ -32,21 +33,24 @@ import (
 // Deps are the dependencies shared by the HTTP handlers. Later phases add their
 // own services here.
 type Deps struct {
-	Log          *slog.Logger
-	Widgets      *widgets.Registry
-	Folders      *folders.Store
-	Disk         *diskusage.Service
-	Hardware     *live.Hub[hardware.Snapshot]
-	Activity     *live.Hub[activity.Snapshot]
-	Naming       *naming.Service
-	Settings     *settings.Store
-	Library      *library.Service
-	Quality      *quality.Service
-	Torrents     *torrents.Service
-	APIToken     *apitoken.Store
-	JellyfinLink *jellyfin.LinkService
-	Updates      *updates.Service
-	Power        *power.Service
+	Log      *slog.Logger
+	Widgets  *widgets.Registry
+	Folders  *folders.Store
+	Disk     *diskusage.Service
+	Hardware *live.Hub[hardware.Snapshot]
+	Activity *live.Hub[activity.Snapshot]
+	Services *live.Hub[services.Snapshot]
+	// ServicesConfigured says whether there is anything to watch at all.
+	ServicesConfigured bool
+	Naming             *naming.Service
+	Settings           *settings.Store
+	Library            *library.Service
+	Quality            *quality.Service
+	Torrents           *torrents.Service
+	APIToken           *apitoken.Store
+	JellyfinLink       *jellyfin.LinkService
+	Updates            *updates.Service
+	Power              *power.Service
 }
 
 // Server serves the Holocron web UI.
@@ -86,6 +90,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /events/hardware", s.handleHardwareEvents)
 	mux.HandleFunc("GET /activity", s.handleActivityPage)
 	mux.HandleFunc("GET /events/activity", s.handleActivityEvents)
+	mux.HandleFunc("GET /services", s.handleServicesPage)
+	mux.HandleFunc("GET /events/services", s.handleServicesEvents)
 
 	mux.HandleFunc("GET /naming", s.handleNamingPage)
 	mux.HandleFunc("POST /naming/scan", s.handleNamingScan)

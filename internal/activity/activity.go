@@ -46,6 +46,8 @@ type Download struct {
 	Health   string // ok | warning | error
 	Messages []string
 	ETA      time.Time
+	TmdbID   int
+	TvdbID   int
 	// From the torrent, when there is one.
 	Speed        int64
 	TorrentState string
@@ -225,7 +227,7 @@ func join(queue []arr.QueueItem, torrents []qbittorrent.Torrent) ([]Download, in
 		d := Download{
 			App: q.App, Subject: q.Subject, Release: q.Release,
 			Progress: q.Progress(), Size: q.Size, State: q.State, Health: q.Health,
-			Messages: q.Messages, ETA: q.ETA,
+			Messages: q.Messages, ETA: q.ETA, TmdbID: q.TmdbID, TvdbID: q.TvdbID,
 		}
 		if t, ok := byHash[q.DownloadID]; ok && q.DownloadID != "" {
 			claimed[q.DownloadID] = true

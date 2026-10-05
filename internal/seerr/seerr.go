@@ -93,6 +93,10 @@ type Request struct {
 	// partially available, available, blocklisted, deleted.
 	MediaStatus int
 	Seasons     int
+	// TmdbID and TvdbID identify the media, to find it in the *arr queues
+	// and calendars.
+	TmdbID int
+	TvdbID int
 }
 
 // Request statuses (MediaRequestStatus in Seerr's source).
@@ -124,6 +128,7 @@ type requestPage struct {
 		SeasonCount int       `json:"seasonCount"`
 		Media       struct {
 			TmdbID int `json:"tmdbId"`
+			TvdbID int `json:"tvdbId"`
 			Status int `json:"status"`
 		} `json:"media"`
 		RequestedBy struct {
@@ -148,6 +153,7 @@ func (c *Client) Recent(ctx context.Context, take int) ([]Request, error) {
 		req := Request{
 			ID: r.ID, Type: r.Type, Status: r.Status, CreatedAt: r.CreatedAt,
 			MediaStatus: r.Media.Status, Seasons: r.SeasonCount,
+			TmdbID: r.Media.TmdbID, TvdbID: r.Media.TvdbID,
 			By: r.RequestedBy.DisplayName,
 		}
 		if req.By == "" {

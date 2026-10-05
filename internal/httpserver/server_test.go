@@ -25,6 +25,7 @@ import (
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
+	"github.com/cristian/holocron/internal/services"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/torrents"
 	"github.com/cristian/holocron/internal/updates"
@@ -64,6 +65,7 @@ func newTestServer(t *testing.T) *testServer {
 		Folders:  folderStore,
 		Disk:     diskusage.NewService(database, folderStore, jobManager),
 		Hardware: hardware.NewHub(20 * time.Millisecond),
+		Services: live.NewHub(20*time.Millisecond, services.NewReader(services.Config{}).Read),
 		Activity: live.NewHub(20*time.Millisecond, activity.NewSampler(func(context.Context) activity.Sources {
 			return activity.Sources{}
 		}).Sample),

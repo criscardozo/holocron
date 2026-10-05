@@ -99,7 +99,7 @@ func TestRequestStateAnswersCanIWatchItYet(t *testing.T) {
 		done       bool
 	}{
 		{seerr.RequestCompleted, seerr.MediaAvailable, "disponible", true},
-		{seerr.RequestApproved, seerr.MediaProcessing, "descargando", false},
+		{seerr.RequestApproved, seerr.MediaProcessing, "buscando", false},
 		{seerr.RequestCompleted, seerr.MediaPartiallyAvailable, "disponible en parte", false},
 		{seerr.RequestPending, seerr.MediaUnknown, "esperando aprobación", false},
 		{seerr.RequestDeclined, seerr.MediaUnknown, "rechazado", false},
@@ -133,5 +133,33 @@ func TestALostBazarrLinkIsAWarning(t *testing.T) {
 	}
 	if !warned || !counted {
 		t.Errorf("attention = %+v", v.Attention)
+	}
+}
+
+// TestProcessingSaysWhatIsReallyHappening is the case the Ginebra session
+// caught: Seerr's "processing" only means it was handed to Radarr. Read
+// literally it said "descargando" for a film still a week from cinemas, with
+// nothing in any queue.
+func TestProcessingSaysWhatIsReallyHappening(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	a := activity.Snapshot{
+		Downloads: []activity.Download{{App: arr.Radarr, TmdbID: 1, Progress: 0.4}},
+		Library: activity.Library{
+			At: now,
+			Requests: []seerr.Request{
+				{Title: "En la cola", Type: "movie", TmdbID: 1, Status: seerr.RequestApproved, MediaStatus: seerr.MediaProcessing},
+				{Title: "Street Fighter", Type: "movie", TmdbID: 2, Status: seerr.RequestApproved, MediaStatus: seerr.MediaProcessing},
+				{Title: "Ni rastro", Type: "movie", TmdbID: 3, Status: seerr.RequestApproved, MediaStatus: seerr.MediaProcessing},
+			},
+			Upcoming: []arr.Upcoming{{TmdbID: 2, When: now.Add(8 * 24 * time.Hour), Kind: "cines"}},
+		},
+	}
+	v := activityView(a, now)
+	want := []string{"descargando 40 %", "en cines en 8 días", "buscando"}
+	for i, w := range want {
+		if v.Requests[i].State != w {
+			t.Errorf("%s = %q, want %q", v.Requests[i].Title, v.Requests[i].State, w)
+		}
 	}
 }

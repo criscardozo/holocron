@@ -823,3 +823,50 @@ Los fixtures de esta parte son capturas reales de Ginebra, limpiadas en el
 servidor antes de salir (sin emails, sin avatares, sin configuración de
 indexadores).
 
+### «Procesando» no es «descargando»
+
+Para Seerr, el estado 3 de una media quiere decir que aceptó el pedido y se lo
+pasó a Radarr o Sonarr, no que algo se esté bajando. Leído al pie de la letra,
+una película que todavía no había salido aparecía como «descargando», y quien
+fuera a mirar encontraba la cola vacía. Lo notó la sesión Ginebra comparando la
+pantalla con las APIs.
+
+Como la cola y el calendario están en la misma lectura, Holocron dice cuál de
+las tres es: **«descargando N %»** si está en la cola de Radarr o Sonarr (se
+cruza por TMDb para películas y TVDB para series), **«sale en N días»** (o «en
+cines») si el calendario tiene fecha, y si no, **«buscando»**.
+
+## Feature 12 — Servicios (`/services`)
+
+El estado de lo que tiene que estar corriendo, las tareas programadas y la
+salud de los discos. En vivo por SSE, cada 15 segundos.
+
+- **Unidades**: lo que diga `HOLOCRON_WATCH_UNITS`. En Ginebra es la misma lista
+  de `ginebra-vigia` más los dos montajes, así que la pantalla y los avisos no
+  pueden discrepar sobre qué tiene que estar arriba.
+- **Tareas programadas**: los timers cuyo nombre empieza con
+  `HOLOCRON_WATCH_TIMERS`, con la última corrida, la próxima y **el resultado
+  del servicio que disparan**, que es donde está si el respaldo salió bien. Un
+  oneshot que terminó queda `inactive` con `Result=success`: eso es trabajo
+  hecho, no un servicio caído.
+- **SMART**: lo lee del archivo que escribe un timer de root
+  (`HOLOCRON_SMART_FILE`). Holocron no corre `smartctl`: necesitaría root y
+  despertaría el disco SMR. Un disco que estaba dormido cuando se midió dice
+  «sin lectura todavía», no error. Los sectores reasignados o pendientes se
+  dicen aparte, porque SMART puede seguir diciendo «sano» con 217 reasignados.
+
+Dos llamadas a `systemctl` por lectura, sin privilegios, probado dentro del
+mismo sandbox que la unit de Holocron. Las dos formas se midieron antes de
+escribirlo, en systemd 257: `show` deja vacío `NextElapseUSecRealtime` y
+escribe `LastTriggerUSec` en hora local aun con `--timestamp=unix`, así que
+los timers salen de `list-timers -o json`, que da los dos en microsegundos.
+
+### La respuesta del servidor a un apagado
+
+En Ginebra los botones de apagar y reiniciar no llaman a `systemctl`: corren los
+scripts del servidor, que pasan por un preflight que se niega si hay alguien
+mirando, un torrent activo o una tarea de Jellyfin. Cuando se niega, la máquina
+simplemente no se apaga, y del lado de Holocron eso se ve igual que un pedido
+perdido. Así que los scripts dejan su respuesta en `.last-action.json` y la
+pantalla de Gestión la muestra, con el motivo, durante 24 horas.
+

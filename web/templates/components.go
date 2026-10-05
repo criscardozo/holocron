@@ -15,6 +15,7 @@ var navItems = []struct{ Label, Href string }{
 	{"Dashboard", "/"},
 	{"Actividad", "/activity"},
 	{"Hardware", "/hardware"},
+	{"Servicios", "/services"},
 	{"Disco", "/disk"},
 	{"Nombres", "/naming"},
 	{"Medios", "/media"},
@@ -148,4 +149,13 @@ func Plural(n int, singular, plural string) string {
 		return "1 " + singular
 	}
 	return strconv.Itoa(n) + " " + plural
+}
+
+// noticeIcon picks the icon for a notice: an alert for an error, a tick
+// otherwise. A function because templ has no ternary.
+func noticeIcon(isErr bool) string {
+	if isErr {
+		return "alert"
+	}
+	return "check"
 }

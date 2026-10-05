@@ -33,6 +33,7 @@ import (
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/seerr"
+	"github.com/cristian/holocron/internal/services"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/torrents"
 	"github.com/cristian/holocron/internal/updates"
@@ -87,6 +88,12 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	updatesService := updates.NewService(filepath.Dir(cfg.DBPath))
 	powerService := power.NewService(filepath.Dir(cfg.DBPath))
 	activityHub := newActivityHub(libraryService, torrentsService, settingsStore)
+	servicesReader := services.NewReader(services.Config{
+		Units: cfg.WatchUnits, TimerPrefix: cfg.WatchTimers, SmartFile: cfg.SmartFile,
+	})
+	// Unit state changes rarely and is one shell-out for all of them, so 15 s
+	// is plenty — and like every live screen, only while somebody watches.
+	servicesHub := live.NewHub(15*time.Second, servicesReader.Read)
 
 	registry := widgets.NewRegistry(
 		widgets.SystemWidget{},
@@ -98,21 +105,23 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	)
 
 	srv := httpserver.New(httpserver.Deps{
-		Log:          logger,
-		Widgets:      registry,
-		Folders:      folderStore,
-		Disk:         diskService,
-		Hardware:     hardware.NewHub(2 * time.Second),
-		Activity:     activityHub,
-		Naming:       namingService,
-		Settings:     settingsStore,
-		Library:      libraryService,
-		Quality:      qualityService,
-		Torrents:     torrentsService,
-		APIToken:     apiTokenStore,
-		JellyfinLink: jellyfinLink,
-		Updates:      updatesService,
-		Power:        powerService,
+		Log:                logger,
+		Widgets:            registry,
+		Folders:            folderStore,
+		Disk:               diskService,
+		Hardware:           hardware.NewHub(2 * time.Second),
+		Activity:           activityHub,
+		Services:           servicesHub,
+		ServicesConfigured: servicesReader.Configured(),
+		Naming:             namingService,
+		Settings:           settingsStore,
+		Library:            libraryService,
+		Quality:            qualityService,
+		Torrents:           torrentsService,
+		APIToken:           apiTokenStore,
+		JellyfinLink:       jellyfinLink,
+		Updates:            updatesService,
+		Power:              powerService,
 	})
 
 	httpSrv := &http.Server{

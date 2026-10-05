@@ -1,0 +1,43 @@
+{
+ "generado": "2026-10-05T11:41:15+00:00",
+ "discos": [
+  {
+   "disco": "/dev/nvme0n1",
+   "modelo": "KINGSTON RBUSNS8154P3256GJ1",
+   "serie": "50026B76830140A7",
+   "capacidad_bytes": 256060514304,
+   "salud": "ok",
+   "reasignados": null,
+   "pendientes": null,
+   "incorregibles": null,
+   "crc": null,
+   "desgaste_pct": 7,
+   "temperatura": 34,
+   "horas": 1351,
+   "leido_en": "2026-10-05T11:41:15+00:00"
+  },
+  {
+   "disco": "/dev/sda",
+   "modelo": "CT250MX500SSD4",
+   "serie": "1816E1374D8A",
+   "capacidad_bytes": 250059350016,
+   "salud": "ok",
+   "reasignados": 0,
+   "pendientes": 0,
+   "incorregibles": 0,
+   "crc": 0,
+   "desgaste_pct": null,
+   "temperatura": 26,
+   "horas": 8965,
+   "leido_en": "2026-10-05T11:41:15+00:00"
+  },
+  {
+   "disco": "/dev/sdb",
+   "dormido": true
+  },
+  {
+   "disco": "/dev/sdc",
+   "dormido": true
+  }
+ ]
+}

@@ -46,6 +46,12 @@ type ManagePageView struct {
 	// than from the LAN. Read from the Host header, so it is a hint about
 	// where the person is, never a permission check.
 	Remote bool
+
+	// LastAction is the server's answer to the last power request, when the
+	// server's scripts leave one. A refused power-off otherwise looks exactly
+	// like a request that got lost.
+	LastAction       string
+	LastActionFailed bool
 }
 
 // ManageServiceRow is what can honestly be said about a neighbouring service:
