@@ -1,24 +1,79 @@
 package templates
 
-// Dashboard renders the "Atención" strip (chips linking to sections that need
-// action) and the widget grid (built in Go, see Grid) inside the shared layout.
-templ Dashboard(chips []AttnChip, grid templ.Component) {
-	@Layout("Dashboard") {
-		<div class="page-head">
-			<div>
-				<h1>Dashboard</h1>
-				<p class="sub">Estado del equipo y accesos rápidos a cada herramienta</p>
+// Home is the start page, laid out like Ginebra's portal: the name over the
+// poster wall, a row of readings, and a tile per area that doubles as the way
+// in. What arrived lately closes it, as posters.
+templ Home(v HomeView) {
+	@Layout("Inicio") {
+		<section class="home-hero">
+			<h1 class="home-title">Holocron</h1>
+			<p class="home-sub">El panel de { v.Machine }</p>
+			<div class="home-status">
+				for _, st := range v.Status {
+					<span class={ "glass-chip", templ.KV("tone-ok", st.Tone == "ok"), templ.KV("tone-warn", st.Tone == "warn"), templ.KV("tone-danger", st.Tone == "danger") }>{ st.Text }</span>
+				}
 			</div>
-			if len(chips) > 0 {
+			if len(v.Attn) > 0 {
 				<div class="attn">
-					<span class="attn-label">Atención</span>
-					for _, c := range chips {
+					for _, c := range v.Attn {
 						@attnChip(c)
 					}
 				</div>
 			}
+		</section>
+		<div class="tiles">
+			for _, t := range v.Tiles {
+				@tile(t)
+			}
 		</div>
-		@grid
+		if len(v.Recent) > 0 {
+			<section class="home-recent">
+				<header class="section-head">
+					<h2>Agregado hace poco</h2>
+					<a href="/media" class="muted">Ver la biblioteca ›</a>
+				</header>
+				@posterRow(v.Recent)
+			</section>
+		}
+	}
+}
+
+templ tile(t Tile) {
+	<a href={ templ.SafeURL(t.Href) } class={ "tile", "glass", templ.KV("tile-warn", t.Warn), templ.KV("tile-off", t.Off) }>
+		<span class={ "tile-icon", "tone-" + t.Tone }>
+			@Icon(t.Icon)
+		</span>
+		<span class="tile-title">{ t.Title }</span>
+		<span class="tile-value">{ t.Value }</span>
+		<span class="tile-sub">{ t.Sub }</span>
+	</a>
+}
+
+// posterRow is a horizontal row of posters with a caption under each.
+templ posterRow(items []ActRecent) {
+	<ul class="poster-row">
+		for _, r := range items {
+			<li class="poster-card">
+				@poster(r.Art, r.Title)
+				<strong>{ r.Title }</strong>
+				<span class="muted">
+					if r.Subtitle != "" {
+						{ r.Subtitle } ·
+					}
+					{ r.When }
+				</span>
+			</li>
+		}
+	</ul>
+}
+
+// poster is one poster image, or a placeholder with the title's initial when
+// there is none. Lazy, because a row or a grid is mostly off screen.
+templ poster(src, title string) {
+	if src != "" {
+		<img class="poster" src={ src } alt="" loading="lazy" decoding="async"/>
+	} else {
+		<span class="poster poster-empty" aria-hidden="true">{ initial(title) }</span>
 	}
 }
 

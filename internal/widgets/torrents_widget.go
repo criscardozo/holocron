@@ -3,14 +3,12 @@ package widgets
 import (
 	"context"
 
-	"github.com/a-h/templ"
-
 	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/internal/torrents"
 	"github.com/cristian/holocron/web/templates"
 )
 
-// TorrentsWidget shows qBittorrent activity: active/total and total speeds.
+// TorrentsWidget shows qBittorrent activity: active torrents and total speeds.
 type TorrentsWidget struct {
 	torrents *torrents.Service
 }
@@ -18,22 +16,22 @@ type TorrentsWidget struct {
 // NewTorrentsWidget creates a TorrentsWidget.
 func NewTorrentsWidget(s *torrents.Service) TorrentsWidget { return TorrentsWidget{torrents: s} }
 
-func (TorrentsWidget) ID() string    { return "torrents" }
-func (TorrentsWidget) Title() string { return "Torrents" }
+func (TorrentsWidget) ID() string { return "torrents" }
 
-func (w TorrentsWidget) Card(ctx context.Context) templ.Component {
-	view := templates.TorrentsCardView{Configured: w.torrents.Configured(ctx)}
-	if view.Configured {
-		sum, err := w.torrents.Summary(ctx)
-		if err != nil {
-			view.Err = true
-		} else {
-			view.Total = sum.Total
-			view.Active = sum.Active
-			view.DlHuman = system.HumanSignedBytes(sum.DlSpeed) + "/s"
-			view.UpHuman = system.HumanSignedBytes(sum.UpSpeed) + "/s"
-		}
+// Tile is how many are moving, and how fast.
+func (w TorrentsWidget) Tile(ctx context.Context) templates.Tile {
+	t := templates.Tile{Href: "/torrents", Icon: "download", Tone: "mint", Title: "Torrents"}
+	if !w.torrents.Configured(ctx) {
+		t.Value, t.Sub, t.Off = "—", "qBittorrent sin configurar", true
+		return t
 	}
-	chrome := templates.WidgetChrome{ID: w.ID(), Title: w.Title(), Icon: "adown", Span: "span-4"}
-	return templates.Widget(chrome, templates.TorrentsBody(view))
+	sum, err := w.torrents.Summary(ctx)
+	if err != nil {
+		t.Value, t.Sub, t.Warn = "—", "qBittorrent no responde", true
+		return t
+	}
+	t.Value = templates.Plural(sum.Active, "activo", "activos")
+	t.Sub = "↓ " + system.HumanSignedBytes(sum.DlSpeed) + "/s · ↑ " +
+		system.HumanSignedBytes(sum.UpSpeed) + "/s · " + templates.Plural(sum.Total, "en total", "en total")
+	return t
 }

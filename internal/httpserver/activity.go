@@ -10,6 +10,7 @@ import (
 
 	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/arr"
+	"github.com/cristian/holocron/internal/artwork"
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/seerr"
 	"github.com/cristian/holocron/internal/system"
@@ -39,7 +40,10 @@ func activityView(a activity.Snapshot, now time.Time) templates.ActivityView {
 		v.Downloads = append(v.Downloads, downloadView(d, now))
 	}
 	for _, it := range a.Recent {
-		r := templates.ActRecent{Title: it.Name, When: ago(now.Sub(it.DateCreated))}
+		r := templates.ActRecent{
+			Title: it.Name, When: ago(now.Sub(it.DateCreated)),
+			Art: artwork.URL(artwork.KindJellyfin, it.PosterID()),
+		}
 		if it.Type == jellyfin.TypeEpisode && it.SeriesName != "" {
 			r.Title = it.SeriesName
 			r.Subtitle = episodeLabel(it.ParentIndexNumber, it.IndexNumber) + " " + it.Name
@@ -113,7 +117,10 @@ func libraryView(v *templates.ActivityView, l activity.Library, now time.Time) {
 		}
 	}
 	for _, r := range l.Requests {
-		ar := templates.ActRequest{Title: r.Title, By: r.By, When: ago(now.Sub(r.CreatedAt)), Kind: "película"}
+		ar := templates.ActRequest{
+			Title: r.Title, By: r.By, When: ago(now.Sub(r.CreatedAt)), Kind: "película",
+			Art: artwork.TMDbURL(r.Poster),
+		}
 		if r.Type == "tv" {
 			ar.Kind = "serie"
 		}
@@ -234,6 +241,11 @@ func playingView(ss jellyfin.Session) templates.ActPlaying {
 	}
 	item := ss.NowPlaying
 	if item != nil {
+		poster := item.ID
+		if item.SeriesID != "" {
+			poster = item.SeriesID
+		}
+		p.Art = artwork.URL(artwork.KindJellyfin, poster)
 		p.Title = item.Name
 		if item.SeriesName != "" {
 			p.Title = item.SeriesName

@@ -1,44 +1,6 @@
 package templates
 
 import "fmt"
-
-// QualityBody is the dashboard quality widget: how many findings the last audit
-// left, broken down by category.
-templ QualityBody(v QualityCardView) {
-	if !v.Configured {
-		<p class="muted">Jellyfin no vinculado. <a href="/settings">Conectar</a>.</p>
-	} else if !v.HasReport {
-		<p class="muted">Sin analizar todavía.</p>
-		<div class="w-foot">
-			<a class="w-link" href="/quality">
-				Analizar la biblioteca
-				@IconSm("chev")
-			</a>
-		</div>
-	} else {
-		<div class="cols2">
-			<ul class="stat-list">
-				for _, c := range v.Counts {
-					<li>
-						<span class="stat-key">{ c.Label }</span>
-						<span class="stat-val">{ fmt.Sprintf("%d", c.Count) }</span>
-					</li>
-				}
-			</ul>
-			<div class="sys-now">
-				<span class="big-num">{ fmt.Sprintf("%d", v.Total) }</span>
-				<span class="cap">hallazgos</span>
-			</div>
-		</div>
-		<div class="w-foot">
-			<a class="w-link" href="/quality">
-				Ver detalle
-				@IconSm("chev")
-			</a>
-		</div>
-	}
-}
-
 // QualityPage is the library quality panel.
 templ QualityPage(v QualityPageView) {
 	@Layout("Calidad") {

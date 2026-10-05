@@ -17,16 +17,21 @@ reutiliza. El orden de construcción está en [roadmap.md](roadmap.md).
 > Las secciones de abajo sobre esas tres features quedan como registro de las
 > decisiones que se tomaron; el código se fue y sigue en el historial de git.
 
-## Feature 1 — Dashboard con grilla de paneles
+## Feature 1 — Inicio
 
-Pantalla principal: una grilla responsive de widgets. Cada widget muestra un resumen
-y, según el caso, un botón de refresh chico arriba a la derecha y/o un link a su
-página de detalle.
+Pantalla principal, armada como la portada de Ginebra: el nombre sobre el mural
+de pósters, una fila de lecturas (en línea desde hace cuánto, CPU, temperatura,
+RAM, batería), la tira «Atención» y **una baldosa por área**: Actividad,
+Hardware, Servicios, Disco, Medios, Calidad, Nombres y Torrents. Cada baldosa es
+el link a su pantalla y dice, en un número, si vale la pena entrar. Cierra con
+lo agregado hace poco, en pósters.
 
-- **UI**: grilla CSS. Cada widget es un componente templ con un fragmento
-  refrescable vía HTMX.
-- **Endpoint**: `GET /` (dashboard), `GET /widgets/{id}` (fragmento de un widget).
-- **Base para**: todas las demás features enganchan acá su widget.
+- **UI**: `Home` en `dashboard.templ`; cada área aporta una `Tile` desde
+  `widgets` (Actividad y Servicios salen de sus hubs en vivo).
+- **Endpoint**: `GET /`. Las fuentes se consultan en paralelo: la página espera a
+  la más lenta, no a la suma.
+- Antes era una grilla de widgets con refresh propio (`GET /widgets/{id}`), que
+  se retiró: cada widget repetía en chico la pantalla a la que linkeaba.
 
 ---
 
@@ -51,8 +56,8 @@ Equivale a lo que hace `diskusage-pi`.
 
 ## Feature 3 — Validador de convención "Título (Año)"
 
-**Widget**: botón de refresh chico a la derecha; muestra cuántas carpetas de
-Películas/Series no cumplen la norma `Título (Año)`. Click → pantalla de errores.
+**Baldosa en Inicio**: cuántas carpetas de Películas/Series no cumplen la norma
+`Título (Año)`. Click → pantalla de errores, que es donde se re-escanea.
 
 **Pantalla de errores**: lista de carpetas mal nombradas, con lo esperado vs. lo
 encontrado, agrupadas por biblioteca.
@@ -61,8 +66,7 @@ encontrado, agrupadas por biblioteca.
   configuradas y valida cada nombre contra un patrón `^.+ \(\d{4}\)$` (con matices:
   detectar año presente pero mal formateado, sufijos como `{edition-...}`, etc.).
 - **Datos**: `naming_issues` (`path, type, expected, found, resolved`).
-- **Endpoints**: `GET /naming` (pantalla), `POST /naming/scan` (refresh), `GET
-  /widgets/naming` (fragmento del widget).
+- **Endpoints**: `GET /naming` (pantalla), `POST /naming/scan` (re-escanear).
 - **Futuro**: renombrado asistido (sugerir el nombre correcto y aplicarlo).
 
 ---
@@ -887,4 +891,24 @@ conserva su ruta conserva su id y su escaneo. **Las rutas no se verifican al
 arrancar**: Holocron tiene que levantar aunque un disco USB se haya caído del
 bus, que es justo cuando más hacen falta sus pantallas, y la de disco ya dice
 que la carpeta no está disponible.
+
+---
+
+## Pósters
+
+Desde octubre de 2026 la web muestra los pósters de la biblioteca: el mural
+detrás de cada página, lo agregado hace poco, la cabecera de lo que se está
+reproduciendo, los pedidos de Seerr y la grilla de Medios.
+
+- **De dónde salen**: de Jellyfin por el id de cada ítem (`server_item_id` en el
+  inventario, `Id`/`SeriesId` en sesiones y agregados) y, para lo pedido que
+  todavía no está en la biblioteca, de TMDb por el `posterPath` que da Seerr.
+- **Cómo llegan al navegador**: siempre por `GET /art/{kind}/{id}`. El servidor
+  los baja una vez a 300 px, los guarda en `artwork/` junto a la base y los sirve
+  de ahí; el navegador los cachea una semana. Jellyfin y TMDb no se enteran de
+  cada visita, y la API key no sale del servidor.
+- **Peso**: unos 25–35 KB por póster. Una biblioteca de mil títulos son unos
+  30 MB en disco, que se llenan de a poco, a medida que se miran.
+- **Lo que falta** se sirve como un SVG en blanco, no como un 404, y se recuerda
+  una hora. Detalle en [ui.md](ui.md#pósters).
 

@@ -62,7 +62,8 @@ holocron/
     subtitles/              # medios sin subs ES + búsqueda/descarga
     qbittorrent/            # cliente de la WebUI API de qBittorrent
     torrents/               # service sobre qbittorrent (config desde settings)
-    widgets/                # registro de widgets del dashboard
+    widgets/                # baldosas de Inicio
+    artwork/                # pósters: caché en disco, servidos por /art/
     apitoken/               # token de la API JSON (genera, revoca, verifica)
     version/                # versión estampada en el build (ldflags)
     updates/                # chequeo de releases en GitHub + pedido de instalación
@@ -138,25 +139,23 @@ entera, buscar subtítulos contra una API). No pueden bloquear un request HTTP.
   mientras el trabajo corre, y muestra el resultado al terminar.
 - Concurrencia acotada (un worker por `kind`, para no saturar la Pi).
 
-## 6. Dashboard y widgets (`widgets`)
+## 6. Inicio y baldosas (`widgets`)
 
-El dashboard es una grilla de widgets. Cada widget implementa una interfaz común:
+Inicio es una baldosa por área. Cada widget implementa una interfaz chica:
+`Tile(ctx) templates.Tile`, que devuelve **datos** (ícono, número, una línea, si
+requiere atención), no HTML; un solo componente templ los dibuja a todos. El
+registro los lee en paralelo. La baldosa es el link a la **pantalla de
+detalle**; el refresh por widget (`GET /widgets/{id}`) se retiró con la grilla.
 
-- `Render()` → fragmento HTML (templ) con el resumen y, si aplica, un botón de
-  refresh chico a la derecha.
-- Un endpoint de refresh (`GET /widgets/{id}`) que devuelve solo el fragmento
-  actualizado (HTMX lo swapea in-place).
-- Un link opcional a una **página de detalle** (la pantalla completa de la feature).
-
-Esto cumple los pedidos: paneles en grilla (feature 1), widget de disco clickeable
-(2), widget de validación con refresh que linkea a la pantalla de errores (3), etc.
+Los pósters los sirve el paquete `artwork` (`GET /art/{kind}/{id}`), con caché
+en `artwork/` junto a la base. Es la única salida a internet que agrega la web:
+`image.tmdb.org`, para los pedidos que todavía no están en la biblioteca.
 
 Patrones de HTMX a usar (fragmentos mínimos, sin JS propio):
 
-- **`hx-boost`** en la navegación dashboard ↔ páginas de detalle: navegación tipo
+- **`hx-boost`** en la navegación entre Inicio y las páginas de detalle: navegación tipo
   SPA sin recargar todo, con degradación elegante si no hay JS.
-- **`hx-indicator`** para el estado "cargando" mientras corre un trabajo o refresca
-  un widget (spinner chico en el widget).
+- **`hx-indicator`** para el estado "cargando" mientras corre un trabajo.
 - **Polling** con `hx-trigger="every 2s"` solo mientras un job está `running`; el
   fragmento deja de pedir solo cuando el job termina (el server devuelve el resumen
   final sin el atributo de polling).

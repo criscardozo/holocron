@@ -10,17 +10,6 @@ type QualityCount struct {
 	Active bool
 }
 
-// QualityCardView drives the dashboard quality widget. With HasReport false the
-// widget invites a first audit instead of showing five zeroes, which would read
-// as "the library is perfect".
-type QualityCardView struct {
-	Configured bool
-	HasReport  bool
-	Scanning   bool
-	Total      int
-	Counts     []QualityCount
-}
-
 // QualityPageView drives the quality panel. Selected is the category being
 // listed; the rest are tabs.
 type QualityPageView struct {

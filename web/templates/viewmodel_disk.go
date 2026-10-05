@@ -1,23 +1,5 @@
 package templates
 
-// DiskWidgetView is the dashboard disk widget: one row per watched disk folder
-// with its filesystem usage (cheap statfs, no recursive scan).
-type DiskWidgetView struct {
-	Empty bool
-	Rows  []DiskStatRow
-}
-
-// DiskStatRow is one folder's disk usage summary. Href links to its detail.
-type DiskStatRow struct {
-	Name        string
-	Href        string
-	UsedPercent int
-	UsedHuman   string
-	TotalHuman  string
-	Hot         bool // usage >= 90%: render the bar with the "hot" gradient
-	Err         string
-}
-
 // DiskPageView is the disk detail page: a nav of folders and the selected one.
 type DiskPageView struct {
 	Nav      []DiskNavItem

@@ -11,8 +11,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	"github.com/cristian/holocron/internal/artwork"
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/settings"
@@ -45,6 +47,9 @@ type Item struct {
 	Title     string
 	Year      int
 	HasSubsES bool
+	// ServerID is the item's id in Jellyfin, which is what its poster is
+	// fetched by. Empty for rows synced before it was recorded.
+	ServerID string
 }
 
 // Stats summarises the inventory.
@@ -215,7 +220,7 @@ func (s *Service) Stats(ctx context.Context) (Stats, error) {
 // Items lists inventory rows for display, ordered by type then title.
 func (s *Service) Items(ctx context.Context, limit int) ([]Item, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT path, type, title, year, has_subs_es
+		`SELECT path, type, title, year, has_subs_es, COALESCE(server_item_id, '')
 		 FROM media_items ORDER BY type, title LIMIT ?`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list items: %w", err)
@@ -225,7 +230,7 @@ func (s *Service) Items(ctx context.Context, limit int) ([]Item, error) {
 	var out []Item
 	for rows.Next() {
 		var it Item
-		if err := rows.Scan(&it.Path, &it.Type, &it.Title, &it.Year, &it.HasSubsES); err != nil {
+		if err := rows.Scan(&it.Path, &it.Type, &it.Title, &it.Year, &it.HasSubsES, &it.ServerID); err != nil {
 			return nil, fmt.Errorf("scan item: %w", err)
 		}
 		out = append(out, it)
@@ -305,4 +310,42 @@ func (s *Service) RecentlyAdded(ctx context.Context, limit int) ([]jellyfin.Adde
 		return nil, jellyfin.Rejected(err)
 	}
 	return items, nil
+}
+
+// PosterIDs picks n library items at random, by their Jellyfin id, for the
+// poster mural behind the pages. From the inventory rather than from
+// Jellyfin, so drawing the mural asks Jellyfin for nothing.
+func (s *Service) PosterIDs(ctx context.Context, n int) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT server_item_id FROM media_items
+		 WHERE server_item_id IS NOT NULL AND server_item_id <> ''
+		 ORDER BY random() LIMIT ?`, n)
+	if err != nil {
+		return nil, fmt.Errorf("poster ids: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan poster id: %w", err)
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
+// Poster fetches one item's poster from Jellyfin, at the given width. An item
+// with no poster is artwork.ErrNotFound, which the cache remembers for a while
+// instead of asking again on every page.
+func (s *Service) Poster(ctx context.Context, id string, width int) ([]byte, string, error) {
+	c, err := s.client(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	data, ct, err := c.Poster(ctx, id, width)
+	if errors.Is(err, jellyfin.ErrNoImage) {
+		return nil, "", artwork.ErrNotFound
+	}
+	return data, ct, err
 }

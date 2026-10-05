@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"database/sql"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/apitoken"
+	"github.com/cristian/holocron/internal/artwork"
 	"github.com/cristian/holocron/internal/db"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
@@ -39,7 +41,11 @@ type testServer struct {
 	*httptest.Server
 	deps Deps
 	logs *strings.Builder
+	db   *sql.DB
 }
+
+// testPosterID is the one poster the test server's fake Jellyfin has.
+const testPosterID = "f27caa37e5142225cceded48f6553502"
 
 func newTestServer(t *testing.T) *testServer {
 	t.Helper()
@@ -79,6 +85,16 @@ func newTestServer(t *testing.T) *testServer {
 		Updates:      updates.NewService(t.TempDir()),
 		Power:        power.NewService(t.TempDir()),
 	}
+	art, err := artwork.New(t.TempDir(), func(_ context.Context, id string, _ int) ([]byte, string, error) {
+		if id == testPosterID {
+			return []byte("jpeg"), "image/jpeg", nil
+		}
+		return nil, "", artwork.ErrNotFound
+	}, logger)
+	if err != nil {
+		t.Fatalf("artwork: %v", err)
+	}
+	deps.Art = art
 	deps.Widgets = widgets.NewRegistry(
 		widgets.SystemWidget{},
 		widgets.NewDiskWidget(folderStore),
@@ -90,7 +106,7 @@ func newTestServer(t *testing.T) *testServer {
 
 	srv := httptest.NewServer(New(deps).Handler())
 	t.Cleanup(srv.Close)
-	return &testServer{Server: srv, deps: deps, logs: logs}
+	return &testServer{Server: srv, deps: deps, logs: logs, db: database}
 }
 
 // response is the whole answer, already read and closed. Returning this rather

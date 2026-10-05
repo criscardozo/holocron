@@ -3,15 +3,13 @@ package widgets
 import (
 	"context"
 
-	"github.com/a-h/templ"
-
 	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/web/templates"
 )
 
 // QualityWidget shows what the last library audit found. It never runs one:
 // the audit reads the whole library from Jellyfin, which is not something a
-// dashboard load should trigger.
+// page load should trigger.
 type QualityWidget struct {
 	quality *quality.Service
 }
@@ -19,32 +17,39 @@ type QualityWidget struct {
 // NewQualityWidget creates a QualityWidget.
 func NewQualityWidget(s *quality.Service) QualityWidget { return QualityWidget{quality: s} }
 
-func (QualityWidget) ID() string    { return "quality" }
-func (QualityWidget) Title() string { return "Calidad" }
+func (QualityWidget) ID() string { return "quality" }
 
-func (w QualityWidget) Card(ctx context.Context) templ.Component {
-	view := templates.QualityCardView{
-		Configured: w.quality.Configured(ctx),
-		Scanning:   w.quality.Scanning(),
+// Tile says how many findings there are, and in which category most of them.
+func (w QualityWidget) Tile(ctx context.Context) templates.Tile {
+	t := templates.Tile{Href: "/quality", Icon: "gauge", Tone: "amber", Title: "Calidad"}
+	switch {
+	case !w.quality.Configured(ctx):
+		t.Value, t.Sub, t.Off = "—", "Jellyfin sin vincular", true
+		return t
+	case w.quality.Scanning():
+		t.Value, t.Sub = "Analizando…", "La biblioteca entera, una vez"
+		return t
 	}
-	if view.Configured {
-		if report, ok, err := w.quality.Latest(ctx); err == nil && ok {
-			view.HasReport = true
-			view.Total = report.Total()
-			for _, c := range quality.Categories {
-				view.Counts = append(view.Counts, templates.QualityCount{
-					Key:   string(c),
-					Label: c.Label(),
-					Count: report.Count(c),
-					Href:  "/quality?cat=" + string(c),
-				})
+	report, ok, err := w.quality.Latest(ctx)
+	switch {
+	case err != nil:
+		t.Value, t.Sub, t.Warn = "—", "No se pudo leer", true
+	case !ok:
+		t.Value, t.Sub = "Sin analizar", "Analizar la biblioteca"
+	case report.Total() == 0:
+		t.Value, t.Sub = "Todo bien", "Nada para revisar"
+	default:
+		t.Value = templates.Plural(report.Total(), "para revisar", "para revisar")
+		var top quality.Category
+		for _, c := range quality.Categories {
+			if report.Count(c) > report.Count(top) {
+				top = c
 			}
 		}
+		if top != "" {
+			t.Sub = "La mayoría: " + top.Label()
+		}
+		t.Warn = true
 	}
-	chrome := templates.WidgetChrome{
-		ID: w.ID(), Title: w.Title(), Icon: "gauge", Span: "span-4",
-		// Something to fix reads as needing attention; a clean library does not.
-		Attn: view.Total > 0,
-	}
-	return templates.Widget(chrome, templates.QualityBody(view))
+	return t
 }

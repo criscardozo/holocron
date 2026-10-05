@@ -3,6 +3,7 @@ package httpserver
 import (
 	"context"
 	"errors"
+	"github.com/cristian/holocron/internal/artwork"
 	"net/http"
 
 	"github.com/cristian/holocron/internal/jobs"
@@ -32,6 +33,7 @@ func (s *Server) mediaView(ctx context.Context) templates.MediaPageView {
 				Type:      it.Type,
 				Path:      it.Path,
 				HasSubsES: it.HasSubsES,
+				Art:       artwork.URL(artwork.KindJellyfin, it.ServerID),
 			})
 		}
 		v.Truncated = len(items) >= listLimit && v.Total > len(items)

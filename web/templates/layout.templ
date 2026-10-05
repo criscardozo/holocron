@@ -1,8 +1,9 @@
 package templates
 
-// Layout is the outer HTML shell shared by every page. hx-boost on the body
-// turns plain links into partial navigation without any custom JavaScript. The
-// title also selects the active nav link (labels match the page titles). The
+// Layout is the outer HTML shell shared by every page: the poster wall, the
+// sidebar and the page. hx-boost on the body turns plain links into partial
+// navigation without any custom JavaScript. The title also selects the active
+// nav link (labels match the page titles). The
 // hidden <svg> holds the icon sprite referenced by Icon/IconSm across pages.
 templ Layout(title string) {
 	<!DOCTYPE html>
@@ -17,11 +18,12 @@ templ Layout(title string) {
 			// indicators working and the console clean. It goes in a meta tag
 			// because an inline <script> would be blocked too.
 			<meta name="htmx-config" content="{&#34;includeIndicatorStyles&#34;:false}"/>
-			// Ginebra's G▶ icon: Holocron is the server's own tool, not a
-			// separate product, so it wears the server's mark.
-			<link rel="icon" type="image/svg+xml" href="/static/ginebra.svg"/>
-			<link rel="icon" type="image/png" sizes="32x32" href="/static/ginebra-32.png"/>
-			<link rel="apple-touch-icon" sizes="180x180" href="/static/ginebra-180.png"/>
+			// The holocron cube, drawn by Ginebra in the G▶'s colours: the
+			// tool has its own mark, and the «GINEBRA» label beside it says
+			// which server it belongs to.
+			<link rel="icon" type="image/svg+xml" href="/static/holocron.svg"/>
+			<link rel="icon" type="image/png" sizes="32x32" href="/static/holocron-32.png"/>
+			<link rel="apple-touch-icon" sizes="180x180" href="/static/holocron-180.png"/>
 			<link rel="stylesheet" href="/static/styles.css"/>
 			<script src="/static/htmx.min.js" defer></script>
 			// htmx-ext-sse 2.2.4, vendored from npm with its sha512 integrity
@@ -32,25 +34,50 @@ templ Layout(title string) {
 		</head>
 		<body hx-boost="true">
 			@iconSprite()
-			<header class="nav">
-				<a class="nav-brand" href="/">
-					<img src="/static/ginebra.svg" alt="" width="28" height="28"/>
-					<span class="nav-brand-name">
-						Holocron
-						<span class="nav-brand-org">GINEBRA</span>
-					</span>
-				</a>
-				<nav class="nav-links">
-					for _, it := range navItems {
-						@navLink(it.Label, it.Href, title)
-					}
-				</nav>
-			</header>
-			<main class="page">
-				{ children... }
-			</main>
+			@muralWall(muralFrom(ctx))
+			<div class={ "shell", templ.KV("is-home", title == "Inicio") }>
+				<aside class="side">
+					<a class="side-brand" href="/" aria-label="Holocron · Ginebra">
+						<img src="/static/holocron.svg" alt="" width="34" height="34"/>
+						<span class="side-brand-name">
+							Holocron
+							<span class="side-brand-org">GINEBRA</span>
+						</span>
+					</a>
+					<nav class="side-nav">
+						for _, g := range navGroups {
+							<div class="side-group">
+								if g.Label != "" {
+									<span class="side-label">{ g.Label }</span>
+								}
+								for _, it := range g.Items {
+									@navLink(it, title)
+								}
+							</div>
+						}
+					</nav>
+				</aside>
+				<main class="page">
+					{ children... }
+				</main>
+			</div>
 		</body>
 	</html>
+}
+
+// muralWall is the poster wall behind every page, the way Ginebra's portal
+// does it: the library's own posters, still and dimmed. hx-preserve keeps the
+// same element across boosted navigation, so the wall does not reload and
+// flicker on every click.
+templ muralWall(urls []string) {
+	if len(urls) > 0 {
+		<div class="mural" id="mural" hx-preserve="true" aria-hidden="true">
+			for _, u := range urls {
+				<img src={ u } alt="" decoding="async"/>
+			}
+		</div>
+		<div class="velo" aria-hidden="true"></div>
+	}
 }
 
 // iconSprite is the hidden SVG sprite: every symbol Icon/IconSm can reference.
@@ -83,6 +110,13 @@ templ iconSprite() {
 		<symbol id="gauge" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"></path><path d="M12 12l5-3"></path><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"></circle></symbol>
 		<symbol id="info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></symbol>
 		<symbol id="power" viewBox="0 0 24 24"><path d="M12 3v9"></path><path d="M18.4 6.6a9 9 0 1 1-12.8 0"></path></symbol>
+		<symbol id="home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"></path></symbol>
+		<symbol id="cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><path d="M9 2v3M15 2v3M9 19v3M15 19v3M19 9h3M19 15h3M2 9h3M2 15h3"></path></symbol>
+		<symbol id="server" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="8" rx="2"></rect><rect x="2" y="13" width="20" height="8" rx="2"></rect><path d="M6 7h.01M6 17h.01"></path></symbol>
+		<symbol id="tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"></path><path d="M7 7h.01"></path></symbol>
+		<symbol id="gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></symbol>
+		<symbol id="sparkle" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"></path></symbol>
+		<symbol id="calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></symbol>
 		<symbol id="key" viewBox="0 0 24 24"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L21 4M2 21l6.5-6.5M7.5 16.5 5.5 14.5"></path><circle cx="11" cy="11" r="5"></circle></symbol>
 	</svg>
 }

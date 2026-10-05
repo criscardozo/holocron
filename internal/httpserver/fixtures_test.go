@@ -57,15 +57,7 @@ func TestWriteIOSFixtures(t *testing.T) {
 	}
 
 	playing := jellyfin.Session{UserName: "cristian", DeviceName: "Living", Client: "Jellyfin Android TV"}
-	playing.NowPlaying = &struct {
-		Name              string `json:"Name"`
-		SeriesName        string `json:"SeriesName"`
-		Type              string `json:"Type"`
-		ProductionYear    int    `json:"ProductionYear"`
-		IndexNumber       *int   `json:"IndexNumber"`
-		ParentIndexNumber *int   `json:"ParentIndexNumber"`
-		RunTimeTicks      int64  `json:"RunTimeTicks"`
-	}{Name: "Honeydew", SeriesName: "The Bear", Type: "Episode", IndexNumber: i(4), ParentIndexNumber: i(2), RunTimeTicks: 18_000_000_000}
+	playing.NowPlaying = &jellyfin.NowPlayingItem{Name: "Honeydew", SeriesName: "The Bear", Type: "Episode", IndexNumber: i(4), ParentIndexNumber: i(2), RunTimeTicks: 18_000_000_000}
 	playing.PlayState = &struct {
 		PositionTicks int64  `json:"PositionTicks"`
 		IsPaused      bool   `json:"IsPaused"`

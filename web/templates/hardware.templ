@@ -37,6 +37,15 @@ templ HardwareLive(v HardwareView) {
 			</span>
 		</div>
 	}
+	// The four numbers that answer "is it all right", before the detail.
+	<div class="kpis">
+		@kpi("cpu", "violet", "CPU", liveOr(v.Live, v.CPU), v.Load, false)
+		@kpi("server", "pink", "Memoria", dashIfEmpty(v.RAM.Pct), ofTotal(v.RAM.Used, v.RAM.Total), v.RAM.High)
+		@kpi("activity", "amber", "Temperatura", dashIfEmpty(v.Temp), prefixed("Encendida hace ", v.Uptime), v.TempHot)
+		if v.Battery.Present {
+			@kpi("power", "mint", "Batería (UPS)", v.Battery.Percent, v.Battery.Status, v.Battery.Discharging || v.Battery.Low)
+		}
+	</div>
 	<div class="hw-grid">
 		<section class="card elev-sm hw-card">
 			<header class="hw-head">
@@ -173,4 +182,18 @@ templ sparkline(s Spark, class string) {
 			<span class="spark-max muted mono">{ s.Max }</span>
 		</div>
 	}
+}
+
+// kpi is one headline number with what it means underneath.
+templ kpi(icon, tone, label, value, sub string, warn bool) {
+	<section class={ "card", "kpi", templ.KV("kpi-warn", warn) }>
+		<span class="kpi-label">
+			<span class={ "tile-icon", "tile-icon-sm", "tone-" + tone }>
+				@IconSm(icon)
+			</span>
+			{ label }
+		</span>
+		<span class="kpi-value">{ value }</span>
+		<span class="kpi-sub">{ sub }</span>
+	</section>
 }

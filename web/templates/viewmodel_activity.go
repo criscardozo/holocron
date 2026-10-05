@@ -36,6 +36,8 @@ type ActRequest struct {
 	State string `json:"state"`
 	Done  bool   `json:"done"`
 	Stuck bool   `json:"stuck"`
+	// Art is the poster's path on this server, or "" when there is none.
+	Art string `json:"art"`
 }
 
 // ActUpcoming is one release on the calendar.
@@ -55,6 +57,7 @@ type ActAttention struct {
 
 // ActPlaying is one session playing something.
 type ActPlaying struct {
+	Art      string `json:"art"`
 	Title    string `json:"title"`
 	Subtitle string `json:"subtitle"` // the episode, or the year
 	Who      string `json:"who"`      // user · device
@@ -93,4 +96,5 @@ type ActRecent struct {
 	Title    string `json:"title"`
 	Subtitle string `json:"subtitle"`
 	When     string `json:"when"`
+	Art      string `json:"art"`
 }

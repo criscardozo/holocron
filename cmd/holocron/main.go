@@ -18,6 +18,7 @@ import (
 	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/arr"
+	"github.com/cristian/holocron/internal/artwork"
 	"github.com/cristian/holocron/internal/bazarr"
 	"github.com/cristian/holocron/internal/config"
 	"github.com/cristian/holocron/internal/db"
@@ -101,6 +102,10 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	jellyfinLink := jellyfin.NewLinkService(settingsStore)
 	updatesService := updates.NewService(filepath.Dir(cfg.DBPath))
 	powerService := power.NewService(filepath.Dir(cfg.DBPath))
+	artStore, err := artwork.New(filepath.Join(filepath.Dir(cfg.DBPath), "artwork"), libraryService.Poster, logger)
+	if err != nil {
+		return fmt.Errorf("artwork cache: %w", err)
+	}
 	activityHub := newActivityHub(libraryService, torrentsService, settingsStore)
 	servicesReader := services.NewReader(services.Config{
 		Units: cfg.WatchUnits, TimerPrefix: cfg.WatchTimers, SmartFile: cfg.SmartFile,
@@ -136,6 +141,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		JellyfinLink:       jellyfinLink,
 		Updates:            updatesService,
 		Power:              powerService,
+		Art:                artStore,
 	})
 
 	httpSrv := &http.Server{

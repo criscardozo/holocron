@@ -12,6 +12,7 @@ import (
 
 	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/apitoken"
+	"github.com/cristian/holocron/internal/artwork"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/hardware"
@@ -27,7 +28,6 @@ import (
 	"github.com/cristian/holocron/internal/updates"
 	"github.com/cristian/holocron/internal/widgets"
 	"github.com/cristian/holocron/web"
-	"github.com/cristian/holocron/web/templates"
 )
 
 // Deps are the dependencies shared by the HTTP handlers. Later phases add their
@@ -51,12 +51,15 @@ type Deps struct {
 	JellyfinLink       *jellyfin.LinkService
 	Updates            *updates.Service
 	Power              *power.Service
+	// Art serves posters from its cache. Nil in tests that do not need it.
+	Art *artwork.Store
 }
 
 // Server serves the Holocron web UI.
 type Server struct {
-	deps Deps
-	log  *slog.Logger
+	deps  Deps
+	log   *slog.Logger
+	mural mural
 }
 
 // New creates a Server.
@@ -75,8 +78,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(staticFS)))
 
 	mux.HandleFunc("GET /healthz", s.handleHealth)
+	mux.HandleFunc("GET /art/{kind}/{id}", s.handleArt)
 	mux.HandleFunc("GET /{$}", s.handleDashboard)
-	mux.HandleFunc("GET /widgets/{id}", s.handleWidget)
 
 	// Phase 1: disk usage.
 	mux.HandleFunc("GET /disk", s.handleDiskPage)
@@ -142,22 +145,7 @@ func (s *Server) Handler() http.Handler {
 	// JSON API for the iOS app (authenticated; see api.go).
 	s.apiRoutes(mux)
 
-	return chain(mux, s.recoverer, s.logRequests, securityHeaders, s.sameOrigin, limitBody, gzipMW)
-}
-
-func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	grid := templates.Grid(s.deps.Widgets.Cards(ctx))
-	s.render(w, r, templates.Dashboard(s.attentionChips(ctx), grid))
-}
-
-func (s *Server) handleWidget(w http.ResponseWriter, r *http.Request) {
-	widget, ok := s.deps.Widgets.Get(r.PathValue("id"))
-	if !ok {
-		http.NotFound(w, r)
-		return
-	}
-	s.render(w, r, widget.Card(r.Context()))
+	return chain(mux, s.recoverer, s.logRequests, securityHeaders, s.sameOrigin, limitBody, gzipMW, s.withMural)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {

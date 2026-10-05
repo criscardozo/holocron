@@ -42,15 +42,7 @@ func (s *Server) handleNamingScan(w http.ResponseWriter, r *http.Request) {
 	if _, err := s.deps.Naming.Scan(ctx); err != nil {
 		s.log.Warn("naming scan", "error", err)
 	}
-	if r.URL.Query().Get("to") == "page" {
-		s.redirect(w, r, "/naming")
-		return
-	}
-	view := templates.NamingCardView{HasMediaFolders: s.deps.Naming.HasMediaFolders(ctx)}
-	if count, err := s.deps.Naming.Count(ctx); err == nil {
-		view.Count = count
-	}
-	s.render(w, r, templates.NamingCard(view))
+	s.redirect(w, r, "/naming")
 }
 
 // handleNamingIgnore and handleNamingUnignore let the user take a folder off

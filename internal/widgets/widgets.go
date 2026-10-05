@@ -1,51 +1,41 @@
-// Package widgets defines the dashboard widget contract and a registry. Each
-// feature contributes a Widget; the dashboard renders their cards and exposes a
-// per-widget refresh endpoint.
+// Package widgets defines the start page's tiles and a registry. Each feature
+// contributes a Widget that says, in one number, how its area is doing.
 package widgets
 
 import (
 	"context"
+	"sync"
 
-	"github.com/a-h/templ"
+	"github.com/cristian/holocron/web/templates"
 )
 
-// Widget is a self-contained dashboard panel.
+// Widget is one area on the start page.
 type Widget interface {
-	// ID is the stable slug used in the refresh URL (/widgets/{id}).
+	// ID is a stable slug, for tests and logs.
 	ID() string
-	// Title is the human-facing heading.
-	Title() string
-	// Card renders the full card (shell + body) as of now.
-	Card(ctx context.Context) templ.Component
+	// Tile reads the area's state as of now.
+	Tile(ctx context.Context) templates.Tile
 }
 
 // Registry holds the registered widgets in display order.
 type Registry struct {
 	order []Widget
-	byID  map[string]Widget
 }
 
 // NewRegistry builds a registry from the given widgets, preserving order.
 func NewRegistry(ws ...Widget) *Registry {
-	r := &Registry{byID: make(map[string]Widget, len(ws))}
-	for _, w := range ws {
-		r.order = append(r.order, w)
-		r.byID[w.ID()] = w
-	}
-	return r
+	return &Registry{order: ws}
 }
 
-// Get returns the widget with the given id.
-func (r *Registry) Get(id string) (Widget, bool) {
-	w, ok := r.byID[id]
-	return w, ok
-}
-
-// Cards renders every widget's card in display order.
-func (r *Registry) Cards(ctx context.Context) []templ.Component {
-	cards := make([]templ.Component, 0, len(r.order))
-	for _, w := range r.order {
-		cards = append(cards, w.Card(ctx))
+// Tiles reads every widget at once and returns their tiles in display order.
+// In parallel because each asks a different service, and the page waits for
+// the slowest rather than for the sum.
+func (r *Registry) Tiles(ctx context.Context) []templates.Tile {
+	out := make([]templates.Tile, len(r.order))
+	var wg sync.WaitGroup
+	for i, w := range r.order {
+		wg.Go(func() { out[i] = w.Tile(ctx) })
 	}
-	return cards
+	wg.Wait()
+	return out
 }

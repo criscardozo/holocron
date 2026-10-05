@@ -1,13 +1,5 @@
 package templates
 
-// MediaCardView drives the dashboard media widget.
-type MediaCardView struct {
-	Configured  bool
-	Total       int
-	Movies      int
-	WithoutSubs int
-}
-
 // MediaPageView drives the media detail page. Truncated reports that the
 // inventory table shows only the first page of a larger library.
 type MediaPageView struct {
@@ -27,6 +19,7 @@ type MediaItemRow struct {
 	Type      string
 	Path      string
 	HasSubsES bool
+	Art       string // poster path on this server, or ""
 }
 
 // JobStatusView is a generic background-job progress fragment. While running it

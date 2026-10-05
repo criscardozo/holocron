@@ -2,37 +2,50 @@ package templates
 
 import (
 	"context"
-	"io"
 	"strconv"
 	"strings"
-
-	"github.com/a-h/templ"
 )
 
-// navItems are the top-bar destinations, in display order. The label doubles as
+// navGroups are the sidebar's sections, in display order. A label doubles as
 // the active-link key: it is matched against each page's title in Layout.
-var navItems = []struct{ Label, Href string }{
-	{"Dashboard", "/"},
-	{"Actividad", "/activity"},
-	{"Hardware", "/hardware"},
-	{"Servicios", "/services"},
-	{"Disco", "/disk"},
-	{"Nombres", "/naming"},
-	{"Medios", "/media"},
-	{"Calidad", "/quality"},
-	{"Torrents", "/torrents"},
-	{"Gestión", "/manage"},
-	{"Ajustes", "/settings"},
+// Eleven links in one row read as a list to search; four groups say where
+// each thing lives.
+var navGroups = []struct {
+	Label string
+	Items []navItem
+}{
+	{"", []navItem{{"Inicio", "/", "home"}}},
+	{"Ahora", []navItem{
+		{"Actividad", "/activity", "activity"},
+		{"Hardware", "/hardware", "cpu"},
+		{"Servicios", "/services", "server"},
+	}},
+	{"Biblioteca", []navItem{
+		{"Medios", "/media", "film"},
+		{"Calidad", "/quality", "gauge"},
+		{"Nombres", "/naming", "tag"},
+		{"Disco", "/disk", "drive"},
+	}},
+	{"Descargas", []navItem{{"Torrents", "/torrents", "download"}}},
+	{"Equipo", []navItem{
+		{"Gestión", "/manage", "power"},
+		{"Ajustes", "/settings", "gear"},
+	}},
 }
 
-// WidgetChrome carries the per-widget dashboard card presentation: its icon,
-// grid span and whether it should read as an attention card (accent inset).
-type WidgetChrome struct {
-	ID    string
-	Title string
-	Icon  string // sprite symbol id
-	Span  string // "", "span-2" or "span-4"
-	Attn  bool
+type navItem struct{ Label, Href, Icon string }
+
+type muralKey struct{}
+
+// WithMural carries the poster URLs for the wall behind the page. The layout
+// reads them from the context so that no page has to pass them along.
+func WithMural(ctx context.Context, urls []string) context.Context {
+	return context.WithValue(ctx, muralKey{}, urls)
+}
+
+func muralFrom(ctx context.Context) []string {
+	urls, _ := ctx.Value(muralKey{}).([]string)
+	return urls
 }
 
 // AttnChip is one clickable pill in the dashboard's "Atención" strip.
@@ -124,23 +137,6 @@ func torrentLabel(state string, paused bool) string {
 	}
 }
 
-// Grid renders the dashboard widget cards inside the grid container. The loop
-// lives in Go rather than a templ range so the template stays a trivial shell.
-func Grid(cards []templ.Component) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-		if _, err := io.WriteString(w, `<div class="grid">`); err != nil {
-			return err
-		}
-		for _, c := range cards {
-			if err := c.Render(ctx, w); err != nil {
-				return err
-			}
-		}
-		_, err := io.WriteString(w, `</div>`)
-		return err
-	})
-}
-
 // Plural formats a count with a Spanish noun, picking singular or plural.
 // "1 carpetas" is the kind of thing that makes an interface feel unfinished,
 // and these counts are small often enough for it to show.
@@ -158,4 +154,56 @@ func noticeIcon(isErr bool) string {
 		return "alert"
 	}
 	return "check"
+}
+
+// initial is the first letter of a title, for a poster that has no image.
+func initial(title string) string {
+	for _, r := range strings.TrimSpace(title) {
+		return strings.ToUpper(string(r))
+	}
+	return "·"
+}
+
+// typeLabelOf names an inventory row's type ("movie" / "show") in Spanish.
+func typeLabelOf(t string) string {
+	switch t {
+	case "movie":
+		return "Película"
+	case "show":
+		return "Serie"
+	default:
+		return t
+	}
+}
+
+// liveOr is the reading once there is one, and "midiendo…" before.
+func liveOr(live bool, v string) string {
+	if !live {
+		return "midiendo…"
+	}
+	return v
+}
+
+// dashIfEmpty stands in for a reading the machine does not have.
+func dashIfEmpty(v string) string {
+	if v == "" {
+		return "—"
+	}
+	return v
+}
+
+// ofTotal is "used de total", or nothing when either is unknown.
+func ofTotal(used, total string) string {
+	if used == "" || total == "" {
+		return ""
+	}
+	return used + " de " + total
+}
+
+// prefixed puts a label before a value, or returns nothing for no value.
+func prefixed(label, v string) string {
+	if v == "" {
+		return ""
+	}
+	return label + v
 }

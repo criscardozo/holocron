@@ -17,27 +17,6 @@ templ JobStatus(v JobStatusView) {
 		</div>
 	}
 }
-
-// MediaBody is the dashboard media widget body: the inventory trio plus a link
-// to the detail page (where the sync action lives).
-templ MediaBody(v MediaCardView) {
-	if !v.Configured {
-		<p class="muted">Jellyfin no vinculado. <a href="/settings">Conectar</a>.</p>
-	} else {
-		<div class="media-stats">
-			<div><div class="n">{ fmt.Sprintf("%d", v.Total) }</div><div class="cap">ítems</div></div>
-			<div><div class="n">{ fmt.Sprintf("%d", v.Movies) }</div><div class="cap">películas</div></div>
-			<div><div class="n warn">{ fmt.Sprintf("%d", v.WithoutSubs) }</div><div class="cap" title="Según Jellyfin, en toda la biblioteca (incluye lo que no gestionan Radarr ni Sonarr)">sin subs ES (Jellyfin)</div></div>
-		</div>
-		<div class="w-foot">
-			<a class="w-link" href="/media">
-				Ver inventario
-				@IconSm("chev")
-			</a>
-		</div>
-	}
-}
-
 // MediaPage is the media detail page.
 templ MediaPage(v MediaPageView) {
 	@Layout("Medios") {
@@ -58,7 +37,7 @@ templ MediaPage(v MediaPageView) {
 // MediaDetailSection is re-fetched when the sync job completes.
 templ MediaDetailSection(v MediaPageView) {
 	<section id="media-detail">
-		<div class="card elev-sm stat-band">
+		<div class="card stat-band">
 			<div class="stat-trio">
 				<div><div class="n">{ fmt.Sprintf("%d", v.Total) }</div><div class="cap">ítems</div></div>
 				<div><div class="n">{ fmt.Sprintf("%d", v.Movies) }</div><div class="cap">películas</div></div>
@@ -79,28 +58,23 @@ templ MediaDetailSection(v MediaPageView) {
 		</div>
 		<div id="media-status"></div>
 		if len(v.Items) > 0 {
-			<div class="table-scroll">
-				<table class="table">
-				<thead><tr><th>Título</th><th class="w-80">Tipo</th><th class="num w-70">Año</th><th class="w-110">Subs ES</th></tr></thead>
-				<tbody>
-					for _, it := range v.Items {
-						<tr>
-							<td>
-								<div class="title-cell">
-									<span class="t">{ it.Title }</span>
-									if it.Path != "" {
-										<span class="p">{ it.Path }</span>
-									}
-								</div>
-							</td>
-							<td><span class="badge badge-neutral">{ it.Type }</span></td>
-							<td class="num">{ yearStr(it.Year) }</td>
-							<td>@yesNoBadge(it.HasSubsES)</td>
-						</tr>
-					}
-				</tbody>
-				</table>
-			</div>
+			// Posters, not a table: this is a film library, and a cover is
+			// found at a glance where a title has to be read. The path stays
+			// in the tooltip for when it is the path that matters.
+			<ul class="poster-grid">
+				for _, it := range v.Items {
+					<li class="poster-card" title={ it.Path }>
+						@poster(it.Art, it.Title)
+						<strong>{ it.Title }</strong>
+						<span class="muted">
+							{ typeLabelOf(it.Type) } · { yearStr(it.Year) }
+							if !it.HasSubsES {
+								<span class="badge badge-no">sin subs ES</span>
+							}
+						</span>
+					</li>
+				}
+			</ul>
 			if v.Truncated {
 				<p class="muted">Se muestran { fmt.Sprintf("%d", len(v.Items)) } de { fmt.Sprintf("%d", v.Total) } ítems.</p>
 			}
@@ -108,12 +82,4 @@ templ MediaDetailSection(v MediaPageView) {
 			<p class="muted">Sin inventario. Tocá «Sincronizar desde Jellyfin».</p>
 		}
 	</section>
-}
-
-templ yesNoBadge(ok bool) {
-	if ok {
-		<span class="badge badge-yes">Sí</span>
-	} else {
-		<span class="badge badge-no">No</span>
-	}
 }

@@ -10,12 +10,18 @@ templ IconSm(id string) {
 	<svg class="ic ic-sm"><use href={ "#" + id }></use></svg>
 }
 
-// navLink renders one top-bar link, marking it aria-current when its label
+// navLink renders one sidebar link, marking it aria-current when its label
 // matches the current page title.
-templ navLink(label, href, current string) {
-	if label == current {
-		<a href={ templ.SafeURL(href) } aria-current="page">{ label }</a>
+templ navLink(it navItem, current string) {
+	if it.Label == current {
+		<a href={ templ.SafeURL(it.Href) } class="side-link" aria-current="page">
+			@IconSm(it.Icon)
+			<span>{ it.Label }</span>
+		</a>
 	} else {
-		<a href={ templ.SafeURL(href) }>{ label }</a>
+		<a href={ templ.SafeURL(it.Href) } class="side-link">
+			@IconSm(it.Icon)
+			<span>{ it.Label }</span>
+		</a>
 	}
 }

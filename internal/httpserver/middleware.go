@@ -149,8 +149,10 @@ func gzipMW(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Event streams are skipped too: gzip buffers until it has a block
 		// worth compressing, so a live screen would sit blank behind it.
+		// Posters are JPEGs, which gzip only makes bigger.
 		if strings.HasPrefix(r.URL.Path, "/static/") ||
 			strings.HasPrefix(r.URL.Path, "/events/") ||
+			strings.HasPrefix(r.URL.Path, "/art/") ||
 			!strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
 			return

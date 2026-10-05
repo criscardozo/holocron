@@ -1,33 +1,6 @@
 package templates
 
 import "fmt"
-
-// TorrentsBody is the dashboard torrents widget body: an activity summary that
-// links to the full management page.
-templ TorrentsBody(v TorrentsCardView) {
-	if !v.Configured {
-		<p class="muted">qBittorrent no configurado. <a href="/settings">Configurar</a>.</p>
-	} else if v.Err {
-		<p class="muted">Sin conexión con qBittorrent.</p>
-	} else {
-		<div class="tor-head">
-			<span class="tor-stat"><b>{ fmt.Sprintf("%d / %d", v.Active, v.Total) }</b> activos</span>
-			<span class="tor-stat dn">
-				@IconSm("adown")
-				<b>{ v.DlHuman }</b>
-			</span>
-			<span class="tor-stat up">
-				@IconSm("aup")
-				<b>{ v.UpHuman }</b>
-			</span>
-			<a class="w-link ml-auto" href="/torrents">
-				Administrar
-				@IconSm("chev")
-			</a>
-		</div>
-	}
-}
-
 // TorrentsPage is the torrents management page.
 templ TorrentsPage(v TorrentsPageView) {
 	@Layout("Torrents") {

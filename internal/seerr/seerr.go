@@ -37,8 +37,9 @@ type Client struct {
 }
 
 type titled struct {
-	Title string
-	Year  int
+	Title  string
+	Year   int
+	Poster string // TMDb's file path, "/abc.jpg"
 }
 
 // New creates a client for the Seerr at base, such as http://127.0.0.1:5055.
@@ -97,6 +98,8 @@ type Request struct {
 	// and calendars.
 	TmdbID int
 	TvdbID int
+	// Poster is TMDb's path for the poster, "/abc.jpg", or "" if it has none.
+	Poster string
 }
 
 // Request statuses (MediaRequestStatus in Seerr's source).
@@ -160,7 +163,7 @@ func (c *Client) Recent(ctx context.Context, take int) ([]Request, error) {
 			req.By = r.RequestedBy.Username
 		}
 		if t, err := c.title(ctx, r.Type, r.Media.TmdbID); err == nil {
-			req.Title, req.Year = t.Title, t.Year
+			req.Title, req.Year, req.Poster = t.Title, t.Year, t.Poster
 		} else {
 			req.Title = fmt.Sprintf("TMDb %d", r.Media.TmdbID)
 		}
@@ -185,6 +188,7 @@ func (c *Client) title(ctx context.Context, kind string, tmdbID int) (titled, er
 		Name         string `json:"name"`
 		ReleaseDate  string `json:"releaseDate"`
 		FirstAirDate string `json:"firstAirDate"`
+		PosterPath   string `json:"posterPath"`
 	}
 	path := "/api/v1/movie/"
 	if kind == "tv" {
@@ -193,7 +197,7 @@ func (c *Client) title(ctx context.Context, kind string, tmdbID int) (titled, er
 	if err := c.get(ctx, path+strconv.Itoa(tmdbID), nil, &d); err != nil {
 		return titled{}, err
 	}
-	t = titled{Title: d.Title}
+	t = titled{Title: d.Title, Poster: d.PosterPath}
 	date := d.ReleaseDate
 	if kind == "tv" {
 		t.Title, date = d.Name, d.FirstAirDate

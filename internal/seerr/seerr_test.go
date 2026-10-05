@@ -33,7 +33,7 @@ func fakeSeerr(t *testing.T, titleCalls *atomic.Int64) *httptest.Server {
 			_, _ = w.Write(count)
 		case strings.HasPrefix(r.URL.Path, "/api/v1/movie/"):
 			titleCalls.Add(1)
-			_, _ = w.Write([]byte(`{"title":"Película ` + strings.TrimPrefix(r.URL.Path, "/api/v1/movie/") + `","releaseDate":"2020-01-26"}`))
+			_, _ = w.Write([]byte(`{"title":"Película ` + strings.TrimPrefix(r.URL.Path, "/api/v1/movie/") + `","releaseDate":"2020-01-26","posterPath":"/kqjL17yufvn9OVLyXYpvtyrFfak.jpg"}`))
 		case strings.HasPrefix(r.URL.Path, "/api/v1/tv/"):
 			titleCalls.Add(1)
 			_, _ = w.Write([]byte(`{"name":"Serie","firstAirDate":"2023-05-18"}`))
@@ -60,6 +60,9 @@ func TestRecentRequestsCarryTheirTitles(t *testing.T) {
 	for _, r := range reqs {
 		if r.Title == "" || strings.HasPrefix(r.Title, "TMDb ") {
 			t.Errorf("request %d has no title: %+v", r.ID, r)
+		}
+		if r.Type == "movie" && r.Poster != "/kqjL17yufvn9OVLyXYpvtyrFfak.jpg" {
+			t.Errorf("request %d lost its poster: %q", r.ID, r.Poster)
 		}
 		if strings.Contains(r.By, "@") {
 			t.Errorf("an email address made it into the requester: %q", r.By)

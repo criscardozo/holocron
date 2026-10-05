@@ -18,6 +18,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -209,4 +210,51 @@ func (c *Client) RefreshItem(ctx context.Context, itemID string) error {
 	}
 	return c.do(ctx, http.MethodPost,
 		"/Items/"+url.PathEscape(itemID)+"/Refresh?"+q.Encode(), nil)
+}
+
+// maxImage caps a poster read into memory. A 300 px JPEG is around 30 KB.
+const maxImage = 4 << 20
+
+// ErrNoImage is returned when the item has no image of the asked type, or is
+// not there at all.
+var ErrNoImage = errors.New("jellyfin: no image")
+
+// Poster fetches the item's primary image, scaled by Jellyfin to the given
+// width so the browser is never sent the original.
+func (c *Client) Poster(ctx context.Context, itemID string, width int) ([]byte, string, error) {
+	q := url.Values{
+		"fillWidth":  {strconv.Itoa(width)},
+		"fillHeight": {strconv.Itoa(width * 3 / 2)},
+		"quality":    {"82"},
+		"format":     {"Jpg"},
+	}
+	path := "/Items/" + url.PathEscape(itemID) + "/Images/Primary?" + q.Encode()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("build request %s: %w", path, err)
+	}
+	req.Header.Set("Authorization", c.authHeader())
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("request %s: %w", path, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	switch {
+	case resp.StatusCode == http.StatusNotFound:
+		return nil, "", ErrNoImage
+	case resp.StatusCode < 200 || resp.StatusCode >= 300:
+		return nil, "", &StatusError{Status: resp.StatusCode, Path: path}
+	}
+	ct := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(ct, "image/") {
+		return nil, "", fmt.Errorf("poster %s: content type %q", itemID, ct)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxImage+1))
+	if err != nil {
+		return nil, "", fmt.Errorf("read poster %s: %w", itemID, err)
+	}
+	if len(body) > maxImage {
+		return nil, "", fmt.Errorf("poster %s: larger than %d bytes", itemID, maxImage)
+	}
+	return body, ct, nil
 }

@@ -351,25 +351,30 @@ func CleanDisplayTitle(s string) string {
 // SessionInfoDto in Jellyfin 12.1's own OpenAPI document, read from the server
 // rather than recalled.
 type Session struct {
-	UserName   string `json:"UserName"`
-	DeviceName string `json:"DeviceName"`
-	Client     string `json:"Client"`
-	NowPlaying *struct {
-		Name              string `json:"Name"`
-		SeriesName        string `json:"SeriesName"`
-		Type              string `json:"Type"`
-		ProductionYear    int    `json:"ProductionYear"`
-		IndexNumber       *int   `json:"IndexNumber"`
-		ParentIndexNumber *int   `json:"ParentIndexNumber"`
-		RunTimeTicks      int64  `json:"RunTimeTicks"`
-	} `json:"NowPlayingItem"`
-	PlayState *struct {
+	UserName   string          `json:"UserName"`
+	DeviceName string          `json:"DeviceName"`
+	Client     string          `json:"Client"`
+	NowPlaying *NowPlayingItem `json:"NowPlayingItem"`
+	PlayState  *struct {
 		PositionTicks int64  `json:"PositionTicks"`
 		IsPaused      bool   `json:"IsPaused"`
 		PlayMethod    string `json:"PlayMethod"` // DirectPlay | DirectStream | Transcode
 	} `json:"PlayState"`
 	// Transcoding is present only while Jellyfin converts the stream.
 	Transcoding *Transcoding `json:"TranscodingInfo"`
+}
+
+// NowPlayingItem is what a session is playing.
+type NowPlayingItem struct {
+	ID                string `json:"Id"`
+	SeriesID          string `json:"SeriesId"`
+	Name              string `json:"Name"`
+	SeriesName        string `json:"SeriesName"`
+	Type              string `json:"Type"`
+	ProductionYear    int    `json:"ProductionYear"`
+	IndexNumber       *int   `json:"IndexNumber"`
+	ParentIndexNumber *int   `json:"ParentIndexNumber"`
+	RunTimeTicks      int64  `json:"RunTimeTicks"`
 }
 
 // Transcoding is what Jellyfin is doing to a stream on its way to the client.
@@ -473,10 +478,20 @@ type Added struct {
 	Name              string    `json:"Name"`
 	Type              string    `json:"Type"`
 	SeriesName        string    `json:"SeriesName"`
+	SeriesID          string    `json:"SeriesId"`
 	ProductionYear    int       `json:"ProductionYear"`
 	IndexNumber       *int      `json:"IndexNumber"`
 	ParentIndexNumber *int      `json:"ParentIndexNumber"`
 	DateCreated       time.Time `json:"DateCreated"`
+}
+
+// PosterID is the item whose poster stands for this one: the series for an
+// episode, whose own image is a frame grab rather than a poster.
+func (a Added) PosterID() string {
+	if a.SeriesID != "" {
+		return a.SeriesID
+	}
+	return a.ID
 }
 
 // RecentlyAdded lists the newest films and episodes, newest first.

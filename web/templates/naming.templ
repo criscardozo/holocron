@@ -1,43 +1,6 @@
 package templates
 
 import "fmt"
-
-// NamingCard is the dashboard naming widget. Its refresh button re-scans (the
-// scan is cheap: a top-level readdir plus a regex) and swaps the card in place.
-// It reads as an attention card when there are invalid names.
-templ NamingCard(v NamingCardView) {
-	<section class={ "card", "elev-sm", "widget", "span-2", templ.KV("attn-widget", v.Count > 0) } id="widget-naming">
-		<header class="w-head">
-			<h2 class="w-title">
-				@Icon("alert")
-				Nombres
-			</h2>
-			<button class="btn btn-ghost btn-icon refresh" hx-post="/naming/scan" hx-target="#widget-naming" hx-swap="outerHTML" hx-indicator="#widget-naming" aria-label="Escanear" title="Escanear">
-				@Icon("refresh")
-			</button>
-		</header>
-		<div class="widget-body">
-			if !v.HasMediaFolders {
-				<p class="muted">Configurá carpetas de Películas/Series en <a href="/settings">Ajustes</a>.</p>
-			} else if v.Count == 0 {
-				<span class="w-ok">
-					@IconSm("check")
-					Todo cumple «Título (Año)»
-				</span>
-			} else {
-				<div class="big-num">{ fmt.Sprintf("%d", v.Count) }</div>
-				<div class="big-label">carpetas con nombre inválido</div>
-				<div class="w-foot">
-					<a class="w-link" href="/naming">
-						Revisar
-						@IconSm("chev")
-					</a>
-				</div>
-			}
-		</div>
-	</section>
-}
-
 // NamingPage lists the folders that break the convention, grouped by library.
 templ NamingPage(v NamingPageView) {
 	@Layout("Nombres") {

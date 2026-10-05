@@ -1,15 +1,5 @@
 package templates
 
-// TorrentsCardView drives the dashboard torrents widget.
-type TorrentsCardView struct {
-	Configured bool
-	Err        bool
-	Total      int
-	Active     int
-	DlHuman    string
-	UpHuman    string
-}
-
 // TorrentsPageView drives the torrents page. Categories are the ones defined in
 // qBittorrent, offered when adding a magnet.
 type TorrentsPageView struct {

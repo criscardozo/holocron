@@ -10,45 +10,6 @@ templ bar(pct int, hot bool) {
 		<div class={ "bar-fill", pwClass(pct) }></div>
 	</div>
 }
-
-// DiskWidgetBody is the dashboard disk widget body: one row per watched disk
-// folder with its filesystem usage.
-templ DiskWidgetBody(v DiskWidgetView) {
-	if v.Empty {
-		<p class="muted">Sin carpetas configuradas. <a href="/settings">Agregar</a>.</p>
-	} else {
-		<ul class="disk-rows">
-			for _, row := range v.Rows {
-				@diskWidgetRow(row)
-			}
-		</ul>
-	}
-}
-
-templ diskWidgetRow(row DiskStatRow) {
-	<li>
-		<a class={ "disk-row", templ.KV("hot", row.Hot) } href={ templ.SafeURL(row.Href) }>
-			<div class="disk-row-head">
-				<span class="name">
-					@IconSm("folder")
-					{ row.Name }
-				</span>
-				if row.Err == "" {
-					<span class="pct">{ fmt.Sprintf("%d%%", row.UsedPercent) }</span>
-				} else {
-					<span class="pct error">error</span>
-				}
-			</div>
-			if row.Err == "" {
-				@bar(row.UsedPercent, row.Hot)
-				<div class="disk-sub">{ row.UsedHuman } / { row.TotalHuman }</div>
-			} else {
-				<div class="disk-sub error">{ row.Err }</div>
-			}
-		</a>
-	</li>
-}
-
 // DiskPage is the disk detail page.
 templ DiskPage(v DiskPageView) {
 	@Layout("Disco") {

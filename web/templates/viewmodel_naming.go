@@ -1,11 +1,5 @@
 package templates
 
-// NamingCardView drives the dashboard naming widget.
-type NamingCardView struct {
-	HasMediaFolders bool
-	Count           int
-}
-
 // NamingPageView drives the naming detail page.
 type NamingPageView struct {
 	HasMediaFolders bool

@@ -4,16 +4,14 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/a-h/templ"
-
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/scanner"
 	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/web/templates"
 )
 
-// DiskWidget shows filesystem usage for each watched disk folder. It uses a
-// cheap statfs per folder (no recursive scan), so rendering is instant.
+// DiskWidget shows the fullest watched disk. It uses a cheap statfs per folder
+// (no recursive scan), so it is instant.
 type DiskWidget struct {
 	folders *folders.Store
 }
@@ -21,35 +19,33 @@ type DiskWidget struct {
 // NewDiskWidget creates a DiskWidget backed by the given folder store.
 func NewDiskWidget(fs *folders.Store) DiskWidget { return DiskWidget{folders: fs} }
 
-func (DiskWidget) ID() string    { return "disk" }
-func (DiskWidget) Title() string { return "Disco" }
+func (DiskWidget) ID() string { return "disk" }
 
-func (w DiskWidget) Card(ctx context.Context) templ.Component {
-	chrome := templates.WidgetChrome{ID: w.ID(), Title: w.Title(), Icon: "drive", Span: "span-2"}
-	view := templates.DiskWidgetView{}
+// Tile shows the fullest disk, because that is the one that runs out first.
+func (w DiskWidget) Tile(ctx context.Context) templates.Tile {
+	t := templates.Tile{Href: "/disk", Icon: "drive", Tone: "lilac", Title: "Disco"}
 	list, err := w.folders.List(ctx, folders.PurposeDisk)
 	if err != nil || len(list) == 0 {
-		view.Empty = true
-		return templates.Widget(chrome, templates.DiskWidgetBody(view))
+		t.Value, t.Sub, t.Off = "—", "Sin carpetas configuradas", true
+		return t
 	}
-
+	best := -1
 	for _, f := range list {
-		row := templates.DiskStatRow{
-			Name: f.Label,
-			Href: "/disk?folder=" + strconv.FormatInt(f.ID, 10),
-		}
 		total, used, _, _, err := scanner.FilesystemStat(f.Path)
-		if err != nil {
-			row.Err = "no se pudo leer"
-		} else {
-			row.TotalHuman = system.HumanBytes(total)
-			row.UsedHuman = system.HumanBytes(used)
-			if total > 0 {
-				row.UsedPercent = int(float64(used) / float64(total) * 100)
-				row.Hot = row.UsedPercent >= 90
-			}
+		if err != nil || total == 0 {
+			continue
 		}
-		view.Rows = append(view.Rows, row)
+		pct := int(float64(used) / float64(total) * 100)
+		if pct > best {
+			best = pct
+			t.Value = strconv.Itoa(pct) + " %"
+			t.Sub = system.HumanBytes(used) + " de " + system.HumanBytes(total) + " · " + f.Label
+		}
 	}
-	return templates.Widget(chrome, templates.DiskWidgetBody(view))
+	if best < 0 {
+		t.Value, t.Sub, t.Warn = "—", "No se pudo leer", true
+		return t
+	}
+	t.Warn = best >= 90
+	return t
 }

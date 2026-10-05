@@ -2,15 +2,13 @@ package widgets
 
 import (
 	"context"
-
-	"github.com/a-h/templ"
+	"strconv"
 
 	"github.com/cristian/holocron/internal/library"
 	"github.com/cristian/holocron/web/templates"
 )
 
-// MediaWidget shows the media inventory summary (total, films, without Spanish
-// subtitles).
+// MediaWidget shows the size of the media inventory.
 type MediaWidget struct {
 	library *library.Service
 }
@@ -18,18 +16,23 @@ type MediaWidget struct {
 // NewMediaWidget creates a MediaWidget.
 func NewMediaWidget(s *library.Service) MediaWidget { return MediaWidget{library: s} }
 
-func (MediaWidget) ID() string    { return "media" }
-func (MediaWidget) Title() string { return "Medios" }
+func (MediaWidget) ID() string { return "media" }
 
-func (w MediaWidget) Card(ctx context.Context) templ.Component {
-	view := templates.MediaCardView{Configured: w.library.Configured(ctx)}
-	if view.Configured {
-		if st, err := w.library.Stats(ctx); err == nil {
-			view.Total = st.Total
-			view.Movies = st.Movies
-			view.WithoutSubs = st.WithoutSubs
-		}
+// Tile counts films and series. Subtitles are not on it: Bazarr owns them now,
+// and its count is on Actividad, named as Bazarr's.
+func (w MediaWidget) Tile(ctx context.Context) templates.Tile {
+	t := templates.Tile{Href: "/media", Icon: "film", Tone: "indigo", Title: "Medios"}
+	if !w.library.Configured(ctx) {
+		t.Value, t.Sub, t.Off = "—", "Jellyfin sin vincular", true
+		return t
 	}
-	chrome := templates.WidgetChrome{ID: w.ID(), Title: w.Title(), Icon: "film", Span: "span-2"}
-	return templates.Widget(chrome, templates.MediaBody(view))
+	st, err := w.library.Stats(ctx)
+	if err != nil {
+		t.Value, t.Sub, t.Warn = "—", "No se pudo leer", true
+		return t
+	}
+	t.Value = strconv.Itoa(st.Total)
+	t.Sub = templates.Plural(st.Movies, "película", "películas") + " · " +
+		templates.Plural(st.Total-st.Movies, "serie", "series")
+	return t
 }
