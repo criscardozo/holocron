@@ -1,9 +1,15 @@
-# Guía de UI — tema «Noir»
+# Guía de UI — el estilo de Ginebra
 
 Cómo está construida la interfaz de Holocron y qué reglas hay que respetar al
-tocarla. La dirección visual es **Noir**: negro + naranja, tipografía de sistema,
-íconos SVG de línea. El material de referencia del rediseño (prototipos HTML y
-capturas) vive en [`design_handoff_holocron_noir/`](design_handoff_holocron_noir/).
+tocarla. Desde octubre de 2026 la dirección visual es **la de Ginebra**, el
+servidor donde corre: fondo casi negro, superficies con borde fino y sin
+sombras, acento violeta con el rosa y el lila del ícono G▶, y la misma
+tipografía de sistema que la portada (`servidor/web/index.html` en el repo de
+Ginebra). Holocron es la herramienta del servidor, no otro producto, así que
+lleva su marca: el ícono G▶ con «Holocron» y la etiqueta «GINEBRA» en lila.
+
+Antes fue el tema «Noir» (negro + naranja). Su material de referencia sigue en
+[`design_handoff_holocron_noir/`](design_handoff_holocron_noir/) como historia.
 
 ## Restricciones (no negociables)
 
@@ -67,17 +73,24 @@ la página. Se usa en el inventario de Medios y en la tabla de Torrents.
 Definidos como custom properties en `:root`. Usar siempre las variables.
 
 ```
---color-bg        #121110   fondo          --ok       #6bbf8f   sí / sembrando
---color-surface   #1a1817   tarjetas       --danger   #e08a8a   no / borrar / error
---color-surface-2 #221f1d   inputs/hover   --warn     var(--color-accent-300)
---color-text      #f1ede9   texto
---color-accent    #ff6a2b   naranja (barras, primary, marca)
---color-accent-200/300/400/800/900        escalones del acento
---color-divider   color-mix(… 12% …)
+--color-bg        #07090e   fondo (el de la portada)   --ok      #34d399
+--color-surface   #13171f   tarjetas                   --danger  #f43f5e
+--color-surface-2 #1d2432   inputs / hover             --warn    #facc15
+--color-text      #eef1f6   texto
+--color-accent    #a78bfa   violeta claro (barras, primary, foco)
+--color-accent-300 #c084fc  lila (etiquetas, «GINEBRA»)
+--color-accent-400 #7c3aed  violeta
+--color-pink      #f472b6   rosa (segunda serie, degradé de la pestaña activa)
+--color-divider   rgba(255,255,255,.09)  el borde fino de todo
 ```
 
-Espaciado `--space-1..8` (4→32 px), radios `--radius-sm/md/lg`, elevación
-`--shadow-sm/md/lg` (hairline + sombra ambiente). Números siempre con
+Las superficies de la portada son translúcidas con `backdrop-filter` sobre un
+mural de posters. Acá no hay mural, así que son esos mismos colores ya
+aplanados sobre el fondo: se ven igual y no cuestan un blur.
+
+Espaciado `--space-1..8` (4→32 px), radios `--radius-sm/md/lg` (6 / 12 / 16 px,
+como los paneles de la portada). **Sin sombras**: `--shadow-*` es sólo el borde
+fino, como en la portada, donde la profundidad sale del borde y no de sombras. Números siempre con
 `font-variant-numeric: tabular-nums`; rutas y nombres de archivo en `.mono`.
 
 ## Componentes

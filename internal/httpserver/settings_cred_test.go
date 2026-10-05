@@ -93,7 +93,7 @@ func TestTheManageScreenSaysWhereTheTokenComesFrom(t *testing.T) {
 	if !strings.Contains(body, "Ajustes → App iOS") {
 		t.Error("the hint should point at the exact place")
 	}
-	if !strings.Contains(body, "Gestión de ObiWan") {
+	if !strings.Contains(body, "Gestión de") {
 		t.Error("the page should say what it is")
 	}
 	// The icon is a <use href="#info"> against a sprite defined in the layout.

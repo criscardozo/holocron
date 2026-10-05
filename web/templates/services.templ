@@ -96,7 +96,7 @@ templ ServicesLive(v ServicesView) {
 								if d.Asleep {
 									// Not an error: the timer reads with -n standby so it never
 									// wakes a sleeping disk, and this one was asleep.
-									<div class="muted act-small">Sin lectura todavía: el disco estaba dormido cuando se midió, y no se lo despierta para esto.</div>
+									<div class="muted act-small" title="El disco estaba dormido cuando se midió, y no se lo despierta para esto: SMART se lee con -n standby.">dormido, sin lectura todavía</div>
 								} else {
 									<div class="act-meta">
 										<span class={ "badge", templ.KV("badge-yes", !d.Bad), templ.KV("badge-no", d.Bad) }>{ d.Health }</span>

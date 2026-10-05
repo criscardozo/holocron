@@ -319,7 +319,7 @@ func manualUpdate() templ.Component {
 			templ_7745c5c3_Var10 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<p class=\"muted link-step\">Actualizá desde una terminal en la Pi:</p><p class=\"mono token-box\">curl -fsSL https://github.com/criscardozo/holocron/releases/latest/download/install.sh | sudo bash</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<p class=\"muted link-step\">Actualizá desde una terminal en el servidor:</p><p class=\"mono token-box\">curl -fsSL https://github.com/criscardozo/holocron/releases/latest/download/install.sh | sudo bash</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

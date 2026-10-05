@@ -72,7 +72,7 @@ func TestRebootDoesNotShareTheTokenGate(t *testing.T) {
 	if !requested(t, ts, power.ActionReboot) {
 		t.Error("reboot should go through on the confirmation alone")
 	}
-	if !strings.Contains(resp.Body, "vuelve sola") {
+	if !strings.Contains(resp.Body, "vuelve solo") {
 		t.Errorf("the acknowledgement should say what to expect, got %q", resp.Body)
 	}
 }
@@ -228,7 +228,7 @@ func TestPoweringOffFromOutsideAsksYouToSayIt(t *testing.T) {
 
 	resp := asClient(t, ts, public, "/manage/action",
 		url.Values{"action": {"poweroff"}, "token": {token}})
-	if !strings.Contains(resp.Body, "dirección pública") {
+	if !strings.Contains(resp.Body, "afuera de casa") {
 		t.Errorf("expected the public-address warning, got %q", resp.Body)
 	}
 	if requested(t, ts, power.ActionPowerOff) {

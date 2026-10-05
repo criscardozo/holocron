@@ -424,7 +424,7 @@ func ServicesLive(v ServicesView) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					if d.Asleep {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "  <div class=\"muted act-small\">Sin lectura todavía: el disco estaba dormido cuando se midió, y no se lo despierta para esto.</div>")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "  <div class=\"muted act-small\" title=\"El disco estaba dormido cuando se midió, y no se lo despierta para esto: SMART se lee con -n standby.\">dormido, sin lectura todavía</div>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}

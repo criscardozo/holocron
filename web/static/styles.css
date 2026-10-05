@@ -1,32 +1,40 @@
-/* Holocron — "Noir" theme: black + orange, quiet dark layout, SVG line icons.
-   Single embedded stylesheet, plain CSS, no build step, no remote resources.
-   Dark-only by design (Noir is a dark identity). Archivo is the design's typeface;
-   to stay self-contained under a strict CSP we use the system sans stack rather
-   than a remote or bundled webfont. */
+/* Holocron — Ginebra's look: near-black ground, translucent-looking surfaces
+   with a hairline border and no shadows, violet accent with pink and lilac
+   from the G▶ icon. Taken from Ginebra's own portal (servidor/web/index.html)
+   so the tool reads as part of the same server, not a separate product.
+   Single embedded stylesheet, plain CSS, no build step, no remote resources,
+   and the system font stack the portal uses — no webfont to embed. */
 
 :root {
-	/* ground + accent (Noir) */
-	--color-bg: #121110;
-	--color-surface: #1a1817;
-	--color-surface-2: #221f1d;
-	--color-text: #f1ede9;
-	--color-divider: color-mix(in srgb, #f1ede9 12%, transparent);
-	--color-accent: #ff6a2b;
-	--color-accent-200: #ffcbaf;
-	--color-accent-300: #ffb088;
-	--color-accent-400: #ff8a4d;
-	--color-accent-800: #48250f;
-	--color-accent-900: #331808;
+	/* ground — the portal's page and tile colours. The tiles there are
+	   rgba(24,29,40,.72) and rgba(32,39,54,.9) over a blurred poster wall;
+	   with no wall behind them here, these are the same colours flattened
+	   onto the ground, which looks identical and costs no backdrop-filter. */
+	--color-bg: #07090e;
+	--color-surface: #13171f;
+	--color-surface-2: #1d2432;
+	--color-text: #eef1f6;
+	--color-divider: rgba(255, 255, 255, 0.09);
 
-	/* state semantics */
-	--ok: #6bbf8f;
-	--danger: #e08a8a;
-	--warn: var(--color-accent-300);
+	/* accent — from the icon: violet light (the main accent, as the portal's
+	   hover and focus use), lilac, violet, pink */
+	--color-accent: #a78bfa;
+	--color-accent-200: #ddd6fe;
+	--color-accent-300: #c084fc;
+	--color-accent-400: #7c3aed;
+	--color-accent-800: #2a1d4a;
+	--color-accent-900: #1a1430;
+	--color-pink: #f472b6;
 
-	/* type */
-	--font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	/* state — the old logo's lights, which already sit well with the palette */
+	--ok: #34d399;
+	--danger: #f43f5e;
+	--warn: #facc15;
+
+	/* type — the portal's own stack */
+	--font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	--font-heading: var(--font-body);
-	--mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+	--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
 	/* spacing scale */
 	--space-1: 4px;
@@ -36,15 +44,15 @@
 	--space-6: 24px;
 	--space-8: 32px;
 
-	/* radii */
+	/* radii — the portal uses 18 px tiles and 16 px panels */
 	--radius-sm: 6px;
-	--radius-md: 10px;
+	--radius-md: 12px;
 	--radius-lg: 16px;
 
-	/* elevation: hairline ring + ambient darkness */
-	--shadow-sm: 0 0 0 1px color-mix(in srgb, var(--color-text) 10%, transparent);
-	--shadow-md: 0 0 0 1px color-mix(in srgb, var(--color-text) 14%, transparent), 0 6px 18px rgba(0, 0, 0, 0.55);
-	--shadow-lg: 0 0 0 1px color-mix(in srgb, var(--color-text) 20%, transparent), 0 16px 40px rgba(0, 0, 0, 0.65);
+	/* no shadows: depth comes from the hairline border, as on the portal */
+	--shadow-sm: 0 0 0 1px var(--color-divider);
+	--shadow-md: 0 0 0 1px var(--color-divider);
+	--shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -53,6 +61,7 @@
 
 body {
 	margin: 0;
+	-webkit-font-smoothing: antialiased;
 	min-height: 100vh;
 	background: var(--color-bg);
 	color: var(--color-text);
@@ -85,13 +94,15 @@ a:hover { color: var(--color-accent-200); }
 	backdrop-filter: blur(8px);
 }
 .nav-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--color-text); font-weight: 600; font-size: 18px; }
-.nav-brand .ic { color: var(--color-accent); }
+.nav-brand img { width: 28px; height: 28px; display: block; border-radius: 7px; }
+.nav-brand-name { display: grid; line-height: 1.05; }
+.nav-brand-org { font-size: 9.5px; font-weight: 700; letter-spacing: .18em; color: var(--color-accent-300); }
 .nav-tag { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent); }
 .nav-links { display: flex; align-items: center; gap: var(--space-4); margin-left: auto; flex-wrap: wrap; }
 .nav-links a { position: relative; color: color-mix(in srgb, var(--color-text) 62%, transparent); font-size: 14px; padding: 2px 0; }
 .nav-links a:hover { color: var(--color-text); }
 .nav-links a[aria-current="page"] { color: var(--color-text); }
-.nav-links a[aria-current="page"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -20px; height: 2px; background: var(--color-accent); border-radius: 2px; }
+.nav-links a[aria-current="page"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -20px; height: 2px; background: linear-gradient(90deg, var(--color-accent), var(--color-pink)); border-radius: 2px; }
 
 /* ── page shell ────────────────────────────────────────────────────── */
 .page { max-width: 1240px; margin: 0 auto; padding: var(--space-8); }
@@ -536,7 +547,7 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .spark-wrap { position: relative; }
 .spark { width: 100%; height: 48px; display: block; }
 .spark polyline { stroke: var(--color-accent); stroke-width: 1.5; }
-.spark-net polyline { stroke: var(--color-accent-300); }
+.spark-net polyline { stroke: var(--color-pink); }
 .spark-max { position: absolute; top: 0; right: 0; font-size: 11px; }
 
 .stat-val.hot { color: var(--danger); }
@@ -555,3 +566,9 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .act-problem .act-title strong { color: var(--color-accent-300); }
 .act-recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
 .act-recent li { display: flex; justify-content: space-between; gap: var(--space-3); }
+
+/* Hover as on Ginebra's portal: the accent border lights up. Without the lift,
+   which suits a launcher tile but would make an admin panel jumpy. */
+.btn-secondary:hover:not(:disabled) { border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); }
+.btn-primary { color: var(--color-bg); background: var(--color-accent); border-color: var(--color-accent); }
+.btn-primary:hover:not(:disabled) { background: var(--color-accent-200); border-color: var(--color-accent-200); }

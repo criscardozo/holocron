@@ -63,6 +63,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	jobManager := jobs.NewManager()
 	folderStore := folders.NewStore(database)
 	settingsStore := settings.NewStore(database)
+	power.SetMachineName(cfg.MachineName)
 	// On Ginebra, systemd hands the services' keys over with LoadCredential.
 	// Elsewhere the directory does not exist and the settings form is used.
 	creds, err := settings.LoadCredentials(os.Getenv("CREDENTIALS_DIRECTORY"))

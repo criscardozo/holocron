@@ -64,7 +64,7 @@ func (s *Server) handleManageAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if needsStrandAck(r, action) {
-		fail("Estás entrando por la dirección pública. Marcá que entendés que queda apagada hasta que alguien vaya hasta ella.")
+		fail("Estás entrando desde afuera de casa. Marcá que entendés que el equipo queda apagado hasta que alguien vaya a prenderlo.")
 		return
 	}
 
@@ -106,9 +106,9 @@ func needsStrandAck(r *http.Request, a power.Action) bool {
 func afterword(a power.Action) string {
 	switch a {
 	case power.ActionPowerOff:
-		return "Cuando esta página deje de responder, ya está apagada."
+		return "Cuando esta página deje de responder, ya está apagado."
 	case power.ActionReboot:
-		return "Va a dejar de responder un minuto o dos y vuelve sola."
+		return "Va a dejar de responder un minuto o dos y vuelve solo."
 	case power.ActionRestartHolocron:
 		return "Recargá en unos segundos."
 	default:
@@ -123,6 +123,7 @@ func (s *Server) manageView(r *http.Request, base templates.ManagePageView) temp
 	v := base
 	v.Available = s.deps.Power.Installed()
 	v.Remote = !fromHome(r)
+	v.Machine = power.MachineName()
 
 	v.Host = widgets.SystemViewOf(system.Read())
 
@@ -147,9 +148,9 @@ func (s *Server) manageView(r *http.Request, base templates.ManagePageView) temp
 
 	// Only recent answers: yesterday's refusal is history, not news.
 	if a, ok := s.deps.Power.Last(); ok && time.Since(a.At) < 24*time.Hour {
-		what := "Reiniciar la Pi"
+		what := power.ActionReboot.Label()
 		if a.Action == "poweroff" {
-			what = "Apagar la Pi"
+			what = power.ActionPowerOff.Label()
 		}
 		when := a.At.Local().Format("15:04")
 		if a.OK {

@@ -46,7 +46,7 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " · Holocron</title><meta name=\"htmx-config\" content=\"{&#34;includeIndicatorStyles&#34;:false}\"><link rel=\"icon\" href=\"/static/favicon.svg\"><link rel=\"stylesheet\" href=\"/static/styles.css\"><script src=\"/static/htmx.min.js\" defer></script><script src=\"/static/htmx-ext-sse.min.js\" defer></script></head><body hx-boost=\"true\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " · Holocron · Ginebra</title><meta name=\"htmx-config\" content=\"{&#34;includeIndicatorStyles&#34;:false}\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/ginebra.svg\"><link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/static/ginebra-32.png\"><link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/static/ginebra-180.png\"><link rel=\"stylesheet\" href=\"/static/styles.css\"><script src=\"/static/htmx.min.js\" defer></script><script src=\"/static/htmx-ext-sse.min.js\" defer></script></head><body hx-boost=\"true\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -54,7 +54,7 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<header class=\"nav\"><a class=\"nav-brand\" href=\"/\"><svg class=\"ic ic-fill\"><use href=\"#diamond\"></use></svg> Holocron</a> <span class=\"nav-tag\">HTPC Manager</span><nav class=\"nav-links\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<header class=\"nav\"><a class=\"nav-brand\" href=\"/\"><img src=\"/static/ginebra.svg\" alt=\"\" width=\"28\" height=\"28\"> <span class=\"nav-brand-name\">Holocron <span class=\"nav-brand-org\">GINEBRA</span></span></a><nav class=\"nav-links\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

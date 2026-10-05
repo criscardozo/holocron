@@ -10,14 +10,18 @@ templ Layout(title string) {
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<title>{ title } · Holocron</title>
+			<title>{ title } · Holocron · Ginebra</title>
 			// htmx injects its indicator CSS as an inline <style>, which the
 			// strict CSP drops with "Applying inline style violates ...".
 			// Turning it off and shipping those rules in styles.css keeps the
 			// indicators working and the console clean. It goes in a meta tag
 			// because an inline <script> would be blocked too.
 			<meta name="htmx-config" content="{&#34;includeIndicatorStyles&#34;:false}"/>
-			<link rel="icon" href="/static/favicon.svg"/>
+			// Ginebra's G▶ icon: Holocron is the server's own tool, not a
+			// separate product, so it wears the server's mark.
+			<link rel="icon" type="image/svg+xml" href="/static/ginebra.svg"/>
+			<link rel="icon" type="image/png" sizes="32x32" href="/static/ginebra-32.png"/>
+			<link rel="apple-touch-icon" sizes="180x180" href="/static/ginebra-180.png"/>
 			<link rel="stylesheet" href="/static/styles.css"/>
 			<script src="/static/htmx.min.js" defer></script>
 			// htmx-ext-sse 2.2.4, vendored from npm with its sha512 integrity
@@ -30,10 +34,12 @@ templ Layout(title string) {
 			@iconSprite()
 			<header class="nav">
 				<a class="nav-brand" href="/">
-					<svg class="ic ic-fill"><use href="#diamond"></use></svg>
-					Holocron
+					<img src="/static/ginebra.svg" alt="" width="28" height="28"/>
+					<span class="nav-brand-name">
+						Holocron
+						<span class="nav-brand-org">GINEBRA</span>
+					</span>
 				</a>
-				<span class="nav-tag">HTPC Manager</span>
 				<nav class="nav-links">
 					for _, it := range navItems {
 						@navLink(it.Label, it.Href, title)

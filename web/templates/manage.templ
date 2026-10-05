@@ -1,13 +1,13 @@
 package templates
 
-// ManagePage is the machine management screen: what the Pi is doing, what
+// ManagePage is the machine management screen: what the server is doing, what
 // would be interrupted, and the buttons that act on it.
 templ ManagePage(v ManagePageView) {
 	@Layout("Gestión") {
 		<div class="page-head">
 			<div>
-				<h1>Gestión de ObiWan</h1>
-				<p class="sub">Estado de la Raspberry Pi y control de sus servicios: reiniciar, apagar</p>
+				<h1>Gestión de { v.Machine }</h1>
+				<p class="sub">Estado del equipo y control de sus servicios: reiniciar, apagar</p>
 			</div>
 		</div>
 		@ManageSection(v)
@@ -139,8 +139,8 @@ templ actionCard(a ManageActionRow) {
 					<label class="ack">
 						<input type="checkbox" name="ack" value="1" required/>
 						<span>
-							Entiendo que no se puede encender a distancia y que queda apagada
-							hasta que alguien vaya hasta ella.
+							Entiendo que no se puede encender a distancia y que el equipo queda
+							apagado hasta que alguien vaya a prenderlo.
 						</span>
 					</label>
 				}

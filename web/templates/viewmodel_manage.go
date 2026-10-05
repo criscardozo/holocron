@@ -50,6 +50,9 @@ type ManagePageView struct {
 	// LastAction is the server's answer to the last power request, when the
 	// server's scripts leave one. A refused power-off otherwise looks exactly
 	// like a request that got lost.
+	// Machine is what the server is called, for the headings.
+	Machine string
+
 	LastAction       string
 	LastActionFailed bool
 }

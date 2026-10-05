@@ -30,6 +30,10 @@ type Config struct {
 	WatchUnits  []string // HOLOCRON_WATCH_UNITS, space-separated, e.g. "jellyfin caddy mnt-biblioteca.mount"
 	WatchTimers string   // HOLOCRON_WATCH_TIMERS, a name prefix, e.g. "ginebra-"
 	SmartFile   string   // HOLOCRON_SMART_FILE, the JSON a root timer writes
+
+	// MachineName is what the screens call this computer ("Apagar Ginebra").
+	// HOLOCRON_MACHINE_NAME, or the hostname with a capital letter.
+	MachineName string
 }
 
 // Load parses flags and environment variables into a Config. It is meant to be
@@ -43,6 +47,7 @@ func Load() Config {
 		WatchUnits:  strings.Fields(os.Getenv("HOLOCRON_WATCH_UNITS")),
 		WatchTimers: os.Getenv("HOLOCRON_WATCH_TIMERS"),
 		SmartFile:   os.Getenv("HOLOCRON_SMART_FILE"),
+		MachineName: envOr("HOLOCRON_MACHINE_NAME", hostTitle()),
 	}
 
 	flag.StringVar(&c.Addr, "addr", c.Addr, "listen address (host:port)")
@@ -68,4 +73,15 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// hostTitle is the short hostname with its first letter upper-cased: "ginebra"
+// becomes "Ginebra". Empty when the hostname cannot be read.
+func hostTitle() string {
+	h, err := os.Hostname()
+	if err != nil || h == "" {
+		return ""
+	}
+	h, _, _ = strings.Cut(h, ".")
+	return strings.ToUpper(h[:1]) + h[1:]
 }

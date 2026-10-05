@@ -6,7 +6,7 @@ import "fmt"
 // scan is cheap: a top-level readdir plus a regex) and swaps the card in place.
 // It reads as an attention card when there are invalid names.
 templ NamingCard(v NamingCardView) {
-	<section class={ "card", "elev-sm", "widget", templ.KV("attn-widget", v.Count > 0) } id="widget-naming">
+	<section class={ "card", "elev-sm", "widget", "span-2", templ.KV("attn-widget", v.Count > 0) } id="widget-naming">
 		<header class="w-head">
 			<h2 class="w-title">
 				@Icon("alert")

@@ -34,7 +34,7 @@ func NamingCard(v NamingCardView) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var2 = []any{"card", "elev-sm", "widget", templ.KV("attn-widget", v.Count > 0)}
+		var templ_7745c5c3_Var2 = []any{"card", "elev-sm", "widget", "span-2", templ.KV("attn-widget", v.Count > 0)}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

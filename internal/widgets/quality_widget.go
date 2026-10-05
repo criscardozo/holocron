@@ -42,7 +42,7 @@ func (w QualityWidget) Card(ctx context.Context) templ.Component {
 		}
 	}
 	chrome := templates.WidgetChrome{
-		ID: w.ID(), Title: w.Title(), Icon: "gauge", Span: "span-2",
+		ID: w.ID(), Title: w.Title(), Icon: "gauge", Span: "span-4",
 		// Something to fix reads as needing attention; a clean library does not.
 		Attn: view.Total > 0,
 	}

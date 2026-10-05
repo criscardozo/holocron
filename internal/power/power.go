@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -55,6 +56,21 @@ var Actions = []Action{
 	ActionPowerOff,
 }
 
+// machine is what the screen calls the computer Holocron runs on: "Ginebra"
+// on Ginebra. Set once at start-up from configuration or the hostname, so the
+// buttons name the machine they act on and the binary is not tied to one.
+var machine = "el servidor"
+
+// SetMachineName sets the name used in labels. Empty keeps "el servidor".
+func SetMachineName(name string) {
+	if name = strings.TrimSpace(name); name != "" {
+		machine = name
+	}
+}
+
+// MachineName is the name used in labels.
+func MachineName() string { return machine }
+
 // Label is the button text.
 func (a Action) Label() string {
 	switch a {
@@ -65,9 +81,9 @@ func (a Action) Label() string {
 	case ActionRestartHolocron:
 		return "Reiniciar Holocron"
 	case ActionReboot:
-		return "Reiniciar la Pi"
+		return "Reiniciar " + machine
 	case ActionPowerOff:
-		return "Apagar la Pi"
+		return "Apagar " + machine
 	default:
 		return string(a)
 	}
@@ -84,11 +100,11 @@ func (a Action) Detail() string {
 	case ActionRestartHolocron:
 		return "Esta página deja de responder unos segundos. Recargá."
 	case ActionReboot:
-		return "Se va todo por un minuto o dos. Vuelve sola."
+		return "Se va todo por un minuto o dos. Vuelve solo."
 	case ActionPowerOff:
-		// The sentence that matters on this screen: a Pi 4 has no
-		// wake-on-LAN, so this is one-way unless someone is there.
-		return "No se puede encender a distancia: queda apagada hasta que alguien vaya hasta ella. Si estás fuera de casa, te quedás sin Jellyfin hasta volver."
+		// The sentence that matters on this screen: powering off is one-way
+		// unless someone is there to switch the machine back on.
+		return "No se puede encender a distancia: el equipo queda apagado hasta que alguien vaya a prenderlo. Si estás fuera de casa, te quedás sin Jellyfin hasta volver."
 	default:
 		return ""
 	}
