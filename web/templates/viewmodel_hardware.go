@@ -8,82 +8,82 @@ package templates
 type HardwareView struct {
 	// Live is false for a reading taken without a previous one, which has no
 	// rates yet: the screen says "midiendo" instead of showing zeros.
-	Live bool
+	Live bool `json:"live"`
 
-	CPU      string // "23 %"
-	CPUSpark Spark
-	Cores    []HWCore
-	Temp     string // "51 °C", or "" when unknown
-	TempHot  bool   // above the point worth a colour
-	TempSpk  Spark
-	Load     string // "0,27 · 0,32 · 0,26"
-	Uptime   string
+	CPU      string   `json:"cpu"` // "23 %"
+	CPUSpark Spark    `json:"cpuSpark"`
+	Cores    []HWCore `json:"cores"`
+	Temp     string   `json:"temp"`    // "51 °C", or "" when unknown
+	TempHot  bool     `json:"tempHot"` // above the point worth a colour
+	TempSpk  Spark    `json:"tempSpk"`
+	Load     string   `json:"load"` // "0,27 · 0,32 · 0,26"
+	Uptime   string   `json:"uptime"`
 
-	RAM     HWMeter
-	Swap    HWMeter
-	Zram    string // "3,8 MiB → 1,1 MiB (×3,3)", or ""
-	HasSwap bool
+	RAM     HWMeter `json:"ram"`
+	Swap    HWMeter `json:"swap"`
+	Zram    string  `json:"zram"` // "3,8 MiB → 1,1 MiB (×3,3)", or ""
+	HasSwap bool    `json:"hasSwap"`
 
-	Links  []HWLink
-	NetSpk Spark // received, the larger of the two on a media server
-	Disks  []HWDisk
+	Links  []HWLink `json:"links"`
+	NetSpk Spark    `json:"netSpk"` // received, the larger of the two on a media server
+	Disks  []HWDisk `json:"disks"`
 
-	Battery HWBattery
+	Battery HWBattery `json:"battery"`
 }
 
 // Spark is a small line chart: the points of an SVG polyline on a 100×24
 // canvas, plus the value at the top of the scale.
 type Spark struct {
-	Points string
-	Max    string
+	Points string `json:"points"`
+	Max    string `json:"max"`
 }
 
 // HWCore is one logical CPU.
 type HWCore struct {
-	Name  string // "0", "1"…
-	Busy  string // "34 %"
-	Width string // bar length on a 0..100 canvas
-	MHz   string // "3,9 GHz"
-	Hot   bool   // busy enough to colour
+	Name  string `json:"name"`  // "0", "1"…
+	Busy  string `json:"busy"`  // "34 %"
+	Width string `json:"width"` // bar length on a 0..100 canvas
+	MHz   string `json:"mhz"`   // "3,9 GHz"
+	Hot   bool   `json:"hot"`   // busy enough to colour
 }
 
 // HWMeter is a used-of-total bar.
 type HWMeter struct {
-	Used  string
-	Total string
-	Pct   string
-	Width string
-	High  bool
+	Used  string `json:"used"`
+	Total string `json:"total"`
+	Pct   string `json:"pct"`
+	Width string `json:"width"`
+	High  bool   `json:"high"`
 }
 
 // HWLink is a network interface.
 type HWLink struct {
-	Name  string
-	Up    bool
-	Speed string // "1 Gb/s", or ""
-	Rx    string
-	Tx    string
+	Name  string `json:"name"`
+	Up    bool   `json:"up"`
+	Speed string `json:"speed"` // "1 Gb/s", or ""
+	Rx    string `json:"rx"`
+	Tx    string `json:"tx"`
 }
 
 // HWDisk is one disk's activity.
 type HWDisk struct {
-	Name  string
-	Model string
-	Read  string
-	Write string
-	Busy  string
-	Width string
-	Idle  bool
+	Name  string `json:"name"`
+	Model string `json:"model"`
+	Read  string `json:"read"`
+	Write string `json:"write"`
+	Busy  string `json:"busy"`
+	Width string `json:"width"`
+	Idle  bool   `json:"idle"`
 }
 
 // HWBattery is the battery that, on Ginebra, is the UPS.
 type HWBattery struct {
-	Present     bool
-	Percent     string
-	Width       string
-	Status      string // in Spanish
-	Health      string // "65 %"
-	Discharging bool   // mains is out
-	Left        string // "1 h 52 min", or ""
-	Low         bool
+	Present     bool   `json:"present"`
+	Percent     string `json:"percent"`
+	Width       string `json:"width"`
+	Status      string `json:"status"`      // in Spanish
+	Health      string `json:"health"`      // "65 %"
+	Discharging bool   `json:"discharging"` // mains is out
+	Left        string `json:"left"`        // "1 h 52 min", or ""
+	Low         bool   `json:"low"`
 }

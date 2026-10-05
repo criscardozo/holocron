@@ -47,6 +47,13 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 	api.HandleFunc("POST /v1/media/sync", s.apiMediaSync)
 
 	api.HandleFunc("GET /v1/manage", s.apiManage)
+	// The live screens, as the web renders them: the same formatted view
+	// models, so the app shows the same words and the wording lives in one
+	// place. Read through the hubs' Current, which reuses a fresh reading
+	// when a tab is already watching.
+	api.HandleFunc("GET /v1/hardware", s.apiHardware)
+	api.HandleFunc("GET /v1/activity", s.apiActivity)
+	api.HandleFunc("GET /v1/services", s.apiServices)
 	api.HandleFunc("POST /v1/manage/action", s.apiManageAction)
 
 	api.HandleFunc("GET /v1/quality", s.apiQuality)
@@ -391,6 +398,15 @@ func (s *Server) apiManage(w http.ResponseWriter, r *http.Request) {
 	if pending, ok := s.deps.Power.Pending(); ok {
 		payload["pending"] = string(pending)
 	}
+	// Whether this request came from outside the house, as the server sees
+	// it. The app used to guess from the address it was configured with, and
+	// behind Caddy that address is the same name from the couch and from
+	// abroad. The server reads the client's real address instead.
+	payload["remote"] = !fromHome(r)
+	payload["machine"] = power.MachineName()
+	if a, ok := s.deps.Power.Last(); ok && time.Since(a.At) < 24*time.Hour {
+		payload["lastAction"] = map[string]any{"action": a.Action, "ok": a.OK, "reason": a.Reason, "at": a.At}
+	}
 	s.writeJSON(w, http.StatusOK, payload)
 }
 
@@ -667,4 +683,16 @@ func pathInt64(r *http.Request, name string) (int64, bool) {
 		return 0, false
 	}
 	return v, true
+}
+
+func (s *Server) apiHardware(w http.ResponseWriter, r *http.Request) {
+	s.writeJSON(w, http.StatusOK, hardwareView(s.deps.Hardware.Current(r.Context())))
+}
+
+func (s *Server) apiActivity(w http.ResponseWriter, r *http.Request) {
+	s.writeJSON(w, http.StatusOK, activityView(s.deps.Activity.Current(r.Context()), time.Now()))
+}
+
+func (s *Server) apiServices(w http.ResponseWriter, r *http.Request) {
+	s.writeJSON(w, http.StatusOK, servicesView(s.deps.Services.Current(r.Context()), s.deps.ServicesConfigured, time.Now()))
 }
