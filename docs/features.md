@@ -748,6 +748,22 @@ tarjeta se pone roja, aparece un aviso arriba de todo con el tiempo estimado
 que queda, y **el dashboard muestra un chip en cualquier pantalla**, porque es
 lo único de esta sección con un reloj corriendo.
 
+Probado de verdad en Ginebra, desenchufando el cargador: al 98 % quedaban unos
+3h 14m. En esa prueba el Inicio dijo **1h 22m** al mismo tiempo. La cuenta es
+la misma en las dos pantallas (carga que queda ÷ corriente), pero la corriente
+es un instante, y el Inicio la leía mientras él mismo consultaba los servicios.
+Por eso:
+
+- se usa el promedio del kernel (`current_avg`/`power_avg`) si la batería lo
+  tiene, y si no, un promedio propio de las lecturas, que se reinicia cuando
+  vuelve la luz;
+- el Inicio lee la batería primero, antes de ponerse a trabajar.
+
+El aviso también dice que **si la batería se agota hay que prenderla a mano**:
+la BIOS de esta Acer no tiene «encender al volver la luz» y la placa de red no
+la despierta estando apagada (declara S4 como su estado más profundo). Por lo
+mismo Gestión sigue diciendo «No se puede encender a distancia».
+
 ### Las barras son SVG
 
 Un ancho que depende de un número no puede ir en `style=""`: la CSP lo

@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -404,6 +405,55 @@ type Battery struct {
 // Discharging reports whether the machine is running on its battery.
 func (b Battery) Discharging() bool { return b.Present && !b.OnAC }
 
+// readRate is the battery's discharge rate: the kernel's own average
+// (current_avg, power_avg) when the battery reports one, the instant value
+// otherwise.
+func readRate(dir, kind string) (uint64, bool) {
+	if v, ok := readUint(filepath.Join(dir, kind+"_avg")); ok && v > 0 {
+		return v, true
+	}
+	return readUint(filepath.Join(dir, kind+"_now"))
+}
+
+// drain smooths the discharge rate across readings. current_now is an
+// instant, and the instant moves with load: on Ginebra, during the first real
+// power cut, the start page said 1h 22m while Hardware said 3h 14m from the
+// same charge, one of them read during a burst of work. A time left that
+// jumps by half between two screens is not one anybody can plan with.
+var drain struct {
+	sync.Mutex
+	rate float64
+	at   time.Time
+}
+
+const (
+	// drainWeight is how much a new reading moves the average.
+	drainWeight = 0.25
+	// drainReset starts the average over when the last reading is this old:
+	// the load it describes is gone.
+	drainReset = 10 * time.Minute
+)
+
+func smoothDrain(rate float64, now time.Time) float64 {
+	drain.Lock()
+	defer drain.Unlock()
+	if drain.at.IsZero() || now.Sub(drain.at) > drainReset {
+		drain.rate = rate
+	} else {
+		drain.rate += drainWeight * (rate - drain.rate)
+	}
+	drain.at = now
+	return drain.rate
+}
+
+// resetDrain forgets the average once the power is back: the next cut starts
+// from its own readings.
+func resetDrain() {
+	drain.Lock()
+	drain.rate, drain.at = 0, time.Time{}
+	drain.Unlock()
+}
+
 // ReadBattery reads the battery on its own, for places that only need to know
 // whether the power is out — the dashboard, every page load — without paying
 // for a full sample.
@@ -426,18 +476,21 @@ func readBattery() Battery {
 		full, okFull := readUint(filepath.Join(d, "charge_full"))
 		design, okDesign := readUint(filepath.Join(d, "charge_full_design"))
 		now, okNow := readUint(filepath.Join(d, "charge_now"))
-		rate, okRate := readUint(filepath.Join(d, "current_now"))
+		rate, okRate := readRate(d, "current")
 		if !okFull {
 			full, okFull = readUint(filepath.Join(d, "energy_full"))
 			design, okDesign = readUint(filepath.Join(d, "energy_full_design"))
 			now, okNow = readUint(filepath.Join(d, "energy_now"))
-			rate, okRate = readUint(filepath.Join(d, "power_now"))
+			rate, okRate = readRate(d, "power")
 		}
 		if okFull && okDesign && design > 0 {
 			b.HealthPct = float64(full) * 100 / float64(design)
 		}
 		if b.Status == "Discharging" && okNow && okRate && rate > 0 {
-			b.Left = time.Duration(float64(now) / float64(rate) * float64(time.Hour))
+			avg := smoothDrain(float64(rate), time.Now())
+			b.Left = time.Duration(float64(now) / avg * float64(time.Hour))
+		} else {
+			resetDrain()
 		}
 	}
 	// The mains adapter is its own supply. Absent means a desktop, which is

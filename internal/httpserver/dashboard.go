@@ -29,6 +29,10 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 // the same view, over the API.
 func (s *Server) homeView(ctx context.Context) templates.HomeView {
 	now := time.Now()
+	// The battery first, before the reads below put the machine to work: its
+	// time left comes from the current it draws, and reading that in the
+	// middle of this page's own burst made it look a lot shorter.
+	bat := hardware.ReadBattery()
 
 	// Everything the page needs comes from a different place; asked at once,
 	// the page waits for the slowest instead of the sum.
@@ -42,13 +46,13 @@ func (s *Server) homeView(ctx context.Context) templates.HomeView {
 	wg.Go(func() { tiles = s.deps.Widgets.Tiles(ctx) })
 	wg.Go(func() { act = s.deps.Activity.Current(ctx) })
 	wg.Go(func() { svc = s.deps.Services.Current(ctx) })
-	wg.Go(func() { chips = s.attentionChips(ctx) })
+	wg.Go(func() { chips = s.attentionChips(ctx, bat) })
 	wg.Wait()
 
 	av := activityView(act, now)
 	v := templates.HomeView{
 		Machine: power.MachineName(),
-		Status:  homeStatus(system.Read(), hardware.ReadBattery()),
+		Status:  homeStatus(system.Read(), bat),
 		Attn:    chips,
 		Recent:  av.Recent,
 	}
@@ -146,13 +150,13 @@ func servicesTile(sv templates.ServicesView) templates.Tile {
 // that needs action (a power cut, invalid folder names, disks that are nearly
 // full). All lookups are best-effort — a failing service just
 // omits its chip rather than breaking the dashboard.
-func (s *Server) attentionChips(ctx context.Context) []templates.AttnChip {
+func (s *Server) attentionChips(ctx context.Context, b hardware.Battery) []templates.AttnChip {
 	var chips []templates.AttnChip
 
 	// First, because it is the only chip with a clock running. On Ginebra the
 	// laptop's battery is the UPS: a power cut shows here on every screen the
 	// dashboard is, not only on /hardware where nobody might be looking.
-	if b := hardware.ReadBattery(); b.Discharging() {
+	if b.Discharging() {
 		label := fmt.Sprintf("Sin luz: batería al %d %%", b.Percent)
 		if b.Left > 0 {
 			label += ", quedan unos " + system.HumanDuration(b.Left)

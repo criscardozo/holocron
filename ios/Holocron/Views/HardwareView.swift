@@ -28,8 +28,14 @@ struct HardwareView: View {
 
     private func upsAlert(_ b: HWBattery) -> some View {
         Label {
-            Text("Se cortó la luz: el servidor está andando con la batería. \(b.percent)\(b.left.isEmpty ? "" : " · quedan unos \(b.left)")")
-                .font(.callout.weight(.semibold))
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Se cortó la luz: el servidor está andando con la batería. \(b.percent)\(b.left.isEmpty ? "" : " · quedan unos \(b.left)")")
+                    .font(.callout.weight(.semibold))
+                // No power-on after a power loss in this BIOS, and no wake
+                // from off: once the battery is gone, it stays off.
+                Text("Si se agota, se apaga y no vuelve sola cuando vuelve la luz: hay que prenderla a mano.")
+                    .font(.caption)
+            }
         } icon: {
             Image(systemName: "bolt.slash.fill")
         }

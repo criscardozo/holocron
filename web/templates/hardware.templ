@@ -34,6 +34,11 @@ templ HardwareLive(v HardwareView) {
 				if v.Battery.Left != "" {
 					· quedan unos { v.Battery.Left }
 				}
+				// Measured on Ginebra: the BIOS has no power-on after a power
+				// loss and the NIC cannot wake it from off, so a battery that
+				// runs out means someone has to press the button.
+				<br/>
+				Si se agota, se apaga y no vuelve sola cuando vuelve la luz: hay que prenderla a mano.
 			</span>
 		</div>
 	}

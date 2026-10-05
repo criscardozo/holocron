@@ -166,6 +166,8 @@ func TestPowerCutIsReported(t *testing.T) {
 	writeFile(t, filepath.Join(h.sys, "class/power_supply/ACAD/online"), "0\n")
 	writeFile(t, filepath.Join(h.sys, "class/power_supply/BAT1/status"), "Discharging\n")
 
+	resetDrain()
+	t.Cleanup(resetDrain)
 	b := readBattery()
 	if !b.Discharging() {
 		t.Fatalf("battery = %+v, want it to say the power is out", b)
@@ -173,5 +175,47 @@ func TestPowerCutIsReported(t *testing.T) {
 	// charge_now 1684800 µAh at 842400 µA is two hours.
 	if b.Left != 2*time.Hour {
 		t.Errorf("time left = %s, want 2h", b.Left)
+	}
+}
+
+// TestTimeLeftDoesNotFollowABurst. The rate is an instant, and an instant of
+// heavy load would halve the estimate on whichever screen read it then. The
+// average moves toward a spike without jumping to it.
+func TestTimeLeftDoesNotFollowABurst(t *testing.T) {
+	h := newFakeHost(t)
+	oldP, oldS := procRoot, sysRoot
+	procRoot, sysRoot = h.proc, h.sys
+	t.Cleanup(func() { procRoot, sysRoot = oldP, oldS })
+	resetDrain()
+	t.Cleanup(resetDrain)
+
+	writeFile(t, filepath.Join(h.sys, "class/power_supply/ACAD/online"), "0\n")
+	writeFile(t, filepath.Join(h.sys, "class/power_supply/BAT1/status"), "Discharging\n")
+	if b := readBattery(); b.Left != 2*time.Hour {
+		t.Fatalf("steady: %s, want 2h", b.Left)
+	}
+	// Two and a half times the current for one reading: a page doing work.
+	writeFile(t, filepath.Join(h.sys, "class/power_supply/BAT1/current_now"), "2106000\n")
+	// The instant alone says 48m. A quarter of the way toward it, the
+	// average says 1h27m: it moves, without jumping.
+	if b := readBattery(); b.Left < 85*time.Minute || b.Left >= 2*time.Hour {
+		t.Errorf("after one burst: %s, want between 1h25m and 2h, not the instant's 48m", b.Left)
+	}
+
+	// The kernel's own average wins when the battery has one.
+	writeFile(t, filepath.Join(h.sys, "class/power_supply/BAT1/current_avg"), "842400\n")
+	resetDrain()
+	if b := readBattery(); b.Left != 2*time.Hour {
+		t.Errorf("with current_avg: %s, want 2h", b.Left)
+	}
+
+	// The power coming back forgets the average.
+	writeFile(t, filepath.Join(h.sys, "class/power_supply/BAT1/status"), "Charging\n")
+	readBattery()
+	drain.Lock()
+	at := drain.at
+	drain.Unlock()
+	if !at.IsZero() {
+		t.Error("the average survived the power coming back")
 	}
 }
