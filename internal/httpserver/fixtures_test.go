@@ -14,6 +14,8 @@ import (
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/seerr"
 	"github.com/cristian/holocron/internal/services"
+	"github.com/cristian/holocron/internal/system"
+	"github.com/cristian/holocron/web/templates"
 )
 
 // TestWriteIOSFixtures writes the JSON the iOS contract tests decode, for the
@@ -57,7 +59,7 @@ func TestWriteIOSFixtures(t *testing.T) {
 	}
 
 	playing := jellyfin.Session{UserName: "cristian", DeviceName: "Living", Client: "Jellyfin Android TV"}
-	playing.NowPlaying = &jellyfin.NowPlayingItem{Name: "Honeydew", SeriesName: "The Bear", Type: "Episode", IndexNumber: i(4), ParentIndexNumber: i(2), RunTimeTicks: 18_000_000_000}
+	playing.NowPlaying = &jellyfin.NowPlayingItem{ID: "0b6f0e4a1c2d4e5f8a9b0c1d2e3f4a5b", SeriesID: "f27caa37e5142225cceded48f6553502", Name: "Honeydew", SeriesName: "The Bear", Type: "Episode", IndexNumber: i(4), ParentIndexNumber: i(2), RunTimeTicks: 18_000_000_000}
 	playing.PlayState = &struct {
 		PositionTicks int64  `json:"PositionTicks"`
 		IsPaused      bool   `json:"IsPaused"`
@@ -117,6 +119,7 @@ func TestWriteIOSFixtures(t *testing.T) {
 		"hardware.json": hardwareView(hw),
 		"activity.json": activityView(act, now),
 		"services.json": servicesView(svc, true, now),
+		"home.json":     fixtureHome(act, svc, now),
 	} {
 		b, err := json.MarshalIndent(v, "", " ")
 		if err != nil {
@@ -125,5 +128,32 @@ func TestWriteIOSFixtures(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dir, name), append(b, '\n'), 0o644); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+// fixtureHome is the start screen over the same readings, through the same
+// functions the start page uses. The registry's tiles are written out with
+// values seen on Ginebra, since they read services this test does not have.
+func fixtureHome(act activity.Snapshot, svc services.Snapshot, now time.Time) templates.HomeView {
+	av := activityView(act, now)
+	return templates.HomeView{
+		Machine: "Ginebra",
+		Status: homeStatus(system.Stats{
+			HasCPU: true, CPUPercent: 14, HasTemp: true, TempC: 36,
+			MemTotal: 20 << 30, MemUsed: 4 << 30, MemPercent: 20, HasUptime: true, Uptime: 4*time.Hour + 10*time.Minute,
+		}, hardware.Battery{Present: true, Percent: 100, Status: "Full", OnAC: true}),
+		Attn: []templates.AttnChip{{Label: "Disco4 91%", Href: "/disk", Icon: "drive"}},
+		Tiles: []templates.Tile{
+			activityTile(av),
+			{Href: "/hardware", Icon: "cpu", Tone: "violet", Title: "Hardware", Value: "14 %", Sub: "36 °C · RAM 20 %"},
+			servicesTile(servicesView(svc, true, now)),
+			{Href: "/disk", Icon: "drive", Tone: "lilac", Title: "Disco", Value: "91 %", Sub: "3.3 TiB de 3.6 TiB · Disco4", Warn: true},
+			{Href: "/media", Icon: "film", Tone: "indigo", Title: "Medios", Value: "366", Sub: "325 películas · 41 series"},
+			{Href: "/quality", Icon: "gauge", Tone: "amber", Title: "Calidad", Value: "Sin analizar", Sub: "Analizar la biblioteca"},
+			{Href: "/naming", Icon: "tag", Tone: "sky", Title: "Nombres", Value: "Todo bien", Sub: "Todo cumple «Título (Año)»"},
+			{Href: "/torrents", Icon: "download", Tone: "mint", Title: "Torrents", Value: "—", Sub: "qBittorrent sin configurar", Off: true},
+		},
+		Recent: av.Recent,
+		Mural:  []string{"/art/jf/f27caa37e5142225cceded48f6553502"},
 	}
 }

@@ -138,6 +138,10 @@ struct APIClient: Sendable {
 
     // MARK: - Live screens
 
+    func home() async throws -> HomeReading {
+        try await get("home")
+    }
+
     func hardware() async throws -> HardwareReading {
         try await get("hardware")
     }

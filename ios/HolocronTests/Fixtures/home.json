@@ -1,0 +1,125 @@
+{
+ "machine": "Ginebra",
+ "status": [
+  {
+   "text": "En línea · 4h 10m",
+   "tone": "ok"
+  },
+  {
+   "text": "CPU 14 %",
+   "tone": ""
+  },
+  {
+   "text": "36 °C",
+   "tone": ""
+  },
+  {
+   "text": "RAM 20 %",
+   "tone": ""
+  },
+  {
+   "text": "Batería 100 %",
+   "tone": ""
+  }
+ ],
+ "attention": [
+  {
+   "label": "Disco4 91%",
+   "href": "/disk",
+   "icon": "drive"
+  }
+ ],
+ "tiles": [
+  {
+   "href": "/activity",
+   "icon": "activity",
+   "tone": "pink",
+   "title": "Actividad",
+   "value": "1 reproducción",
+   "sub": "2 bajando · 21 pedidos · 1 estreno en 30 días",
+   "warn": false,
+   "off": false
+  },
+  {
+   "href": "/hardware",
+   "icon": "cpu",
+   "tone": "violet",
+   "title": "Hardware",
+   "value": "14 %",
+   "sub": "36 °C · RAM 20 %",
+   "warn": false,
+   "off": false
+  },
+  {
+   "href": "/services",
+   "icon": "server",
+   "tone": "teal",
+   "title": "Servicios",
+   "value": "1 caída",
+   "sub": "3 unidades · 2 tareas · 1 diferencia con el repo",
+   "warn": true,
+   "off": false
+  },
+  {
+   "href": "/disk",
+   "icon": "drive",
+   "tone": "lilac",
+   "title": "Disco",
+   "value": "91 %",
+   "sub": "3.3 TiB de 3.6 TiB · Disco4",
+   "warn": true,
+   "off": false
+  },
+  {
+   "href": "/media",
+   "icon": "film",
+   "tone": "indigo",
+   "title": "Medios",
+   "value": "366",
+   "sub": "325 películas · 41 series",
+   "warn": false,
+   "off": false
+  },
+  {
+   "href": "/quality",
+   "icon": "gauge",
+   "tone": "amber",
+   "title": "Calidad",
+   "value": "Sin analizar",
+   "sub": "Analizar la biblioteca",
+   "warn": false,
+   "off": false
+  },
+  {
+   "href": "/naming",
+   "icon": "tag",
+   "tone": "sky",
+   "title": "Nombres",
+   "value": "Todo bien",
+   "sub": "Todo cumple «Título (Año)»",
+   "warn": false,
+   "off": false
+  },
+  {
+   "href": "/torrents",
+   "icon": "download",
+   "tone": "mint",
+   "title": "Torrents",
+   "value": "—",
+   "sub": "qBittorrent sin configurar",
+   "warn": false,
+   "off": true
+  }
+ ],
+ "recent": [
+  {
+   "title": "The Social Dilemma",
+   "subtitle": "(2020)",
+   "when": "hace 3 h",
+   "art": ""
+  }
+ ],
+ "mural": [
+  "/art/jf/f27caa37e5142225cceded48f6553502"
+ ]
+}

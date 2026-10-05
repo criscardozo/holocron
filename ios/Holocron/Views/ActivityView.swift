@@ -11,15 +11,15 @@ struct ActivityView: View {
             LoadableView(state: state, reload: load) { act in
                 VStack(spacing: 16) {
                     ForEach(act.errors, id: \.self) { e in
-                        Label(e, systemImage: "exclamationmark.triangle")
+                        Label("No responde: \(e)", systemImage: "exclamationmark.triangle")
                             .font(.callout).foregroundStyle(Palette.accent300).card()
                     }
-                    if !act.attention.isEmpty { attentionCard(act.attention) }
-                    if act.hasJellyfin { playingCard(act) }
-                    if act.hasTorrents || act.hasArr { downloadsCard(act) }
+                    if act.hasJellyfin { playingSection(act) }
+                    if !act.recent.isEmpty { recentRow(act.recent) }
                     if act.hasSeerr { requestsCard(act) }
+                    if act.hasTorrents || act.hasArr { downloadsCard(act) }
                     if !act.upcoming.isEmpty { upcomingCard(act.upcoming) }
-                    if !act.recent.isEmpty { recentCard(act) }
+                    if !act.attention.isEmpty { attentionCard(act.attention) }
                 }
                 .padding(16)
             }
@@ -42,40 +42,70 @@ struct ActivityView: View {
         .card(accented: true)
     }
 
-    private func playingCard(_ act: ActivityReading) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("Reproduciendo", systemImage: "play.tv").sectionTitle()
-            if act.playing.isEmpty {
-                Text(act.idle > 0
-                     ? "Nadie está mirando nada. \(act.idle) \(act.idle == 1 ? "sesión abierta" : "sesiones abiertas") sin reproducir."
-                     : "Nadie está mirando nada.")
-                    .font(.callout).foregroundStyle(Palette.muted)
+    /// What is playing, large, each over its own poster blurred: the first
+    /// thing on the screen, because it is the thing happening.
+    @ViewBuilder private func playingSection(_ act: ActivityReading) -> some View {
+        if act.playing.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Reproduciendo").kicker()
+                Text("Nadie está mirando nada.").font(.title3.weight(.semibold))
+                if act.idle > 0 {
+                    Text("\(act.idle) \(act.idle == 1 ? "sesión abierta" : "sesiones abiertas") sin reproducir.")
+                        .font(.caption).foregroundStyle(Palette.muted)
+                }
             }
-            ForEach(act.playing) { p in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(p.title).font(.callout.weight(.semibold)).lineLimit(1)
-                        Spacer()
-                        if p.paused { Pill(text: "en pausa", kind: .neutral) }
-                        Pill(text: p.method, kind: p.onCPU ? .warn : .neutral)
-                    }
-                    if !p.subtitle.isEmpty {
-                        Text(p.subtitle).font(.caption).foregroundStyle(Palette.muted).lineLimit(1)
-                    }
-                    ProgressBar(value: fraction(p.width))
-                    Text([p.who, p.client, p.position].filter { !$0.isEmpty }.joined(separator: " · "))
-                        .font(.caption.monospacedDigit()).foregroundStyle(Palette.muted)
-                    if p.transcode {
-                        Text([p.hardware, p.detail].filter { !$0.isEmpty }.joined(separator: " · "))
-                            .font(.caption).foregroundStyle(p.onCPU ? Palette.accent300 : Palette.muted)
-                        ForEach(p.reasons, id: \.self) { r in
-                            Text("• \(r)").font(.caption2).foregroundStyle(Palette.muted)
-                        }
-                    }
+            .card()
+        } else {
+            ForEach(act.playing) { p in playingHero(p) }
+        }
+    }
+
+    private func playingHero(_ p: ActPlaying) -> some View {
+        HStack(alignment: .bottom, spacing: 14) {
+            PosterImage(path: p.art, title: p.title)
+                .frame(width: 92)
+                .shadow(color: .black.opacity(0.5), radius: 14, y: 8)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(p.paused ? "En pausa" : "Reproduciendo").kicker()
+                Text(p.title).font(.title2.weight(.bold)).lineLimit(2)
+                if !p.subtitle.isEmpty {
+                    Text(p.subtitle).font(.subheadline).foregroundStyle(Palette.text.opacity(0.8)).lineLimit(1)
+                }
+                Text(p.who).font(.caption).foregroundStyle(Palette.muted).lineLimit(2)
+                ProgressBar(value: fraction(p.width)).padding(.top, 4)
+                HStack(spacing: 6) {
+                    Text(p.position).font(.caption2.monospacedDigit()).foregroundStyle(Palette.muted)
+                    Pill(text: p.method, kind: p.transcode ? .neutral : .yes)
+                    if !p.hardware.isEmpty { Pill(text: p.hardware, kind: p.onCPU ? .no : .yes) }
+                }
+                if p.transcode, !(p.detail.isEmpty && p.reasons.isEmpty) {
+                    Text(([p.detail] + p.reasons).filter { !$0.isEmpty }.joined(separator: " · "))
+                        .font(.caption2).foregroundStyle(p.onCPU ? Palette.accent300 : Palette.muted)
                 }
             }
         }
-        .card()
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack {
+                PosterImage(path: p.art, title: p.title, corner: 0)
+                    .scaledToFill()
+                    .blur(radius: 28)
+                    .opacity(0.55)
+                LinearGradient(colors: [Palette.bg.opacity(0.92), Palette.bg.opacity(0.5)],
+                               startPoint: .leading, endPoint: .trailing)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Palette.divider))
+    }
+
+    private func recentRow(_ items: [ActRecent]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Agregado hace poco").font(.headline)
+            PosterRow(items: items)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func downloadsCard(_ act: ActivityReading) -> some View {
@@ -118,7 +148,9 @@ struct ActivityView: View {
                 Text("No hay pedidos.").font(.callout).foregroundStyle(Palette.muted)
             }
             ForEach(act.requests) { r in
-                HStack(alignment: .firstTextBaseline) {
+                HStack(spacing: 12) {
+                    PosterImage(path: r.art, title: r.title, corner: 5)
+                        .frame(width: 34)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(r.title).font(.callout).lineLimit(1)
                         Text([r.kind, r.by, r.when].filter { !$0.isEmpty }.joined(separator: " · "))
@@ -140,31 +172,6 @@ struct ActivityView: View {
                     Text(u.subject).font(.callout).lineLimit(1)
                     Spacer()
                     Text(u.when).font(.caption).foregroundStyle(Palette.muted)
-                }
-            }
-        }
-        .card()
-    }
-
-    private func recentCard(_ act: ActivityReading) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Label("Recién agregado", systemImage: "sparkles").sectionTitle()
-                Spacer()
-                if !act.libAge.isEmpty {
-                    Text(act.libAge).font(.caption).foregroundStyle(Palette.muted)
-                }
-            }
-            ForEach(act.recent) { r in
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(r.title).font(.callout).lineLimit(1)
-                        if !r.subtitle.isEmpty {
-                            Text(r.subtitle).font(.caption).foregroundStyle(Palette.muted).lineLimit(1)
-                        }
-                    }
-                    Spacer()
-                    Text(r.when).font(.caption).foregroundStyle(Palette.muted)
                 }
             }
         }

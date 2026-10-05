@@ -215,6 +215,24 @@ struct ContractTests {
         #expect(drift.differ.first?.problem == "no está instalado")
     }
 
+    @Test func home() throws {
+        let home = try decode(HomeReading.self, "home")
+        #expect(home.machine == "Ginebra")
+        #expect(home.tiles.count == 8)
+        #expect(home.tiles.first?.href == "/activity")
+        #expect(home.status.first?.tone == "ok")
+        #expect(!home.mural.isEmpty)
+        // Every area the web shows has a symbol, so no tile renders blank.
+        for tile in home.tiles {
+            #expect(DashboardView.symbol(for: tile.href) != "square.grid.2x2", "no symbol for \(tile.href)")
+        }
+    }
+
+    @Test func activityCarriesPosters() throws {
+        let act = try decode(ActivityReading.self, "activity")
+        #expect(act.playing.first?.art?.hasPrefix("/art/") == true)
+    }
+
     @Test func lenientDecodesNullAndMissing() throws {
         struct Box: Decodable { @Lenient var items: [String] }
         let null = try JSONDecoder().decode(Box.self, from: Data(#"{"items":null}"#.utf8))

@@ -251,6 +251,7 @@ Jellyfin vinculada no es administradora (releer metadata lo requiere).
 
 | Método | Ruta | Qué hace |
 |---|---|---|
+| `GET` | `/api/v1/home` | El Inicio: baldosas por área, lecturas, avisos, lo agregado hace poco y los pósters del mural |
 | `GET` | `/api/v1/hardware` | CPU por núcleo, memoria, red, discos y batería |
 | `GET` | `/api/v1/activity` | Reproducciones, descargas, pedidos de Seerr, calendario y avisos |
 | `GET` | `/api/v1/services` | Unidades de systemd, tareas programadas, SMART y la deriva de la instalación (`drift`, `null` si el servidor no la chequea) |
@@ -262,6 +263,11 @@ largos de barra vienen como texto sobre un lienzo de 0 a 100 (`"width": "20.0"`)
 y los sparklines como los puntos del polyline sobre un lienzo de 100×24.
 
 Las listas vacías pueden llegar como `null`: el cliente tiene que tolerarlo.
+
+Los pósters (`art` en reproducciones, agregados, pedidos y en cada ítem de
+`/api/v1/media`, y `mural` en `/api/v1/home`) son rutas del servidor
+(`/art/jf/…`, `/art/tmdb/…`) que se resuelven contra su dirección. **No piden
+token**: son la misma ruta que usa la web.
 
 La web recibe esto mismo por SSE (`/events/…`); la API se consulta. El servidor
 muestrea sólo mientras alguien pregunta, así que un cliente que deja de preguntar

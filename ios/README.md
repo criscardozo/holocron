@@ -78,11 +78,34 @@ ios/
 - **Sin dependencias externas.** Sólo SwiftUI, Foundation y Security, igual que
   el servidor se mantiene en dos dependencias de Go.
 - **Concurrencia estricta de Swift 6** activada.
+- **Pósters**: los sirve el servidor por `/art/…` (la misma ruta que la web, sin
+  token); la app los baja con `AsyncImage` y los guarda en un `URLCache` de
+  160 MB, así que después de la primera vez salen del teléfono.
+- **Inicio** es la misma vista que el Inicio web (`/api/v1/home`): baldosas,
+  lecturas, avisos y lo agregado hace poco, sobre el mural de pósters.
 - **Las pantallas en vivo se refrescan solas mientras están a la vista**:
   Hardware cada 3 s, Torrents cada 3 s, Actividad cada 5 s, Servicios cada
   15 s. La web usa SSE; acá alcanza con un poll corto, porque el servidor
   muestrea sólo mientras alguien pregunta y la app deja de preguntar en cuanto
   la pantalla se va. El resto usa pull-to-refresh.
+
+## Ver las pantallas en el simulador
+
+Las compilaciones de desarrollo (`Debug`) aceptan la dirección y el token por
+variables de entorno, sólo en memoria: no tocan UserDefaults ni el Keychain, y
+el atajo no existe en la compilación `Release` que va al teléfono. Con un
+servidor corriendo en la Mac:
+
+```sh
+SIMCTL_CHILD_HOLOCRON_PREVIEW_URL=http://127.0.0.1:8099 \
+SIMCTL_CHILD_HOLOCRON_PREVIEW_TOKEN=<token> \
+SIMCTL_CHILD_HOLOCRON_PREVIEW_TAB=activity \
+  xcrun simctl launch --terminate-running-process booted ar.com.criscardozo.holocron
+xcrun simctl io booted screenshot /tmp/pantalla.png
+```
+
+`HOLOCRON_PREVIEW_TAB` es `activity`, `media` o `torrents`; sin ella abre en
+Inicio.
 
 ## Tests
 

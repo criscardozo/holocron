@@ -83,6 +83,8 @@ struct MediaItem: Codable, Identifiable, Hashable {
     var year: Int
     var type: String
     var hasSubsEs: Bool
+    /// The poster's path on the server; absent from servers before 0.19.1.
+    var art: String?
 
     var id: String { path }
 }

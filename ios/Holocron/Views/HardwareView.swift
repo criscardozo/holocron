@@ -11,6 +11,7 @@ struct HardwareView: View {
             LoadableView(state: state, reload: load) { hw in
                 VStack(spacing: 16) {
                     if hw.battery.discharging { upsAlert(hw.battery) }
+                    kpis(hw)
                     cpuCard(hw)
                     memoryCard(hw)
                     networkCard(hw)
@@ -34,6 +35,39 @@ struct HardwareView: View {
         }
         .foregroundStyle(Palette.danger)
         .card()
+    }
+
+    /// The four numbers that answer "is it all right", before the detail.
+    private func kpis(_ hw: HardwareReading) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            kpi("cpu", "violet", "CPU", hw.live ? hw.cpu : "midiendo…", hw.load, warn: false)
+            kpi("memorychip", "pink", "Memoria", hw.ram.pct, "\(hw.ram.used) de \(hw.ram.total)", warn: hw.ram.high)
+            kpi("thermometer.medium", "amber", "Temperatura", hw.temp.isEmpty ? "—" : hw.temp, "Encendida hace \(hw.uptime)", warn: hw.tempHot)
+            if hw.battery.present {
+                kpi("battery.100.bolt", "mint", "Batería (UPS)", hw.battery.percent, hw.battery.status,
+                    warn: hw.battery.discharging || hw.battery.low)
+            }
+        }
+    }
+
+    private func kpi(_ symbol: String, _ tone: String, _ label: String, _ value: String, _ sub: String, warn: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: symbol)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 26, height: 26)
+                    .background(DashboardView.tone(tone), in: RoundedRectangle(cornerRadius: 7))
+                Text(label).font(.caption).foregroundStyle(Palette.muted)
+            }
+            Text(value)
+                .font(.title2.weight(.bold)).monospacedDigit()
+                .foregroundStyle(warn ? Palette.danger : Palette.text)
+                .lineLimit(1).minimumScaleFactor(0.7)
+                .padding(.top, 4)
+            Text(sub).font(.caption2).foregroundStyle(Palette.muted).lineLimit(1)
+        }
+        .card(accented: warn)
     }
 
     private func cpuCard(_ hw: HardwareReading) -> some View {

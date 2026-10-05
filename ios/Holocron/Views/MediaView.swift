@@ -1,12 +1,11 @@
 import SwiftUI
 
-/// The Jellyfin inventory: counters, the sync job, and the item list.
+/// The Jellyfin inventory: counters, the sync job, and the library as posters.
 struct MediaView: View {
     @Environment(AppSettings.self) private var settings
 
     @State private var state: Loadable<MediaLibrary> = .idle
     @State private var banner: String?
-    @State private var disks: [DiskFolder] = []
 
     var body: some View {
         LoadableView(state: state, reload: load) { library in
@@ -31,60 +30,50 @@ struct MediaView: View {
         .task { if case .idle = state { await load() } }
     }
 
+    /// Posters, not a list: this is a film library, and a cover is found at a
+    /// glance where a title has to be read.
     private func content(_ library: MediaLibrary) -> some View {
-        List {
-            Section {
-                stats(library)
-                actions(library)
-                if let banner {
-                    Text(banner).font(.footnote).foregroundStyle(Palette.muted)
-                }
-            }
-            .listRowBackground(Palette.surface)
-
-            if !disks.isEmpty {
-                Section("Disco") {
-                    ForEach(disks) { disk in
-                        NavigationLink {
-                            DiskDetailView(folder: disk)
-                        } label: {
-                            HStack {
-                                Text(disk.label).font(.callout)
-                                Spacer()
-                                if disk.available {
-                                    Text("\(disk.usedPercent)%")
-                                        .font(.callout).monospacedDigit()
-                                        .foregroundStyle(disk.isHot ? Palette.accent300 : Palette.muted)
-                                }
-                            }
-                        }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 10) {
+                    stats(library)
+                    actions(library)
+                    if let banner {
+                        Text(banner).font(.footnote).foregroundStyle(Palette.muted)
                     }
                 }
-                .listRowBackground(Palette.surface)
-            }
+                .card()
 
-            if library.items.isEmpty {
-                Section {
+                if library.items.isEmpty {
                     Text("Sin inventario. Tocá «Sincronizar».")
                         .foregroundStyle(Palette.muted)
-                }
-                .listRowBackground(Palette.surface)
-            } else {
-                Section {
-                    ForEach(library.items) { item in
-                        itemRow(item)
+                } else {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 12)], alignment: .leading, spacing: 16) {
+                        ForEach(library.items) { item in
+                            posterCard(item)
+                        }
                     }
-                } header: {
-                    Text("Inventario")
-                } footer: {
                     if library.truncated == true {
                         Text("Mostrando \(library.items.count) de \(library.total ?? 0) ítems.")
+                            .font(.footnote).foregroundStyle(Palette.muted)
                     }
                 }
-                .listRowBackground(Palette.surface)
+            }
+            .padding(16)
+        }
+    }
+
+    private func posterCard(_ item: MediaItem) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            PosterImage(path: item.art, title: item.title)
+            Text(item.title).font(.caption.weight(.semibold)).lineLimit(1)
+            Text("\(item.type == "movie" ? "Película" : "Serie") · \(item.year > 0 ? String(item.year) : "—")")
+                .font(.caption2).foregroundStyle(Palette.muted).lineLimit(1)
+            if !item.hasSubsEs {
+                Text("sin subs ES").font(.system(size: 9, weight: .semibold)).foregroundStyle(Palette.danger)
             }
         }
-        .scrollContentBackground(.hidden)
+        .accessibilityElement(children: .combine)
     }
 
     private func stats(_ library: MediaLibrary) -> some View {
@@ -127,21 +116,6 @@ struct MediaView: View {
         }
     }
 
-    private func itemRow(_ item: MediaItem) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(item.title).font(.callout)
-            Text(item.path)
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Palette.muted)
-                .lineLimit(1)
-            HStack(spacing: 6) {
-                Pill(text: item.type == "movie" ? "Peli" : "Serie", kind: .neutral)
-                Pill(text: item.hasSubsEs ? "subs ES" : "sin subs", kind: item.hasSubsEs ? .yes : .no)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-
     // MARK: - Loading
 
     @MainActor private func load() async {
@@ -152,7 +126,6 @@ struct MediaView: View {
         if case .idle = state { state = .loading }
         do {
             state = .loaded(try await client.media())
-            disks = (try? await client.diskFolders()) ?? []
         } catch {
             state = .failed(message(for: error))
         }

@@ -11,7 +11,7 @@ struct RootView: View {
         // the deployment target at iOS 17 so older phones can run this.
         TabView(selection: $tab) {
             NavigationStack { DashboardView() }
-                .tabItem { Label("Estado", systemImage: "waveform.path.ecg") }
+                .tabItem { Label("Inicio", systemImage: "house") }
                 .tag(Tab.dashboard)
             NavigationStack { ActivityView() }
                 .tabItem { Label("Actividad", systemImage: "play.tv") }
@@ -38,6 +38,15 @@ struct RootView: View {
             if !settings.isConfigured {
                 tab = .settings
             }
+            #if DEBUG
+            // With AppSettings' preview override: which screen to open on.
+            switch ProcessInfo.processInfo.environment["HOLOCRON_PREVIEW_TAB"] {
+            case "activity": tab = .activity
+            case "media": tab = .media
+            case "torrents": tab = .torrents
+            default: break
+            }
+            #endif
         }
     }
 }

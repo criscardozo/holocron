@@ -65,6 +65,14 @@ extension View {
         modifier(CardBackground(accented: accented))
     }
 
+    /// The small violet label over a heading, as on the web's `.kicker`.
+    func kicker() -> some View {
+        font(.caption2.weight(.semibold))
+            .textCase(.uppercase)
+            .kerning(1.6)
+            .foregroundStyle(Palette.accent300)
+    }
+
     /// The uppercase, letter-spaced section label used across the UI.
     func sectionTitle() -> some View {
         font(.caption.weight(.semibold))

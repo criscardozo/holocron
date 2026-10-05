@@ -138,6 +138,8 @@ struct ActivityReading: Decodable, Sendable {
 }
 
 struct ActPlaying: Decodable, Sendable, Identifiable {
+    /// Poster paths are optional: servers before 0.18 do not send them.
+    var art: String?
     var title: String
     var subtitle: String
     var who: String
@@ -172,6 +174,7 @@ struct ActRecent: Decodable, Sendable, Identifiable {
     var title: String
     var subtitle: String
     var when: String
+    var art: String?
     var id: String { title + subtitle }
 }
 
@@ -183,6 +186,7 @@ struct ActRequest: Decodable, Sendable, Identifiable {
     var state: String
     var done: Bool
     var stuck: Bool
+    var art: String?
     var id: String { title + kind + when }
 }
 
@@ -256,3 +260,40 @@ struct SvcDisk: Decodable, Sendable, Identifiable {
     @Lenient var warn: [String]
     var id: String { disk }
 }
+
+// MARK: - Home
+
+/// The start screen: the web's start page, plus the mural's posters.
+struct HomeReading: Decodable, Sendable {
+    var machine: String
+    @Lenient var status: [HomeStat]
+    @Lenient var attention: [HomeAttention]
+    @Lenient var tiles: [HomeTile]
+    @Lenient var recent: [ActRecent]
+    @Lenient var mural: [String]
+}
+
+struct HomeStat: Decodable, Sendable, Identifiable {
+    var text: String
+    var tone: String // ok | warn | danger | ""
+    var id: String { text }
+}
+
+struct HomeAttention: Decodable, Sendable, Identifiable {
+    var label: String
+    var href: String
+    var id: String { label }
+}
+
+/// One area. `href` is the web page; the app maps it to its own screen.
+struct HomeTile: Decodable, Sendable, Identifiable {
+    var href: String
+    var tone: String
+    var title: String
+    var value: String
+    var sub: String
+    var warn: Bool
+    var off: Bool
+    var id: String { href }
+}
+

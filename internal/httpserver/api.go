@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cristian/holocron/internal/apitoken"
+	"github.com/cristian/holocron/internal/artwork"
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
@@ -51,6 +52,7 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 	// models, so the app shows the same words and the wording lives in one
 	// place. Read through the hubs' Current, which reuses a fresh reading
 	// when a tab is already watching.
+	api.HandleFunc("GET /v1/home", s.apiHome)
 	api.HandleFunc("GET /v1/hardware", s.apiHardware)
 	api.HandleFunc("GET /v1/activity", s.apiActivity)
 	api.HandleFunc("GET /v1/services", s.apiServices)
@@ -300,6 +302,9 @@ type apiMediaItem struct {
 	Year      int    `json:"year"`
 	Type      string `json:"type"`
 	HasSubsES bool   `json:"hasSubsEs"`
+	// Art is the poster's path on this server ("/art/jf/…"), or "". The
+	// app resolves it against the server address; it needs no token.
+	Art string `json:"art"`
 }
 
 func (s *Server) apiMedia(w http.ResponseWriter, r *http.Request) {
@@ -323,6 +328,7 @@ func (s *Server) apiMedia(w http.ResponseWriter, r *http.Request) {
 		out = append(out, apiMediaItem{
 			Path: it.Path, Title: it.Title, Year: it.Year, Type: it.Type,
 			HasSubsES: it.HasSubsES,
+			Art:       artwork.URL(artwork.KindJellyfin, it.ServerID),
 		})
 	}
 	s.writeJSON(w, http.StatusOK, map[string]any{
@@ -701,4 +707,20 @@ func (s *Server) apiActivity(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) apiServices(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, http.StatusOK, servicesView(s.deps.Services.Current(r.Context()), s.deps.ServicesConfigured, time.Now()))
+}
+
+// apiHome is the start screen: the same view the web's start page renders,
+// plus the mural's posters, which the web takes from its layout instead.
+func (s *Server) apiHome(w http.ResponseWriter, r *http.Request) {
+	v := s.homeView(r.Context())
+	// The web's wall repeats posters to fill a wide screen; the app lays out
+	// its own and needs each one once.
+	seen := map[string]bool{}
+	for _, u := range s.muralURLs(r.Context()) {
+		if !seen[u] {
+			seen[u] = true
+			v.Mural = append(v.Mural, u)
+		}
+	}
+	s.writeJSON(w, http.StatusOK, v)
 }

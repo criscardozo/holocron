@@ -50,9 +50,9 @@ func muralFrom(ctx context.Context) []string {
 
 // AttnChip is one clickable pill in the dashboard's "Atención" strip.
 type AttnChip struct {
-	Label string
-	Href  string
-	Icon  string // sprite symbol id
+	Label string `json:"label"`
+	Href  string `json:"href"`
+	Icon  string `json:"icon"` // sprite symbol id
 }
 
 // intToStr formats an int64 id for use in form values and URLs.

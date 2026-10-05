@@ -22,7 +22,12 @@ import (
 const homeRecent = 10
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	s.render(w, r, templates.Home(s.homeView(r.Context())))
+}
+
+// homeView reads everything the start page shows. The app's start screen is
+// the same view, over the API.
+func (s *Server) homeView(ctx context.Context) templates.HomeView {
 	now := time.Now()
 
 	// Everything the page needs comes from a different place; asked at once,
@@ -60,8 +65,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	v.Tiles = append(v.Tiles, servicesTile(servicesView(svc, s.deps.ServicesConfigured, now)))
 	v.Tiles = append(v.Tiles, tiles...)
-
-	s.render(w, r, templates.Home(v))
+	return v
 }
 
 // homeStatus is the row of readings under the title.

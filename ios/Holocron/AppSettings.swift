@@ -26,6 +26,19 @@ final class AppSettings {
     init() {
         serverURL = UserDefaults.standard.string(forKey: Keys.serverURL) ?? ""
         token = Keychain.get(Keys.token) ?? ""
+        #if DEBUG
+        // For looking at the screens in the simulator against a server on the
+        // Mac: `simctl launch` with SIMCTL_CHILD_HOLOCRON_PREVIEW_URL/_TOKEN.
+        // Held in memory only — assignments in init skip didSet, so nothing
+        // reaches UserDefaults or the Keychain — and absent from release
+        // builds, which is what goes on the phone.
+        let env = ProcessInfo.processInfo.environment
+        if let url = env["HOLOCRON_PREVIEW_URL"], let tok = env["HOLOCRON_PREVIEW_TOKEN"] {
+            serverURL = url
+            token = tok
+            return
+        }
+        #endif
         // The public tunnel and its Access service token are gone: Holocron
         // is reached over the LAN or Tailscale, behind Caddy. A secret nothing
         // uses any more should not stay in the Keychain.
