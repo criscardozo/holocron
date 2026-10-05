@@ -5,6 +5,18 @@ reutiliza. El orden de construcción está en [roadmap.md](roadmap.md).
 
 ---
 
+
+> **Octubre de 2026: Holocron se mudó a Ginebra y dejó de escribir en la
+> biblioteca.** El stack nuevo hace mejor tres cosas que Holocron hacía a mano,
+> y tener dos programas tocando las mismas carpetas era buscarse un conflicto:
+>
+> - **Trailers** → los hace Trailarr. Se retiró la feature y la dependencia de yt-dlp.
+> - **Subtítulos con OpenSubtitles** → los hace Bazarr. Holocron sólo va a mostrar lo que falta.
+> - **Renombrado masivo** → lo hacen Radarr y Sonarr. `/naming` queda como detector de sólo lectura.
+>
+> Las secciones de abajo sobre esas tres features quedan como registro de las
+> decisiones que se tomaron; el código se fue y sigue en el historial de git.
+
 ## Feature 1 — Dashboard con grilla de paneles
 
 Pantalla principal: una grilla responsive de widgets. Cada widget muestra un resumen

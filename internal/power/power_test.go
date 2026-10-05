@@ -156,12 +156,11 @@ func TestStalePendingIsNotReported(t *testing.T) {
 func TestOnlyPoweringOffNeedsTheToken(t *testing.T) {
 	t.Parallel()
 	want := map[Action]bool{
-		ActionRestartJellyfin:   false,
-		ActionRestartQbit:       false,
-		ActionRestartCloudflare: false,
-		ActionRestartHolocron:   false,
-		ActionReboot:            false,
-		ActionPowerOff:          true,
+		ActionRestartJellyfin: false,
+		ActionRestartQbit:     false,
+		ActionRestartHolocron: false,
+		ActionReboot:          false,
+		ActionPowerOff:        true,
 	}
 	for _, a := range Actions {
 		expected, listed := want[a]

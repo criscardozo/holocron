@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cristian/holocron/internal/folders"
+	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/netaddr"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/web/templates"
@@ -24,10 +25,6 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		Notice:      r.URL.Query().Get("notice"),
 		JellyfinURL: s.deps.Settings.GetDefault(ctx, settings.KeyJellyfinURL, ""),
 	}
-	view.OpenSubsUser = s.deps.Settings.GetDefault(ctx, settings.KeyOpenSubtitlesUser, "")
-	if _, ok, _ := s.deps.Settings.Get(ctx, settings.KeyOpenSubtitlesKey); ok {
-		view.OpenSubsSet = true
-	}
 	view.QbitURL = s.deps.Settings.GetDefault(ctx, settings.KeyQbitURL, "")
 	view.QbitUser = s.deps.Settings.GetDefault(ctx, settings.KeyQbitUser, "")
 	if _, ok, _ := s.deps.Settings.Get(ctx, settings.KeyQbitPass); ok {
@@ -38,8 +35,20 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	// Each credential card says whether it is set up, instead of showing an
 	// empty form that looks the same either way.
 	view.Jellyfin = SettingsCredJellyfin(view)
-	view.OpenSubs = SettingsCredOpenSubs(view)
+	// Linked is read from the stored credentials, not from the Quick Connect
+	// flow's state: that state only exists while a code is pending, so reading
+	// it here made a linked server look unconfigured on every normal visit.
+	view.Jellyfin.Configured = jellyfin.Linked(ctx, s.deps.Settings)
+	if view.Jellyfin.Configured && len(view.Jellyfin.Facts) == 0 {
+		view.Jellyfin.Facts = append(view.Jellyfin.Facts,
+			templates.SettingsFact{Label: "Servidor", Value: s.deps.Settings.GetDefault(ctx, settings.KeyJellyfinURL, "")})
+		if u := s.deps.Settings.GetDefault(ctx, settings.KeyJellyfinUser, ""); u != "" {
+			view.Jellyfin.Facts = append(view.Jellyfin.Facts, templates.SettingsFact{Label: "Cuenta", Value: u})
+		}
+	}
+	view.Jellyfin.Managed = s.deps.Settings.Managed(settings.KeyJellyfinToken)
 	view.Qbit = SettingsCredQbit(view)
+	view.Qbit.Managed = s.deps.Settings.Managed(settings.KeyQbitPass)
 	view.Updates = s.updatesView(ctx, false)
 	// A reload mid-flow should keep showing the code rather than restart it.
 	if s.deps.JellyfinLink.Pending() {
@@ -85,32 +94,6 @@ func (s *Server) handleDeleteFolder(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.deps.Folders.Delete(r.Context(), id); err != nil {
 		s.log.Warn("delete folder", "id", id, "error", err)
-	}
-	s.redirect(w, r, "/settings")
-}
-
-func (s *Server) handleSaveOpenSubtitles(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad form", http.StatusBadRequest)
-		return
-	}
-	ctx := r.Context()
-	// Username is always stored (may be blank); secrets only when provided.
-	if err := s.deps.Settings.Set(ctx, settings.KeyOpenSubtitlesUser, strings.TrimSpace(r.PostFormValue("username"))); err != nil {
-		s.serverError(w, r, err)
-		return
-	}
-	if key := strings.TrimSpace(r.PostFormValue("api_key")); key != "" {
-		if err := s.deps.Settings.Set(ctx, settings.KeyOpenSubtitlesKey, key); err != nil {
-			s.serverError(w, r, err)
-			return
-		}
-	}
-	if pass := r.PostFormValue("password"); pass != "" {
-		if err := s.deps.Settings.Set(ctx, settings.KeyOpenSubtitlesPass, pass); err != nil {
-			s.serverError(w, r, err)
-			return
-		}
 	}
 	s.redirect(w, r, "/settings")
 }
@@ -191,25 +174,6 @@ func SettingsCredJellyfin(v templates.SettingsView) templates.SettingsCred {
 	return c
 }
 
-// SettingsCredOpenSubs describes the OpenSubtitles card. No live check: there
-// is no probe for it that does not spend a download from a small daily quota,
-// and burning one to draw a badge would be a poor trade.
-func SettingsCredOpenSubs(v templates.SettingsView) templates.SettingsCred {
-	c := templates.SettingsCred{
-		Configured: v.OpenSubsSet,
-		ClearHref:  "/settings/opensubtitles/clear",
-		Confirm:    "¿Borrar el usuario y la API key de OpenSubtitles?",
-	}
-	if !c.Configured {
-		return c
-	}
-	if v.OpenSubsUser != "" {
-		c.Facts = append(c.Facts, templates.SettingsFact{Label: "Usuario", Value: v.OpenSubsUser})
-	}
-	c.Facts = append(c.Facts, templates.SettingsFact{Label: "API key", Value: "guardada"})
-	return c
-}
-
 // SettingsCredQbit describes the qBittorrent card.
 func SettingsCredQbit(v templates.SettingsView) templates.SettingsCred {
 	c := templates.SettingsCred{
@@ -236,6 +200,10 @@ func SettingsCredQbit(v templates.SettingsView) templates.SettingsCred {
 // to get back to a clean start.
 func (s *Server) handleClearJellyfin(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	if s.deps.Settings.Managed(settings.KeyJellyfinToken) {
+		s.redirect(w, r, "/settings?notice="+url.QueryEscape("Jellyfin lo gestiona el servidor: no se borra desde acá."))
+		return
+	}
 	if err := s.deps.JellyfinLink.Unlink(ctx); err != nil {
 		s.log.Warn("clear jellyfin", "error", err)
 	}
@@ -246,15 +214,11 @@ func (s *Server) handleClearJellyfin(w http.ResponseWriter, r *http.Request) {
 	s.redirect(w, r, "/settings?notice="+url.QueryEscape("Credenciales de Jellyfin borradas."))
 }
 
-func (s *Server) handleClearOpenSubtitles(w http.ResponseWriter, r *http.Request) {
-	if err := s.clearKeys(r, settings.KeyOpenSubtitlesUser, settings.KeyOpenSubtitlesKey); err != nil {
-		s.serverError(w, r, err)
+func (s *Server) handleClearQbit(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Settings.Managed(settings.KeyQbitPass) {
+		s.redirect(w, r, "/settings?notice="+url.QueryEscape("qBittorrent lo gestiona el servidor: no se borra desde acá."))
 		return
 	}
-	s.redirect(w, r, "/settings?notice="+url.QueryEscape("Credenciales de OpenSubtitles borradas."))
-}
-
-func (s *Server) handleClearQbit(w http.ResponseWriter, r *http.Request) {
 	if err := s.clearKeys(r, settings.KeyQbitURL, settings.KeyQbitUser, settings.KeyQbitPass); err != nil {
 		s.serverError(w, r, err)
 		return

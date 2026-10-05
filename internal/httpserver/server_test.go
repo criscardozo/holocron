@@ -22,9 +22,7 @@ import (
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/settings"
-	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
-	"github.com/cristian/holocron/internal/trailers"
 	"github.com/cristian/holocron/internal/updates"
 	"github.com/cristian/holocron/internal/widgets"
 )
@@ -61,12 +59,10 @@ func newTestServer(t *testing.T) *testServer {
 		Log:          logger,
 		Folders:      folderStore,
 		Disk:         diskusage.NewService(database, folderStore, jobManager),
-		Naming:       naming.NewService(database, folderStore, jobManager),
-		Trailers:     trailers.NewService(folderStore, jobManager, absentYTDLP{}),
+		Naming:       naming.NewService(database, folderStore),
 		Settings:     settingsStore,
 		Library:      library.NewService(database, settingsStore, jobManager),
 		Quality:      quality.NewService(database, settingsStore, jobManager),
-		Subtitles:    subtitles.NewService(database, settingsStore),
 		Torrents:     torrents.NewService(settingsStore),
 		APIToken:     apitoken.NewStore(settingsStore),
 		JellyfinLink: jellyfin.NewLinkService(settingsStore),
@@ -77,7 +73,6 @@ func newTestServer(t *testing.T) *testServer {
 		widgets.SystemWidget{},
 		widgets.NewDiskWidget(folderStore),
 		widgets.NewNamingWidget(deps.Naming),
-		widgets.NewSubtitlesWidget(deps.Subtitles),
 		widgets.NewMediaWidget(deps.Library),
 		widgets.NewQualityWidget(deps.Quality),
 		widgets.NewTorrentsWidget(deps.Torrents),

@@ -3,15 +3,13 @@ package templates
 // SettingsView is the settings page: the list of watched folders and a form to
 // add more.
 type SettingsView struct {
-	Folders      []SettingsFolderRow
-	Purposes     []string
-	Notice       string
-	JellyfinURL  string
-	OpenSubsUser string
-	OpenSubsSet  bool
-	QbitURL      string
-	QbitUser     string
-	QbitSet      bool
+	Folders     []SettingsFolderRow
+	Purposes    []string
+	Notice      string
+	JellyfinURL string
+	QbitURL     string
+	QbitUser    string
+	QbitSet     bool
 	// APITokenSet reports whether a JSON API token exists. The token itself is
 	// never shown again: only its digest is stored.
 	APITokenSet bool
@@ -22,7 +20,6 @@ type SettingsView struct {
 
 	// One per credential card, so each says plainly whether it is set up.
 	Jellyfin SettingsCred
-	OpenSubs SettingsCred
 	Qbit     SettingsCred
 }
 
@@ -61,4 +58,7 @@ type SettingsCred struct {
 	// but probing three services while the page waits would make it slow, so
 	// it arrives after the render.
 	StatusHref string
+	// Managed means the server provides these credentials (LoadCredential on
+	// Ginebra), so the card confirms them and offers no way to clear them.
+	Managed bool
 }

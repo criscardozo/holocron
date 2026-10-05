@@ -7,7 +7,6 @@ import (
 
 	"github.com/cristian/holocron/internal/db"
 	"github.com/cristian/holocron/internal/folders"
-	"github.com/cristian/holocron/internal/jobs"
 )
 
 func newService(t *testing.T) (*Service, *folders.Store) {
@@ -19,7 +18,7 @@ func newService(t *testing.T) (*Service, *folders.Store) {
 	t.Cleanup(func() { _ = database.Close() })
 
 	store := folders.NewStore(database)
-	return NewService(database, store, jobs.NewManager()), store
+	return NewService(database, store), store
 }
 
 func mkdirs(t *testing.T, root string, names ...string) {

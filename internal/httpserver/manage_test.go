@@ -173,17 +173,16 @@ func requested(t *testing.T, ts *testServer, a power.Action) bool {
 	return ok && pending == a
 }
 
-// asHost sends the request with a Host header of our choosing. It cannot go
-// through the headers map: net/http reads Host off the request field and
-// ignores a header by that name, so a test that set it there would pass while
-// exercising the LAN path — green, and proving the opposite of what it claims.
-// That is worse than a failing test.
-//
-// Note the asymmetry, because it makes the two ways of checking this
-// non-interchangeable: on the client side `curl -H "Host: ..."` really does
-// rewrite the request host, which is why measuring the live server that way is
-// valid. Same header, opposite behaviour depending on which end you are at.
-func asHost(t *testing.T, ts *testServer, host, path string, form url.Values) response {
+// Clients as Caddy presents them: the connection comes from loopback (the test
+// server listens on 127.0.0.1, exactly like Holocron behind Caddy) and the real
+// address is the last entry of X-Forwarded-For.
+const (
+	tailscaleClient = "100.94.171.18" // away: the VPN looks the same from anywhere
+	lanClient       = "192.168.0.10"  // home
+)
+
+// asClient posts as if Caddy had forwarded the request from ip.
+func asClient(t *testing.T, ts *testServer, ip, path string, form url.Values) response {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost,
 		ts.URL+path, strings.NewReader(form.Encode()))
@@ -191,17 +190,17 @@ func asHost(t *testing.T, ts *testServer, host, path string, form url.Values) re
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Host = host
+	req.Header.Set("X-Forwarded-For", ip)
 	return ts.do(t, req)
 }
 
-func getAsHost(t *testing.T, ts *testServer, host, path string) response {
+func getAsClient(t *testing.T, ts *testServer, ip, path string) response {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+path, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Host = host
+	req.Header.Set("X-Forwarded-For", ip)
 	return ts.do(t, req)
 }
 
@@ -225,9 +224,9 @@ func TestPoweringOffFromOutsideAsksYouToSayIt(t *testing.T) {
 	installHelper(t, ts)
 	token := tokenFor(t, ts)
 
-	const public = "holocron.merli.store"
+	const public = tailscaleClient
 
-	resp := asHost(t, ts, public, "/manage/action",
+	resp := asClient(t, ts, public, "/manage/action",
 		url.Values{"action": {"poweroff"}, "token": {token}})
 	if !strings.Contains(resp.Body, "dirección pública") {
 		t.Errorf("expected the public-address warning, got %q", resp.Body)
@@ -236,7 +235,7 @@ func TestPoweringOffFromOutsideAsksYouToSayIt(t *testing.T) {
 		t.Fatal("powered off from outside without the acknowledgement")
 	}
 
-	resp = asHost(t, ts, public, "/manage/action",
+	resp = asClient(t, ts, public, "/manage/action",
 		url.Values{"action": {"poweroff"}, "token": {token}, "ack": {"1"}})
 	if !requested(t, ts, power.ActionPowerOff) {
 		t.Fatalf("the acknowledged power-off was not requested: %q", resp.Body)
@@ -251,7 +250,7 @@ func TestBeingHomeDoesNotAskForTheAck(t *testing.T) {
 	installHelper(t, ts)
 	token := tokenFor(t, ts)
 
-	resp := asHost(t, ts, "192.168.0.2:8080", "/manage/action",
+	resp := asClient(t, ts, lanClient, "/manage/action",
 		url.Values{"action": {"poweroff"}, "token": {token}})
 	if !requested(t, ts, power.ActionPowerOff) {
 		t.Fatalf("a power-off from the LAN should not need an ack: %q", resp.Body)
@@ -265,7 +264,7 @@ func TestOnlyStrandingAsksForTheAck(t *testing.T) {
 	ts := newTestServer(t)
 	installHelper(t, ts)
 
-	resp := asHost(t, ts, "holocron.merli.store", "/manage/action",
+	resp := asClient(t, ts, tailscaleClient, "/manage/action",
 		url.Values{"action": {"reboot"}})
 	if !requested(t, ts, power.ActionReboot) {
 		t.Fatalf("a remote reboot should not need an ack: %q", resp.Body)
@@ -279,14 +278,45 @@ func TestTheAckOnlyAppearsFromOutside(t *testing.T) {
 	ts := newTestServer(t)
 	installHelper(t, ts)
 
-	if body := getAsHost(t, ts, "192.168.0.2:8080", "/manage").Body; strings.Contains(body, `name="ack"`) {
+	if body := getAsClient(t, ts, lanClient, "/manage").Body; strings.Contains(body, `name="ack"`) {
 		t.Error("the LAN page should not ask for an acknowledgement")
 	}
-	body := getAsHost(t, ts, "holocron.merli.store", "/manage").Body
+	body := getAsClient(t, ts, tailscaleClient, "/manage").Body
 	if !strings.Contains(body, `name="ack"`) {
 		t.Error("the public page should ask for an acknowledgement")
 	}
 	if !strings.Contains(body, "required") {
 		t.Error("the acknowledgement must be required, so the browser enforces it too")
+	}
+}
+
+// TestForwardedForIsOnlyBelievedFromTheLocalProxy. Anyone reaching the port
+// directly could write a home address into the header and skip the
+// acknowledgement; only Caddy, on loopback, gets to say who the client is. And
+// even from loopback only the last entry counts, the one Caddy appended.
+func TestForwardedForIsOnlyBelievedFromTheLocalProxy(t *testing.T) {
+	t.Parallel()
+	mk := func(remote, xff string) *http.Request {
+		r, _ := http.NewRequest(http.MethodGet, "/", nil)
+		r.RemoteAddr = remote
+		if xff != "" {
+			r.Header.Set("X-Forwarded-For", xff)
+		}
+		return r
+	}
+	cases := []struct {
+		name, remote, xff string
+		home              bool
+	}{
+		{"caddy forwarding a LAN client", "127.0.0.1:51000", "192.168.0.10", true},
+		{"caddy forwarding a tailscale client", "127.0.0.1:51000", "100.94.171.18", false},
+		{"client spoofing a LAN entry ahead of caddy's", "127.0.0.1:51000", "192.168.0.10, 100.94.171.18", false},
+		{"direct connection lying in the header", "100.94.171.18:40000", "192.168.0.10", false},
+		{"direct LAN connection, no proxy", "192.168.0.10:40000", "", true},
+	}
+	for _, c := range cases {
+		if got := fromHome(mk(c.remote, c.xff)); got != c.home {
+			t.Errorf("%s: fromHome = %v, want %v", c.name, got, c.home)
+		}
 	}
 }

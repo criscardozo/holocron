@@ -288,11 +288,11 @@ func TestAPIPowerOffFromOutsideNeedsTheAck(t *testing.T) {
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Authorization", "Bearer "+token)
-		req.Host = host
+		req.Header.Set("X-Forwarded-For", host)
 		return ts.do(t, req)
 	}
 
-	const public = "holocron.merli.store"
+	const public = tailscaleClient
 
 	resp := send(public, url.Values{"action": {"poweroff"}})
 	if resp.Status != http.StatusPreconditionRequired {

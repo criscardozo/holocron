@@ -11,8 +11,14 @@ Condicionan cualquier cambio visual:
 
 1. **Sin build step de front-end.** Un único archivo `web/static/styles.css`
    escrito a mano, embebido con `//go:embed`. No hay bundler, Sass ni Tailwind.
-2. **Sin JavaScript propio.** La interactividad es HTMX (`hx-*`) más CSS
-   (`transition`, `:hover`, `@keyframes`). No se agregan scripts.
+2. **HTMX primero, JavaScript propio cuando un widget lo justifique.** La
+   interactividad base es HTMX (`hx-*`), más su extensión SSE para lo que va en
+   vivo, y CSS (`transition`, `:hover`, `@keyframes`). Se permite JavaScript
+   propio desde octubre de 2026 (decisión de Cristian al pasar a Ginebra), con
+   dos condiciones: va **siempre en un archivo `.js` externo y embebido**, nunca
+   inline, para que la CSP `script-src 'self'` no cambie; y cada archivo
+   resuelve algo que HTMX no puede, por ejemplo un gráfico interactivo. Si se
+   juntan más de dos o tres, se ordenan en vez de acumularse.
 3. **Todo self-contained.** Nada de CDNs, fuentes remotas ni imágenes externas.
    Por eso la tipografía es la stack del sistema y no *Archivo* (la fuente del
    diseño): embeber un `.woff2` sumaría peso al binario sin necesidad.

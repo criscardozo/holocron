@@ -209,73 +209,26 @@ Dos niveles, igual criterio que `diskusage-pi`:
   (LAN de confianza); se puede acotar a una IP específica vía el flag.
 - CSP estricta en headers, HTMX y CSS servidos desde el mismo origen (embebidos).
 
-### Exponerlo fuera de la LAN (Cloudflare Access)
+### Acceso desde afuera de la LAN (Tailscale + Caddy)
 
-La decisión de no tener login vale **sólo dentro de la LAN**. Este dashboard se
-publica además por un túnel de Cloudflare, y ahí esa premisa no alcanza. La
-autenticación la pone **Cloudflare Access** adelante, no Holocron: sigue sin
-haber usuarios ni sesiones en el código.
+Holocron corre en **Ginebra** y escucha sólo en `127.0.0.1:8090`. Adelante
+está **Caddy**, que termina TLS para `holocron.merli.store` con un certificado
+de Let's Encrypt (DNS-01). El nombre resuelve a 192.168.0.2, así que se llega
+**sólo** desde la LAN o por **Tailscale**. No hay nada expuesto a internet.
 
-Van **dos aplicaciones** de Access, no una, y el orden importa porque Access
-resuelve por ruta y gana la más específica:
+Hasta septiembre de 2026 hubo un túnel de Cloudflare con dos aplicaciones de
+Access delante. Se dio de baja y su historia quedó en el historial de git. Lo
+que cambió para Holocron:
 
-| Aplicación | Ruta | Política |
-|---|---|---|
-| Holocron API | `holocron.merli.store/api` | **Service Auth** con un service token |
-| Holocron | `holocron.merli.store` | **Allow** — login con Google, lista de emails permitidos |
-
-Son dos porque la app iOS **no puede completar un login de navegador**: con una
-sola aplicación cubriendo todo el dominio, la app recibiría el HTML del
-formulario de Access en lugar de JSON.
-
-Las dos **ya están aplicadas**. La de la raíz (política `Hogar`, sesión de 24 h
-para que cerrar sesión signifique algo). Se verifica sin credenciales: un `GET`
-a cualquier ruta responde `302` a `<team>.cloudflareaccess.com` con
-`auth_status: NONE` en el JWT de meta.
-
-En `/api` la política es **Service Auth**, no Bypass. Bypass dejaría esa ruta
-abierta a internet con una sola capa (el bearer token de Holocron); Service Auth
-exige además los headers `CF-Access-Client-Id` / `CF-Access-Client-Secret`, que
-la app manda en cada request y guarda en el Keychain (el secreto) y en
-`UserDefaults` (el id, que no es secreto). Holocron **sigue** validando su
-bearer token detrás: dos capas, a propósito.
-
-La app iOS reconoce el rechazo de Access como tal. Hace falta porque no se
-parece a un error de la API, y **ninguna de las heurísticas obvias alcanza**: el
-código es 403 con Service Auth y 302 en el navegador, en el 403 no hay redirect
-que seguir, y el cuerpo tampoco es siempre HTML —pidiéndole
-`Accept: application/json` responde JSON—. Lo único presente en todos los casos
-son los headers `cf-access-aud` / `cf-access-domain`, que es en lo que se apoya
-la detección. El detalle medido está en [api.md](api.md).
-
-En la API de Cloudflare, el path **no** es un campo aparte: va dentro del
-dominio (`"domain": "holocron.merli.store/api"`). Mandarlo como `path` crea dos
-aplicaciones del mismo dominio y falla con `application_already_exists`.
-
-Lo que Access **no** hace: el origen sigue sin autenticación. Sólo sirve si el
-túnel es la única puerta — nada de abrir además el `:8090` en el router, porque
-eso saltea Access por completo. Holocron tampoco valida el JWT
-`Cf-Access-Jwt-Assertion` que Cloudflare inyecta: no haría falta mientras el
-único camino sea el túnel, y validarlo sumaría una dependencia de red al
-arranque.
-
-> **`latest` no es atómico.** Durante una publicación, el alias
-> `releases/latest/download/` puede servir un asset de la versión vieja y otro
-> de la nueva con segundos de diferencia — medido: un `install.sh` de una
-> versión junto al `.sha256` de la siguiente. Por eso tanto el instalador como
-> el ayudante de actualización **resuelven primero a qué tag apunta `latest`**
-> (siguiendo el redirect de `/releases/latest`, sin `jq` ni token) y después
-> bajan todo de ese tag, con lo que la coherencia es por construcción y no por
-> suerte. El checksum lo detectaba igual, pero el síntoma era «apreté actualizar
-> y falló» justo cuando se acaba de publicar, que es cuando más gente lo aprieta.
-
-El túnel apunta a **`http://127.0.0.1:8090`**, con la IP explícita y no
-`localhost`: `localhost` puede resolver a IPv6 y, si el servicio no escucha en
-`::1`, falla de forma intermitente. Si se toca la config del túnel, mantener la
-IP.
-
-El plan Zero Trust gratuito cubre 50 usuarios, así que esto entra en el
-presupuesto de siempre (ver las reglas del proyecto: nada que cueste plata).
+- **La frontera es la red** (LAN o tailnet) más el bearer de `/api`. El token
+  de la API pasó de segundo factor a único.
+- **«Estás en casa» se decide por la IP del cliente**, no por el `Host`
+  (`internal/httpserver/clientip.go`). Detrás de Caddy, `RemoteAddr` es siempre
+  loopback, así que se lee `X-Forwarded-For`, pero **sólo** si la conexión viene
+  de loopback, y sólo su último elemento, que es el que agrega Caddy. Tailscale
+  (100.64/10) cuenta como afuera.
+- **Las keys de los servicios** las pone systemd con `LoadCredential=` desde
+  `/etc/ginebra/keys/` (archivos de root 0600). El navegador nunca las ve.
 
 ## 9. Errores y logging
 

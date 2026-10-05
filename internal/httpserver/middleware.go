@@ -111,7 +111,7 @@ func changesState(method string) bool {
 }
 
 // sameHost compares an Origin header against the host the request was sent to.
-// Only the host is compared, never the scheme: behind the Cloudflare tunnel the
+// Only the host is compared, never the scheme: behind a TLS-terminating proxy the
 // browser sends https while the origin server speaks http, and requiring them
 // to match would reject every request that arrives through it.
 func sameHost(origin, host string) bool {

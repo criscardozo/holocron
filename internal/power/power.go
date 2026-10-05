@@ -39,19 +39,17 @@ type Action string
 // they are the ones worth reaching for often; the two that take the machine
 // away are last.
 const (
-	ActionRestartJellyfin   Action = "restart-jellyfin"
-	ActionRestartQbit       Action = "restart-qbittorrent"
-	ActionRestartCloudflare Action = "restart-cloudflared"
-	ActionRestartHolocron   Action = "restart-holocron"
-	ActionReboot            Action = "reboot"
-	ActionPowerOff          Action = "poweroff"
+	ActionRestartJellyfin Action = "restart-jellyfin"
+	ActionRestartQbit     Action = "restart-qbittorrent"
+	ActionRestartHolocron Action = "restart-holocron"
+	ActionReboot          Action = "reboot"
+	ActionPowerOff        Action = "poweroff"
 )
 
 // Actions in display order.
 var Actions = []Action{
 	ActionRestartJellyfin,
 	ActionRestartQbit,
-	ActionRestartCloudflare,
 	ActionRestartHolocron,
 	ActionReboot,
 	ActionPowerOff,
@@ -64,8 +62,6 @@ func (a Action) Label() string {
 		return "Reiniciar Jellyfin"
 	case ActionRestartQbit:
 		return "Reiniciar qBittorrent"
-	case ActionRestartCloudflare:
-		return "Reiniciar el túnel"
 	case ActionRestartHolocron:
 		return "Reiniciar Holocron"
 	case ActionReboot:
@@ -85,8 +81,6 @@ func (a Action) Detail() string {
 		return "Corta lo que se esté reproduciendo. Vuelve solo en unos segundos."
 	case ActionRestartQbit:
 		return "Las descargas se reanudan solas al volver."
-	case ActionRestartCloudflare:
-		return "Corta el acceso por el dominio público — incluido este, si entraste por ahí. Desde la LAN no se nota."
 	case ActionRestartHolocron:
 		return "Esta página deja de responder unos segundos. Recargá."
 	case ActionReboot:

@@ -4,11 +4,14 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
+	"strings"
 	"syscall"
 	"time"
 
@@ -25,9 +28,7 @@ import (
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/settings"
-	"github.com/cristian/holocron/internal/subtitles"
 	"github.com/cristian/holocron/internal/torrents"
-	"github.com/cristian/holocron/internal/trailers"
 	"github.com/cristian/holocron/internal/updates"
 	"github.com/cristian/holocron/internal/widgets"
 )
@@ -55,15 +56,25 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	jobManager := jobs.NewManager()
 	folderStore := folders.NewStore(database)
 	settingsStore := settings.NewStore(database)
+	// On Ginebra, systemd hands the services' keys over with LoadCredential.
+	// Elsewhere the directory does not exist and the settings form is used.
+	creds, err := settings.LoadCredentials(os.Getenv("CREDENTIALS_DIRECTORY"))
+	if err != nil {
+		return fmt.Errorf("load credentials: %w", err)
+	}
+	settingsStore.Manage(creds)
+	if len(creds) > 0 {
+		names := make([]string, 0, len(creds))
+		for n := range creds {
+			names = append(names, n)
+		}
+		sort.Strings(names)
+		logger.Info("credentials provided by the server", "names", strings.Join(names, ","))
+	}
 	diskService := diskusage.NewService(database, folderStore, jobManager)
-	namingService := naming.NewService(database, folderStore, jobManager)
-	// yt-dlp is looked up once at startup. Absent is a normal state, not a
-	// startup failure: the trailers screen explains it rather than the server
-	// refusing to run because an optional external tool is missing.
-	trailersService := trailers.NewService(folderStore, jobManager, trailers.NewRunner())
+	namingService := naming.NewService(database, folderStore)
 	libraryService := library.NewService(database, settingsStore, jobManager)
 	qualityService := quality.NewService(database, settingsStore, jobManager)
-	subtitlesService := subtitles.NewService(database, settingsStore)
 	torrentsService := torrents.NewService(settingsStore)
 	apiTokenStore := apitoken.NewStore(settingsStore)
 	jellyfinLink := jellyfin.NewLinkService(settingsStore)
@@ -74,7 +85,6 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		widgets.SystemWidget{},
 		widgets.NewDiskWidget(folderStore),
 		widgets.NewNamingWidget(namingService),
-		widgets.NewSubtitlesWidget(subtitlesService),
 		widgets.NewMediaWidget(libraryService),
 		widgets.NewQualityWidget(qualityService),
 		widgets.NewTorrentsWidget(torrentsService),
@@ -86,11 +96,9 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Folders:      folderStore,
 		Disk:         diskService,
 		Naming:       namingService,
-		Trailers:     trailersService,
 		Settings:     settingsStore,
 		Library:      libraryService,
 		Quality:      qualityService,
-		Subtitles:    subtitlesService,
 		Torrents:     torrentsService,
 		APIToken:     apiTokenStore,
 		JellyfinLink: jellyfinLink,

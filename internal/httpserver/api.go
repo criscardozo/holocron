@@ -53,10 +53,6 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 	api.HandleFunc("POST /v1/quality/scan", s.apiQualityScan)
 	api.HandleFunc("POST /v1/quality/refresh", s.apiQualityRefresh)
 
-	api.HandleFunc("GET /v1/subtitles", s.apiSubtitles)
-	api.HandleFunc("GET /v1/subtitles/search", s.apiSubtitleSearch)
-	api.HandleFunc("POST /v1/subtitles/download", s.apiSubtitleDownload)
-
 	api.HandleFunc("GET /v1/torrents", s.apiTorrents)
 	api.HandleFunc("POST /v1/torrents", s.apiTorrentAdd)
 	api.HandleFunc("POST /v1/torrents/{hash}/{action}", s.apiTorrentAction)
@@ -546,103 +542,9 @@ func jellyfinLinkPayload(status jellyfin.Status) map[string]any {
 	}
 }
 
-// ── subtitles ───────────────────────────────────────────────────────────
-
 // apiListLimit caps list endpoints so a huge library cannot produce an
 // unbounded response on a small device.
 const apiListLimit = 500
-
-type apiSubtitleMissing struct {
-	Path  string `json:"path"`
-	Title string `json:"title"`
-	Year  int    `json:"year"`
-	Type  string `json:"type"`
-}
-
-func (s *Server) apiSubtitles(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	configured := s.deps.Subtitles.Configured(ctx)
-	items, err := s.deps.Subtitles.MissingItems(ctx, apiListLimit)
-	if err != nil {
-		s.apiFailure(w, r, err)
-		return
-	}
-	total, err := s.deps.Subtitles.MissingCount(ctx)
-	if err != nil {
-		total = len(items)
-	}
-	out := make([]apiSubtitleMissing, 0, len(items))
-	for _, it := range items {
-		out = append(out, apiSubtitleMissing{Path: it.Path, Title: it.Title, Year: it.Year, Type: it.Type})
-	}
-	s.writeJSON(w, http.StatusOK, map[string]any{
-		"configured": configured,
-		"missing":    total,
-		"items":      out,
-		"truncated":  len(items) >= apiListLimit && total > len(items),
-	})
-}
-
-type apiSubtitleResult struct {
-	FileID   string `json:"fileId"`
-	FileName string `json:"fileName"`
-	Release  string `json:"release"`
-	Language string `json:"language"`
-}
-
-func (s *Server) apiSubtitleSearch(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	title := strings.TrimSpace(q.Get("title"))
-	if title == "" {
-		s.apiError(w, http.StatusBadRequest, "title is required")
-		return
-	}
-	year := 0
-	if raw := q.Get("year"); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil {
-			year = parsed
-		}
-	}
-	results, err := s.deps.Subtitles.Search(r.Context(), title, year)
-	if err != nil {
-		s.log.Warn("api subtitle search", "title", title, "error", err)
-		s.apiError(w, http.StatusBadGateway, "OpenSubtitles search failed")
-		return
-	}
-	out := make([]apiSubtitleResult, 0, len(results))
-	for _, res := range results {
-		out = append(out, apiSubtitleResult{
-			FileID:   strconv.Itoa(res.FileID),
-			FileName: res.FileName,
-			Release:  res.Release,
-			Language: res.Language,
-		})
-	}
-	s.writeJSON(w, http.StatusOK, map[string]any{"results": out})
-}
-
-func (s *Server) apiSubtitleDownload(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		FileID int    `json:"fileId"`
-		Path   string `json:"path"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		s.apiError(w, http.StatusBadRequest, "invalid JSON body")
-		return
-	}
-	if body.FileID == 0 || body.Path == "" {
-		s.apiError(w, http.StatusBadRequest, "fileId and path are required")
-		return
-	}
-	dest, err := s.deps.Subtitles.Download(r.Context(), body.FileID, body.Path)
-	if err != nil {
-		// The path is validated against the inventory inside Download.
-		s.log.Warn("api subtitle download", "file_id", body.FileID, "error", err)
-		s.apiError(w, http.StatusBadRequest, "could not download that subtitle")
-		return
-	}
-	s.writeJSON(w, http.StatusOK, map[string]any{"path": dest})
-}
 
 // ── torrents ────────────────────────────────────────────────────────────
 

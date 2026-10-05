@@ -24,14 +24,6 @@ func (s *Server) attentionChips(ctx context.Context) []templates.AttnChip {
 		})
 	}
 
-	if n, err := s.deps.Subtitles.MissingCount(ctx); err == nil && n > 0 {
-		chips = append(chips, templates.AttnChip{
-			Label: fmt.Sprintf("%d sin subtítulos", n),
-			Href:  "/subtitles",
-			Icon:  "cap",
-		})
-	}
-
 	if list, err := s.deps.Folders.List(ctx, folders.PurposeDisk); err == nil {
 		for _, f := range list {
 			total, used, _, _, err := scanner.FilesystemStat(f.Path)

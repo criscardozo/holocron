@@ -79,20 +79,6 @@ func TestClearingCredentialsBringsTheFormBack(t *testing.T) {
 	}
 }
 
-// TestOpenSubtitlesHasNoLiveCheck. Deliberate: the only probe available spends
-// a download from a small daily quota, and burning one to draw a badge is a bad
-// trade. Pinned so nobody adds it without noticing the cost.
-func TestOpenSubtitlesHasNoLiveCheck(t *testing.T) {
-	t.Parallel()
-	ts := newTestServer(t)
-	if err := ts.deps.Settings.Set(t.Context(), settings.KeyOpenSubtitlesKey, "k"); err != nil {
-		t.Fatal(err)
-	}
-	if body := ts.get(t, "/settings", nil).Body; strings.Contains(body, "/settings/status/opensubtitles") {
-		t.Error("OpenSubtitles grew a live check")
-	}
-}
-
 // TestTheManageScreenSaysWhereTheTokenComesFrom. Asking for a credential
 // without saying where it lives turns a safety measure into a dead end.
 func TestTheManageScreenSaysWhereTheTokenComesFrom(t *testing.T) {

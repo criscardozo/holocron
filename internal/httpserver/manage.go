@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/cristian/holocron/internal/apitoken"
-	"github.com/cristian/holocron/internal/netaddr"
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/internal/widgets"
@@ -93,12 +92,11 @@ func (s *Server) handleManageAction(w http.ResponseWriter, r *http.Request) {
 // get home. Asking them to state that is worth one checkbox.
 //
 // Friction, not authorisation. Whoever holds the token can send ack=1 by hand,
-// and the Host header this keys off is client-supplied, so neither proves
-// anything. What it buys is that a remote power-off is a decision rather than
+// so it proves nothing about authority — only that the person meant it. What it buys is that a remote power-off is a decision rather than
 // a mis-tap, and checking it server-side rather than only rendering it means a
 // page loaded at home and submitted later from a train still gets asked.
 func needsStrandAck(r *http.Request, a power.Action) bool {
-	return a.Strands() && !netaddr.IsPrivateHost(r.Host) &&
+	return a.Strands() && !fromHome(r) &&
 		strings.TrimSpace(r.PostFormValue("ack")) == ""
 }
 
@@ -112,8 +110,6 @@ func afterword(a power.Action) string {
 		return "Va a dejar de responder un minuto o dos y vuelve sola."
 	case power.ActionRestartHolocron:
 		return "Recargá en unos segundos."
-	case power.ActionRestartCloudflare:
-		return "Si entraste por el dominio público, puede cortarse la conexión."
 	default:
 		return "Vuelve solo en unos segundos."
 	}
@@ -125,7 +121,7 @@ func (s *Server) manageView(r *http.Request, base templates.ManagePageView) temp
 	ctx := r.Context()
 	v := base
 	v.Available = s.deps.Power.Installed()
-	v.Remote = !netaddr.IsPrivateHost(r.Host)
+	v.Remote = !fromHome(r)
 
 	v.Host = widgets.SystemViewOf(system.Read())
 

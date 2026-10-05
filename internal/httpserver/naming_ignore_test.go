@@ -56,21 +56,3 @@ func TestTheIgnoreButtonWorksEndToEnd(t *testing.T) {
 		t.Error("un-ignoring did not bring the folder back")
 	}
 }
-
-// TestIgnoringAlsoKeepsItOutOfTheRenamePreview, since that screen is the one
-// that would actually touch the disk.
-func TestIgnoringAlsoKeepsItOutOfTheRenamePreview(t *testing.T) {
-	t.Parallel()
-	ts := newTestServer(t)
-	movies := setupLibrary(t, ts)
-
-	target := filepath.Join(movies, "The.Matrix.1999.1080p.BluRay")
-	ts.post(t, "/naming/ignore", url.Values{"path": {target}}, nil)
-
-	ts.post(t, "/naming/rename/preview", url.Values{}, nil)
-	waitForRename(t, ts)
-
-	if body := ts.get(t, "/naming/rename", nil).Body; strings.Contains(body, "The.Matrix.1999.1080p.BluRay") {
-		t.Error("the rename preview offers a folder that was ignored")
-	}
-}

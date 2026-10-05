@@ -77,43 +77,6 @@ templ settingsContent(v SettingsView) {
 
 		<div class="card elev-sm block">
 			<h2>
-				@Icon("cap")
-				OpenSubtitles
-			</h2>
-			<p class="desc">Para buscar y descargar subtítulos en español.</p>
-			if v.OpenSubs.Configured {
-				@credConnected(v.OpenSubs)
-			} else {
-			<form method="post" action="/settings/opensubtitles" hx-post="/settings/opensubtitles" hx-target="body">
-				<div class="field">
-					<label>Usuario</label>
-					<input class="input" type="text" name="username" value={ v.OpenSubsUser } placeholder="usuario (para descargar)"/>
-				</div>
-				<div class="field">
-					<label>
-						API key
-						if v.OpenSubsSet {
-							<span class="saved">
-								@IconSm("check")
-								guardado
-							</span>
-						}
-					</label>
-					<input class="input" type="password" name="api_key" placeholder="API key de OpenSubtitles"/>
-				</div>
-				<div class="field">
-					<label>Contraseña</label>
-					<input class="input" type="password" name="password" placeholder="contraseña (dejá vacío para conservar)"/>
-				</div>
-				<div class="block-foot">
-					<button type="submit" class="btn btn-primary">Guardá</button>
-				</div>
-			</form>
-			}
-		</div>
-
-		<div class="card elev-sm block">
-			<h2>
 				@Icon("download")
 				Actualizaciones
 			</h2>
@@ -222,14 +185,21 @@ templ credConnected(c SettingsCred) {
 				}
 			</ul>
 		}
-		<div class="block-foot">
-			<form method="post" action={ templ.SafeURL(c.ClearHref) } hx-post={ c.ClearHref } hx-target="body" hx-confirm={ c.Confirm }>
-				<button type="submit" class="btn btn-danger">
-					@IconSm("trash")
-					Borrar credenciales y reconectar
-				</button>
-			</form>
-		</div>
+		if c.Managed {
+			<p class="muted">
+				Gestionado por el servidor: las credenciales las pone Ginebra y no se
+				editan desde acá.
+			</p>
+		} else {
+			<div class="block-foot">
+				<form method="post" action={ templ.SafeURL(c.ClearHref) } hx-post={ c.ClearHref } hx-target="body" hx-confirm={ c.Confirm }>
+					<button type="submit" class="btn btn-danger">
+						@IconSm("trash")
+						Borrar credenciales y reconectar
+					</button>
+				</form>
+			</div>
+		}
 	</div>
 }
 

@@ -1,7 +1,6 @@
 package naming
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -40,8 +39,7 @@ func TestHiddenFoldersAreNeverFlagged(t *testing.T) {
 	}
 }
 
-// TestIgnoringAFolderTakesItOffEveryList — the issue list, the count, and the
-// rename preview. A folder that still shows up somewhere after being ignored
+// TestIgnoringAFolderTakesItOffEveryList — the issue list and the count. A folder that still shows up somewhere after being ignored
 // is worse than no button at all.
 func TestIgnoringAFolderTakesItOffEveryList(t *testing.T) {
 	t.Parallel()
@@ -49,7 +47,6 @@ func TestIgnoringAFolderTakesItOffEveryList(t *testing.T) {
 
 	movies := t.TempDir()
 	mkdirs(t, movies, "Trabajo en progreso", "The.Matrix.1999")
-	write(t, movies, "The.Matrix.1999/The.Matrix.1999.mkv")
 	if _, err := store.Add(t.Context(), "Películas", movies, folders.PurposeMovies); err != nil {
 		t.Fatal(err)
 	}
@@ -72,45 +69,6 @@ func TestIgnoringAFolderTakesItOffEveryList(t *testing.T) {
 	}
 	if c, _ := svc.Count(t.Context()); c != 1 {
 		t.Errorf("Count = %d, want 1", c)
-	}
-	plans, err := svc.PlanMovies(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, p := range plans {
-		if p.Plan.Folder == "Trabajo en progreso" {
-			t.Error("the rename preview still offers to touch an ignored folder")
-		}
-	}
-}
-
-// TestAnIgnoredFolderIsNotRenamedEvenIfAsked. The preview and the apply are
-// separate requests, so an ignore added in between has to win — that is the
-// one case the button exists for.
-func TestAnIgnoredFolderIsNotRenamedEvenIfAsked(t *testing.T) {
-	t.Parallel()
-	svc, store := newService(t)
-
-	movies := t.TempDir()
-	mkdirs(t, movies, "The.Matrix.1999")
-	write(t, movies, "The.Matrix.1999/The.Matrix.1999.mkv")
-	if _, err := store.Add(t.Context(), "Películas", movies, folders.PurposeMovies); err != nil {
-		t.Fatal(err)
-	}
-
-	target := filepath.Join(movies, "The.Matrix.1999")
-	if err := svc.Ignore(t.Context(), target); err != nil {
-		t.Fatal(err)
-	}
-	sum, err := svc.ApplyFolders(t.Context(), []string{target})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sum.Folders != 0 || sum.Files != 0 {
-		t.Fatalf("renamed an ignored folder: %+v", sum)
-	}
-	if _, err := os.Stat(target); err != nil {
-		t.Errorf("the folder was touched: %v", err)
 	}
 }
 
