@@ -217,8 +217,12 @@ func (s *LinkService) Pending() bool {
 	return s.secret != "" && !s.linked && time.Since(s.started) <= codeTTL
 }
 
-// Unlink forgets the stored credentials.
+// Unlink forgets the stored credentials. The server's own key is not Holocron's
+// to forget.
 func (s *LinkService) Unlink(ctx context.Context) error {
+	if _, ok := s.managedStatus(ctx); ok {
+		return ErrServerManaged
+	}
 	s.reset()
 	for _, key := range []string{
 		settings.KeyJellyfinToken, settings.KeyJellyfinUserID,

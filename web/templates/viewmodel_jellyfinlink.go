@@ -11,5 +11,7 @@ type JellyfinLinkView struct {
 	// Admin is false when the linked account cannot ask Jellyfin to write
 	// metadata, which is worth saying before the user presses that button.
 	Admin bool
-	Error string
+	// Managed is a link made of the server's own key: nothing to unlink.
+	Managed bool
+	Error   string
 }

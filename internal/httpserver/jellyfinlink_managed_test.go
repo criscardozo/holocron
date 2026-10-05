@@ -3,6 +3,7 @@ package httpserver
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/cristian/holocron/internal/settings"
@@ -38,5 +39,18 @@ func TestNoQuickConnectOverTheServersKey(t *testing.T) {
 	}
 	if got.State != "linked" || !got.Managed || !got.Admin {
 		t.Errorf("status = %+v, want linked by the server's key", got)
+	}
+
+	// The web says the same: no code, no unlink button, no warning logged.
+	for _, page := range []response{
+		ts.post(t, "/settings/jellyfin/link", nil, nil),
+		ts.get(t, "/settings/jellyfin/link/status", nil),
+	} {
+		if !strings.Contains(page.Body, "Conectado con la clave del servidor") || strings.Contains(page.Body, "Desvincular") {
+			t.Errorf("web fragment = %s", page.Body)
+		}
+	}
+	if strings.Contains(ts.logs.String(), "jellyfin link start") {
+		t.Error("an expected state was logged as a warning")
 	}
 }

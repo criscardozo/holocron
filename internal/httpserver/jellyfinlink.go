@@ -18,6 +18,10 @@ import (
 
 func (s *Server) handleJellyfinLinkStart(w http.ResponseWriter, r *http.Request) {
 	status, err := s.deps.JellyfinLink.Start(r.Context())
+	if errors.Is(err, jellyfin.ErrServerManaged) {
+		// Not a failure: the server's key is the link. Show it as such.
+		status, err = s.deps.JellyfinLink.Check(r.Context())
+	}
 	if err != nil {
 		s.log.Warn("jellyfin link start", "error", err)
 		s.render(w, r, templates.JellyfinLink(templates.JellyfinLinkView{
@@ -158,7 +162,7 @@ func linkErrorMessage(err error) string {
 
 // linkView maps the service status onto the fragment's view model.
 func linkView(status jellyfin.Status) templates.JellyfinLinkView {
-	v := templates.JellyfinLinkView{Code: status.Code, User: status.User, Admin: status.Admin}
+	v := templates.JellyfinLinkView{Code: status.Code, User: status.User, Admin: status.Admin, Managed: status.Managed}
 	switch status.State {
 	case jellyfin.StatePending:
 		v.Pending = true

@@ -25,7 +25,11 @@ templ JellyfinLink(v JellyfinLinkView) {
 		} else if v.Linked {
 			<div class="notice mb-6">
 				@IconSm("check")
-				<span>Vinculado como <strong>{ v.User }</strong>.</span>
+				if v.Managed {
+					<span>Conectado con la clave del servidor. No hace falta vincular nada.</span>
+				} else {
+					<span>Vinculado como <strong>{ v.User }</strong>.</span>
+				}
 			</div>
 			if !v.Admin {
 				<div class="notice error mb-6">
@@ -35,9 +39,11 @@ templ JellyfinLink(v JellyfinLinkView) {
 			}
 			<div class="actions">
 				<button class="btn btn-secondary" hx-get="/settings/jellyfin/test" hx-target="#jellyfin-test" hx-swap="innerHTML">Probar conexión</button>
-				<form method="post" action="/settings/jellyfin/unlink" hx-post="/settings/jellyfin/unlink" hx-target="body" hx-confirm="¿Desvincular Jellyfin?">
-					<button type="submit" class="btn btn-danger">Desvincular</button>
-				</form>
+				if !v.Managed {
+					<form method="post" action="/settings/jellyfin/unlink" hx-post="/settings/jellyfin/unlink" hx-target="body" hx-confirm="¿Desvincular Jellyfin?">
+						<button type="submit" class="btn btn-danger">Desvincular</button>
+					</form>
+				}
 			</div>
 			<div id="jellyfin-test"></div>
 		} else {
