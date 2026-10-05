@@ -13,6 +13,7 @@ import (
 // the active-link key: it is matched against each page's title in Layout.
 var navItems = []struct{ Label, Href string }{
 	{"Dashboard", "/"},
+	{"Actividad", "/activity"},
 	{"Hardware", "/hardware"},
 	{"Disco", "/disk"},
 	{"Nombres", "/naming"},

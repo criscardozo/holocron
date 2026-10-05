@@ -542,3 +542,16 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .stat-val.hot { color: var(--danger); }
 .hw-ups-off { border-color: var(--danger); }
 .ups-alert { font-size: 15px; }
+
+/* ── actividad ──────────────────────────────────────────────────────── */
+.act-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.act-card { display: grid; gap: var(--space-3); align-content: start; }
+.act-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+.act-item { display: grid; gap: 6px; }
+.act-title { display: flex; gap: var(--space-2); align-items: baseline; flex-wrap: wrap; }
+.act-meta { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; font-size: 12.5px; }
+.act-small { font-size: 12px; }
+.act-warn { color: var(--color-accent-300); }
+.act-problem .act-title strong { color: var(--color-accent-300); }
+.act-recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.act-recent li { display: flex; justify-content: space-between; gap: var(--space-3); }

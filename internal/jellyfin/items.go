@@ -347,15 +347,48 @@ func CleanDisplayTitle(s string) string {
 	}, s)
 }
 
-// Session is one client connected to Jellyfin. Only the parts that answer
-// "would powering off interrupt somebody" are decoded.
+// Session is one client connected to Jellyfin. Field names are those of
+// SessionInfoDto in Jellyfin 12.1's own OpenAPI document, read from the server
+// rather than recalled.
 type Session struct {
 	UserName   string `json:"UserName"`
 	DeviceName string `json:"DeviceName"`
+	Client     string `json:"Client"`
 	NowPlaying *struct {
-		Name       string `json:"Name"`
-		SeriesName string `json:"SeriesName"`
+		Name              string `json:"Name"`
+		SeriesName        string `json:"SeriesName"`
+		Type              string `json:"Type"`
+		ProductionYear    int    `json:"ProductionYear"`
+		IndexNumber       *int   `json:"IndexNumber"`
+		ParentIndexNumber *int   `json:"ParentIndexNumber"`
+		RunTimeTicks      int64  `json:"RunTimeTicks"`
 	} `json:"NowPlayingItem"`
+	PlayState *struct {
+		PositionTicks int64  `json:"PositionTicks"`
+		IsPaused      bool   `json:"IsPaused"`
+		PlayMethod    string `json:"PlayMethod"` // DirectPlay | DirectStream | Transcode
+	} `json:"PlayState"`
+	// Transcoding is present only while Jellyfin converts the stream.
+	Transcoding *Transcoding `json:"TranscodingInfo"`
+}
+
+// Transcoding is what Jellyfin is doing to a stream on its way to the client.
+type Transcoding struct {
+	IsVideoDirect bool    `json:"IsVideoDirect"`
+	IsAudioDirect bool    `json:"IsAudioDirect"`
+	VideoCodec    string  `json:"VideoCodec"`
+	AudioCodec    string  `json:"AudioCodec"`
+	Container     string  `json:"Container"`
+	Bitrate       int64   `json:"Bitrate"`
+	Width         int     `json:"Width"`
+	Height        int     `json:"Height"`
+	Framerate     float64 `json:"Framerate"`
+	// HardwareAccelerationType is "qsv" on Ginebra when Quick Sync is doing
+	// the work, "none" when the CPU is. That difference is what decides
+	// whether a second stream fits.
+	HardwareAccelerationType string   `json:"HardwareAccelerationType"`
+	TranscodeReasons         []string `json:"TranscodeReasons"`
+	CompletionPercentage     float64  `json:"CompletionPercentage"`
 }
 
 // Playing reports what this session is showing, or "" if it is idle. A session
@@ -374,6 +407,15 @@ func (s Session) Playing() string {
 	}
 	// Playing something Jellyfin will not name: still worth reporting as busy.
 	return "algo"
+}
+
+// Sessions lists every session Jellyfin knows about, playing or not.
+func (c *Client) Sessions(ctx context.Context) ([]Session, error) {
+	var all []Session
+	if err := c.do(ctx, http.MethodGet, "/Sessions", &all); err != nil {
+		return nil, err
+	}
+	return all, nil
 }
 
 // NowPlaying lists the sessions currently playing something. Used before
@@ -423,4 +465,41 @@ func (c *Client) RunningTasks(ctx context.Context) ([]ScheduledTask, error) {
 // and treating that as "in the future" would hide real missing files.
 func (i Item) Unaired(now time.Time) bool {
 	return !i.Premiere.IsZero() && i.Premiere.After(now)
+}
+
+// Added is one item recently added to the library.
+type Added struct {
+	ID                string    `json:"Id"`
+	Name              string    `json:"Name"`
+	Type              string    `json:"Type"`
+	SeriesName        string    `json:"SeriesName"`
+	ProductionYear    int       `json:"ProductionYear"`
+	IndexNumber       *int      `json:"IndexNumber"`
+	ParentIndexNumber *int      `json:"ParentIndexNumber"`
+	DateCreated       time.Time `json:"DateCreated"`
+}
+
+// RecentlyAdded lists the newest films and episodes, newest first.
+//
+// isMissing=false matters: Jellyfin keeps virtual entries for episodes it
+// knows about but has no file for — an airing season's future episodes among
+// them — and those would otherwise show up as "added" the day the provider
+// announced them.
+func (c *Client) RecentlyAdded(ctx context.Context, limit int) ([]Added, error) {
+	q := url.Values{
+		"Recursive":        {"true"},
+		"IncludeItemTypes": {TypeMovie + "," + TypeEpisode},
+		"SortBy":           {"DateCreated"},
+		"SortOrder":        {"Descending"},
+		"Fields":           {"DateCreated,ProductionYear"},
+		"isMissing":        {"false"},
+		"Limit":            {strconv.Itoa(limit)},
+	}
+	var resp struct {
+		Items []Added `json:"Items"`
+	}
+	if err := c.do(ctx, http.MethodGet, "/Items?"+q.Encode(), &resp); err != nil {
+		return nil, err
+	}
+	return resp.Items, nil
 }

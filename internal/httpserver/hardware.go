@@ -10,24 +10,34 @@ import (
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
+
 	"github.com/cristian/holocron/internal/hardware"
+	"github.com/cristian/holocron/internal/live"
 	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/web/templates"
 )
 
 func (s *Server) handleHardwarePage(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, templates.HardwarePage(hardwareView(s.deps.Hardware.Current())))
+	s.render(w, r, templates.HardwarePage(hardwareView(s.deps.Hardware.Current(r.Context()))))
 }
 
-// handleHardwareEvents streams readings as Server-Sent Events, one rendered
-// fragment per reading.
+// handleHardwareEvents streams hardware readings. See streamLive.
+func (s *Server) handleHardwareEvents(w http.ResponseWriter, r *http.Request) {
+	streamLive(s, w, r, s.deps.Hardware, "hardware", func(v hardware.Snapshot) templ.Component {
+		return templates.HardwareLive(hardwareView(v))
+	})
+}
+
+// streamLive sends a hub's readings as Server-Sent Events, one rendered
+// fragment per reading, until the client goes away.
 //
 // The connection outlives the server's 60 s WriteTimeout by design, so the
 // deadline is pushed forward before each write instead of being dropped: a
 // client that stops reading still gets cut off, just not one that is merely
 // watching. Behind Caddy nothing else is needed — reverse_proxy flushes
-// text/event-stream as it arrives.
-func (s *Server) handleHardwareEvents(w http.ResponseWriter, r *http.Request) {
+// text/event-stream as it arrives (measured on Ginebra: 29 events in 60 s).
+func streamLive[T any](s *Server, w http.ResponseWriter, r *http.Request, hub *live.Hub[T], event string, render func(T) templ.Component) {
 	rc := http.NewResponseController(w)
 	h := w.Header()
 	h.Set("Content-Type", "text/event-stream")
@@ -35,11 +45,11 @@ func (s *Server) handleHardwareEvents(w http.ResponseWriter, r *http.Request) {
 	h.Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 	if err := rc.Flush(); err != nil {
-		s.log.Warn("hardware events: cannot flush", "error", err)
+		s.log.Warn("event stream: cannot flush", "event", event, "error", err)
 		return
 	}
 
-	readings, stop := s.deps.Hardware.Subscribe()
+	readings, stop := hub.Subscribe()
 	defer stop()
 
 	ctx := r.Context()
@@ -48,14 +58,14 @@ func (s *Server) handleHardwareEvents(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-ctx.Done():
 			return
-		case snap := <-readings:
+		case v := <-readings:
 			buf.Reset()
-			if err := templates.HardwareLive(hardwareView(snap)).Render(ctx, &buf); err != nil {
-				s.log.Warn("hardware events: render", "error", err)
+			if err := render(v).Render(ctx, &buf); err != nil {
+				s.log.Warn("event stream: render", "event", event, "error", err)
 				return
 			}
 			_ = rc.SetWriteDeadline(time.Now().Add(15 * time.Second))
-			if err := writeEvent(w, "hardware", buf.Bytes()); err != nil {
+			if err := writeEvent(w, event, buf.Bytes()); err != nil {
 				return // the client went away
 			}
 			if err := rc.Flush(); err != nil {

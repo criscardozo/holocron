@@ -1,0 +1,157 @@
+package templates
+
+// ActivityPage is what is happening right now: who is watching what, and what
+// is downloading. Live over /events/activity, like the hardware screen.
+templ ActivityPage(v ActivityView) {
+	@Layout("Actividad") {
+		<div class="page-head">
+			<div>
+				<h1>Actividad</h1>
+				<p class="sub">Quién está mirando qué, y qué se está bajando</p>
+			</div>
+		</div>
+		<div hx-ext="sse" sse-connect="/events/activity">
+			<div sse-swap="activity" hx-swap="innerHTML">
+				@ActivityLive(v)
+			</div>
+		</div>
+	}
+}
+
+templ ActivityLive(v ActivityView) {
+	if len(v.Errors) > 0 {
+		<div class="notice error mb-6">
+			@IconSm("alert")
+			<span>
+				No responden:
+				for i, e := range v.Errors {
+					if i > 0 {
+						,
+					}
+					<strong>{ e }</strong>
+				}
+				. Lo que muestran esas fuentes puede estar desactualizado o faltar.
+			</span>
+		</div>
+	}
+	<div class="act-grid">
+		<section class="card elev-sm act-card">
+			<header class="hw-head">
+				<h2>Reproduciendo</h2>
+				if v.Idle > 0 {
+					<span class="muted">{ Plural(v.Idle, "cliente conectado sin reproducir", "clientes conectados sin reproducir") }</span>
+				}
+			</header>
+			if !v.HasJellyfin {
+				<p class="muted">Jellyfin no está vinculado. Se configura en <a href="/settings">Ajustes</a>.</p>
+			} else if len(v.Playing) == 0 {
+				<p class="muted">Nadie está mirando nada.</p>
+			} else {
+				<ul class="act-list">
+					for _, p := range v.Playing {
+						@actPlaying(p)
+					}
+				</ul>
+			}
+		</section>
+
+		<section class="card elev-sm act-card">
+			<header class="hw-head">
+				<h2>Descargas</h2>
+				if v.HasTorrents {
+					<span class="mono num muted">↓ { v.Down } · ↑ { v.Up }</span>
+				}
+			</header>
+			if !v.HasTorrents && !v.HasArr {
+				<p class="muted">No hay qBittorrent ni Radarr/Sonarr configurados.</p>
+			} else if len(v.Downloads) == 0 {
+				<p class="muted">No se está bajando nada.</p>
+			} else {
+				<ul class="act-list">
+					for _, d := range v.Downloads {
+						@actDownload(d)
+					}
+				</ul>
+			}
+		</section>
+
+		if len(v.Recent) > 0 {
+			<section class="card elev-sm act-card">
+				<header class="hw-head"><h2>Agregado hace poco</h2></header>
+				<ul class="act-recent">
+					for _, r := range v.Recent {
+						<li>
+							<span>
+								{ r.Title }
+								if r.Subtitle != "" {
+									<span class="muted">{ r.Subtitle }</span>
+								}
+							</span>
+							<span class="muted num">{ r.When }</span>
+						</li>
+					}
+				</ul>
+			</section>
+		}
+	</div>
+}
+
+templ actPlaying(p ActPlaying) {
+	<li class="act-item">
+		<div class="act-title">
+			<strong>{ p.Title }</strong>
+			if p.Subtitle != "" {
+				<span class="muted">{ p.Subtitle }</span>
+			}
+		</div>
+		<div class="act-meta muted">
+			{ p.Who }
+			if p.Paused {
+				<span class="badge badge-neutral">en pausa</span>
+			}
+		</div>
+		@hwBar(p.Width, false)
+		<div class="act-meta">
+			<span class="mono num muted">{ p.Position }</span>
+			<span class={ "badge", templ.KV("badge-yes", !p.Transcode), templ.KV("badge-neutral", p.Transcode) }>{ p.Method }</span>
+			if p.Hardware != "" {
+				<span class={ "badge", templ.KV("badge-yes", !p.OnCPU), templ.KV("badge-no", p.OnCPU) }>{ p.Hardware }</span>
+			}
+		</div>
+		if p.Detail != "" || len(p.Reasons) > 0 {
+			<div class="act-meta muted act-small">
+				{ p.Detail }
+				for _, r := range p.Reasons {
+					<span>· { r }</span>
+				}
+			</div>
+		}
+	</li>
+}
+
+templ actDownload(d ActDownload) {
+	<li class={ "act-item", templ.KV("act-problem", d.Problem) }>
+		<div class="act-title">
+			if d.App != "" {
+				<span class="badge badge-neutral">{ d.App }</span>
+			} else {
+				<span class="badge badge-neutral">a mano</span>
+			}
+			<strong>{ d.Subject }</strong>
+		</div>
+		@hwBar(d.Width, d.Problem)
+		<div class="act-meta">
+			<span class="mono num">{ d.Pct }</span>
+			if d.Speed != "" {
+				<span class="mono num muted">{ d.Speed }</span>
+			}
+			if d.ETA != "" {
+				<span class="muted">{ d.ETA }</span>
+			}
+			<span class="muted">{ d.State }</span>
+		</div>
+		for _, m := range d.Messages {
+			<div class="act-small act-warn">{ m }</div>
+		}
+	</li>
+}

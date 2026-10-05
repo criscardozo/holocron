@@ -15,7 +15,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/apitoken"
+	"github.com/cristian/holocron/internal/arr"
 	"github.com/cristian/holocron/internal/config"
 	"github.com/cristian/holocron/internal/db"
 	"github.com/cristian/holocron/internal/diskusage"
@@ -25,6 +27,7 @@ import (
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
+	"github.com/cristian/holocron/internal/live"
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
@@ -81,6 +84,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	jellyfinLink := jellyfin.NewLinkService(settingsStore)
 	updatesService := updates.NewService(filepath.Dir(cfg.DBPath))
 	powerService := power.NewService(filepath.Dir(cfg.DBPath))
+	activityHub := newActivityHub(libraryService, torrentsService, settingsStore)
 
 	registry := widgets.NewRegistry(
 		widgets.SystemWidget{},
@@ -97,6 +101,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Folders:      folderStore,
 		Disk:         diskService,
 		Hardware:     hardware.NewHub(2 * time.Second),
+		Activity:     activityHub,
 		Naming:       namingService,
 		Settings:     settingsStore,
 		Library:      libraryService,
@@ -161,4 +166,37 @@ func newLogger(level string) *slog.Logger {
 		lv = slog.LevelInfo
 	}
 	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: lv}))
+}
+
+// Where Ginebra runs Radarr and Sonarr. Fixed, not configurable from the web,
+// for the same reason the Jellyfin address is pinned when the server manages
+// its key: an editable address is a way to send the key somewhere else.
+const (
+	radarrAddr = "http://127.0.0.1:7878"
+	sonarrAddr = "http://127.0.0.1:8989"
+)
+
+// newActivityHub builds the live "what is happening" hub. Sessions change
+// within seconds and a download's speed too, so it reads every 5 s — but only
+// while somebody has the screen open.
+func newActivityHub(lib *library.Service, tor *torrents.Service, st *settings.Store) *live.Hub[activity.Snapshot] {
+	var queues []*arr.Client
+	if key, ok := st.Credential(settings.CredRadarr); ok {
+		queues = append(queues, arr.New(arr.Radarr, radarrAddr, key))
+	}
+	if key, ok := st.Credential(settings.CredSonarr); ok {
+		queues = append(queues, arr.New(arr.Sonarr, sonarrAddr, key))
+	}
+	sampler := activity.NewSampler(func(ctx context.Context) activity.Sources {
+		src := activity.Sources{Queues: queues}
+		if lib.Configured(ctx) {
+			src.Sessions = lib.Sessions
+			src.Recent = lib.RecentlyAdded
+		}
+		if tor.Configured(ctx) {
+			src.Torrents = tor.List
+		}
+		return src
+	})
+	return live.NewHub(5*time.Second, sampler.Sample)
 }

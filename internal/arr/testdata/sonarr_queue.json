@@ -1,0 +1,45 @@
+{
+ "page": 1,
+ "pageSize": 100,
+ "totalRecords": 2,
+ "records": [
+  {
+   "id": 3,
+   "seriesId": 9,
+   "episodeId": 99,
+   "seasonNumber": 2,
+   "title": "The.Bear.S02E04.1080p.WEB.h264",
+   "downloadId": "0011223344556677889900112233445566778899",
+   "status": "completed",
+   "trackedDownloadState": "importBlocked",
+   "trackedDownloadStatus": "warning",
+   "size": 1500000000,
+   "sizeleft": 0,
+   "estimatedCompletionTime": "2026-10-05T12:10:00Z",
+   "statusMessages": [
+    {
+     "title": "The.Bear.S02E04.1080p.WEB.h264",
+     "messages": [
+      "No se encontraron archivos aptos para importar"
+     ]
+    }
+   ],
+   "series": {
+    "title": "The Bear"
+   },
+   "episode": {
+    "seasonNumber": 2,
+    "episodeNumber": 4,
+    "title": "Honeydew"
+   }
+  },
+  {
+   "id": 4,
+   "title": "Something.Unmatched",
+   "downloadId": "",
+   "status": "queued",
+   "size": 0,
+   "sizeleft": 0
+  }
+ ]
+}

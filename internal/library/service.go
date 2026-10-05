@@ -280,3 +280,29 @@ func (s *Service) RunningTasks(ctx context.Context) ([]string, error) {
 	}
 	return out, nil
 }
+
+// Sessions returns every Jellyfin session, playing or not.
+func (s *Service) Sessions(ctx context.Context) ([]jellyfin.Session, error) {
+	c, err := s.client(ctx)
+	if err != nil {
+		return nil, err
+	}
+	all, err := c.Sessions(ctx)
+	if err != nil {
+		return nil, jellyfin.Rejected(err)
+	}
+	return all, nil
+}
+
+// RecentlyAdded returns the newest films and episodes.
+func (s *Service) RecentlyAdded(ctx context.Context, limit int) ([]jellyfin.Added, error) {
+	c, err := s.client(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items, err := c.RecentlyAdded(ctx, limit)
+	if err != nil {
+		return nil, jellyfin.Rejected(err)
+	}
+	return items, nil
+}

@@ -169,28 +169,3 @@ func TestPowerCutIsReported(t *testing.T) {
 		t.Errorf("time left = %s, want 2h", b.Left)
 	}
 }
-
-// TestTheHubStopsWhenNobodyWatches is the house rule: Jellyfin owns the CPU,
-// so a sampler for a screen nobody has open must not keep running.
-func TestTheHubStopsWhenNobodyWatches(t *testing.T) {
-	h := NewHub(5 * time.Millisecond)
-	ch, stop := h.Subscribe()
-	select {
-	case <-ch:
-	case <-time.After(2 * time.Second):
-		t.Fatal("no reading arrived")
-	}
-	stop()
-	stop() // twice must be harmless: a handler's defer and a closed client
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		h.mu.Lock()
-		running := h.running
-		h.mu.Unlock()
-		if !running {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatal("the sampling loop kept running with no subscribers")
-}

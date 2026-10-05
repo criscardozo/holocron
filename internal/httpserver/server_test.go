@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/db"
 	"github.com/cristian/holocron/internal/diskusage"
@@ -20,6 +21,7 @@ import (
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
+	"github.com/cristian/holocron/internal/live"
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
@@ -58,10 +60,13 @@ func newTestServer(t *testing.T) *testServer {
 	settingsStore := settings.NewStore(database)
 
 	deps := Deps{
-		Log:          logger,
-		Folders:      folderStore,
-		Disk:         diskusage.NewService(database, folderStore, jobManager),
-		Hardware:     hardware.NewHub(20 * time.Millisecond),
+		Log:      logger,
+		Folders:  folderStore,
+		Disk:     diskusage.NewService(database, folderStore, jobManager),
+		Hardware: hardware.NewHub(20 * time.Millisecond),
+		Activity: live.NewHub(20*time.Millisecond, activity.NewSampler(func(context.Context) activity.Sources {
+			return activity.Sources{}
+		}).Sample),
 		Naming:       naming.NewService(database, folderStore),
 		Settings:     settingsStore,
 		Library:      library.NewService(database, settingsStore, jobManager),

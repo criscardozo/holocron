@@ -750,3 +750,45 @@ Un ancho que depende de un número no puede ir en `style=""`: la CSP lo
 bloquea. Las barras y las líneas son SVG generado en el servidor, con el largo
 como atributo `width` o como puntos de una `polyline`, que no son estilos.
 
+## Feature 11 — Actividad (`/activity`)
+
+Quién está mirando qué en Jellyfin y cómo, y qué se está bajando, en vivo por
+SSE como el hardware: lee cada 5 s, sólo mientras alguien tiene la pantalla
+abierta.
+
+### Reproduciendo
+
+Por cada sesión: qué es, quién y desde qué cliente, por dónde va, y **cómo
+llega**: directo, directo con remux, o transcodificando. Cuando transcodifica
+dice **si lo hace Quick Sync o la CPU**, y esa es la distinción que importa en
+Ginebra: con la GPU sobra lugar para otro stream, con cuatro núcleos no. Los
+motivos de la transcodificación van traducidos («video de 10 bits», «subtítulos
+que hay que quemar en la imagen»).
+
+Los nombres de los campos salen del OpenAPI de Jellyfin 12.1 leído del propio
+servidor, no de memoria.
+
+### Descargas
+
+Cada elemento de la cola de Radarr y Sonarr cruzado con su torrent en
+qBittorrent por el hash (en mayúsculas de un lado y minúsculas del otro). Del
+*arr sale para qué es; del torrent, la velocidad y el progreso al byte. Un
+torrent que ningún *arr reclama aparece igual, como «a mano».
+
+**Primero lo que necesita a alguien**: una importación trabada es un archivo que
+ya está en el disco y que no va a moverse hasta que alguien mire, así que va
+arriba de todo, con el motivo que da el *arr.
+
+### Cuatro fuentes, cada una con derecho a fallar
+
+Se leen en paralelo y una caída no apaga a las otras. Y la que no responde se
+nombra, porque «no se baja nada» y «Sonarr no contesta» son la misma lista
+vacía. «Agregado hace poco» se pide cada 5 minutos y no en cada lectura: cambia
+unas pocas veces por día.
+
+### Direcciones fijas
+
+Radarr y Sonarr se leen en `127.0.0.1:7878` y `:8989` con las keys que pone
+systemd. Las direcciones no se editan desde la web, por la misma razón que la de
+Jellyfin: una dirección editable es una forma de mandar la key a otro lado.
+

@@ -10,12 +10,14 @@ import (
 
 	"github.com/a-h/templ"
 
+	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/hardware"
 	"github.com/cristian/holocron/internal/jellyfin"
 	"github.com/cristian/holocron/internal/library"
+	"github.com/cristian/holocron/internal/live"
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
@@ -34,7 +36,8 @@ type Deps struct {
 	Widgets      *widgets.Registry
 	Folders      *folders.Store
 	Disk         *diskusage.Service
-	Hardware     *hardware.Hub
+	Hardware     *live.Hub[hardware.Snapshot]
+	Activity     *live.Hub[activity.Snapshot]
 	Naming       *naming.Service
 	Settings     *settings.Store
 	Library      *library.Service
@@ -81,6 +84,8 @@ func (s *Server) Handler() http.Handler {
 	// Live hardware: the page, and the event stream it listens to.
 	mux.HandleFunc("GET /hardware", s.handleHardwarePage)
 	mux.HandleFunc("GET /events/hardware", s.handleHardwareEvents)
+	mux.HandleFunc("GET /activity", s.handleActivityPage)
+	mux.HandleFunc("GET /events/activity", s.handleActivityEvents)
 
 	mux.HandleFunc("GET /naming", s.handleNamingPage)
 	mux.HandleFunc("POST /naming/scan", s.handleNamingScan)

@@ -1,11 +1,14 @@
 package hardware
 
 import (
+	"context"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/cristian/holocron/internal/live"
 )
 
 // Core is one logical CPU.
@@ -186,3 +189,33 @@ func push(xs []float64, v float64) []float64 {
 }
 
 func clone(xs []float64) []float64 { return append([]float64(nil), xs...) }
+
+// staleAfter is how old the previous reading can be before a rate computed
+// against it stops meaning "now". After an hour with nobody watching, the
+// first reading would otherwise report the average CPU of that whole hour.
+const staleAfter = 10 * time.Second
+
+// primeGap is the short wait used to take a fresh pair of readings when the
+// previous one is stale: long enough for the counters to move, short enough
+// that a page opened cold shows real numbers almost at once.
+const primeGap = 300 * time.Millisecond
+
+// Fresh samples, first taking a priming reading if the previous one is too old
+// to compare against.
+func (c *Collector) Fresh(now func() time.Time) Snapshot {
+	c.mu.Lock()
+	stale := c.prev == nil || now().Sub(c.prev.at) > staleAfter
+	c.mu.Unlock()
+	if stale {
+		c.Sample(now())
+		time.Sleep(primeGap)
+	}
+	return c.Sample(now())
+}
+
+// NewHub returns a live hub over a collector: sampling only while somebody is
+// watching, every interval.
+func NewHub(interval time.Duration) *live.Hub[Snapshot] {
+	c := NewCollector()
+	return live.NewHub(interval, func(context.Context) Snapshot { return c.Fresh(time.Now) })
+}
