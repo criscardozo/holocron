@@ -210,6 +210,9 @@ struct ContractTests {
         #expect(!svc.timers.isEmpty)
         #expect(!svc.disks.isEmpty)
         #expect(svc.errors.isEmpty)
+        let drift = try #require(svc.drift)
+        #expect(drift.commit == "3187b01")
+        #expect(drift.differ.first?.problem == "no está instalado")
     }
 
     @Test func lenientDecodesNullAndMissing() throws {

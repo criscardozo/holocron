@@ -61,6 +61,8 @@ type Snapshot struct {
 	Timers []Timer
 	Mounts []Mount
 	Smart  *Smart
+	// Drift is the server's own check of what it installed against its repo.
+	Drift *Drift
 	// Errors says what could not be read, in words.
 	Errors []string
 }
@@ -71,6 +73,7 @@ type Config struct {
 	TimerPrefix string   // e.g. "ginebra-": every timer whose name starts with it
 	Mounts      []string
 	SmartFile   string
+	DriftFile   string
 }
 
 // Reader reads a Snapshot.
@@ -183,6 +186,17 @@ func (r *Reader) Read(ctx context.Context) Snapshot {
 			s.Errors = append(s.Errors, "no se pudo leer el estado SMART")
 		default:
 			s.Smart = smart
+		}
+	}
+	if r.cfg.DriftFile != "" {
+		drift, err := ReadDrift(r.cfg.DriftFile)
+		switch {
+		case errors.Is(err, os.ErrNotExist):
+			// Not a server that checks itself: no card.
+		case err != nil:
+			s.Errors = append(s.Errors, "no se pudo leer la deriva de la instalación")
+		default:
+			s.Drift = drift
 		}
 	}
 	sort.Slice(s.Timers, func(i, j int) bool { return s.Timers[i].Name < s.Timers[j].Name })
@@ -342,6 +356,33 @@ type SmartDisk struct {
 	Hours         *int64     `json:"horas"`
 	ReadAt        *time.Time `json:"leido_en"`
 	Asleep        bool       `json:"dormido"`
+}
+
+// Drift is what the server found installed that does not match its repo,
+// written hourly by Ginebra's ginebra-deriva.
+type Drift struct {
+	Generated time.Time   `json:"generado"`
+	Commit    string      `json:"commit"` // "3187b01 2026-10-06T01:28:53+11:00"
+	Differ    []DriftItem `json:"difieren"`
+}
+
+// DriftItem is one file that differs, and how, in the server's words.
+type DriftItem struct {
+	File    string `json:"archivo"`
+	Problem string `json:"problema"`
+}
+
+// ReadDrift reads the drift report.
+func ReadDrift(path string) (*Drift, error) {
+	b, err := os.ReadFile(path) //#nosec G304 -- path from server configuration
+	if err != nil {
+		return nil, err
+	}
+	var d Drift
+	if err := json.Unmarshal(b, &d); err != nil {
+		return nil, fmt.Errorf("decode %s: %w", path, err)
+	}
+	return &d, nil
 }
 
 // ReadSmart reads the SMART status file.

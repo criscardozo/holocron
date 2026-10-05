@@ -210,7 +210,23 @@ struct ServicesReading: Decodable, Sendable {
     @Lenient var timers: [SvcTimer]
     @Lenient var disks: [SvcDisk]
     var smartAge: String
+    /// The server's own check of its installation against its repo; absent on
+    /// a server that does not run one.
+    var drift: SvcDrift?
     @Lenient var errors: [String]
+}
+
+struct SvcDrift: Decodable, Sendable {
+    var age: String
+    var commit: String
+    var stale: Bool
+    @Lenient var differ: [SvcDiffer]
+}
+
+struct SvcDiffer: Decodable, Sendable, Identifiable {
+    var file: String
+    var problem: String
+    var id: String { file }
 }
 
 struct SvcUnit: Decodable, Sendable, Identifiable {

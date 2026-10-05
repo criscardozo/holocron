@@ -78,6 +78,9 @@ templ ServicesLive(v ServicesView) {
 					</ul>
 				</section>
 			}
+			if v.Drift != nil {
+				@driftCard(*v.Drift)
+			}
 			if len(v.Disks) > 0 {
 				<section class="card elev-sm act-card">
 					<header class="hw-head">
@@ -115,4 +118,41 @@ templ ServicesLive(v ServicesView) {
 			}
 		</div>
 	}
+}
+
+// driftCard is the server's own check that what runs is what its repo says.
+// Quiet when it matches; the files, in the server's words, when it does not.
+templ driftCard(d SvcDrift) {
+	<section class={ "card", "act-card", templ.KV("tile-warn", len(d.Differ) > 0 || d.Stale) }>
+		<header class="hw-head">
+			<h2>Instalación</h2>
+			<span class="muted">{ d.Age }</span>
+		</header>
+		if len(d.Differ) == 0 {
+			<p class="act-meta">
+				<span class="badge badge-yes">coincide con el repo</span>
+				if d.Commit != "" {
+					<span class="muted mono">{ d.Commit }</span>
+				}
+			</p>
+		} else {
+			<p class="act-meta">
+				<span class="badge badge-no">{ Plural(len(d.Differ), "diferencia", "diferencias") }</span>
+				if d.Commit != "" {
+					<span class="muted">con el repo en <span class="mono">{ d.Commit }</span></span>
+				}
+			</p>
+			<ul class="stat-list">
+				for _, it := range d.Differ {
+					<li>
+						<span class="stat-key mono">{ it.File }</span>
+						<span class="act-warn act-small">{ it.Problem }</span>
+					</li>
+				}
+			</ul>
+		}
+		if d.Stale {
+			<p class="act-small act-warn">El chequeo dejó de correr: este resultado es viejo.</p>
+		}
+	</section>
 }

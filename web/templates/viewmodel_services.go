@@ -8,7 +8,23 @@ type ServicesView struct {
 	Timers     []SvcTimer `json:"timers"`
 	Disks      []SvcDisk  `json:"disks"`
 	SmartAge   string     `json:"smartAge"` // "SMART leído hace 3 h"
-	Errors     []string   `json:"errors"`
+	// Drift is nil on a server that does not check its own installation.
+	Drift  *SvcDrift `json:"drift"`
+	Errors []string  `json:"errors"`
+}
+
+// SvcDrift is the server's check of what it installed against its repo.
+type SvcDrift struct {
+	Age    string      `json:"age"`    // "revisado hace 20 min"
+	Commit string      `json:"commit"` // the repo commit it compared against
+	Stale  bool        `json:"stale"`  // the check itself has stopped running
+	Differ []SvcDiffer `json:"differ"`
+}
+
+// SvcDiffer is one file that does not match.
+type SvcDiffer struct {
+	File    string `json:"file"`
+	Problem string `json:"problem"`
 }
 
 // SvcUnit is one systemd unit.

@@ -253,7 +253,7 @@ Jellyfin vinculada no es administradora (releer metadata lo requiere).
 |---|---|---|
 | `GET` | `/api/v1/hardware` | CPU por núcleo, memoria, red, discos y batería |
 | `GET` | `/api/v1/activity` | Reproducciones, descargas, pedidos de Seerr, calendario y avisos |
-| `GET` | `/api/v1/services` | Unidades de systemd, tareas programadas y SMART |
+| `GET` | `/api/v1/services` | Unidades de systemd, tareas programadas, SMART y la deriva de la instalación (`drift`, `null` si el servidor no la chequea) |
 
 Devuelven **el mismo view model que renderiza la web**, ya formateado en el
 servidor (`"7 %"`, `"146.5 KiB/s"`, `"hace 3 h"`), así el teléfono y el

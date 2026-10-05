@@ -109,6 +109,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	activityHub := newActivityHub(libraryService, torrentsService, settingsStore)
 	servicesReader := services.NewReader(services.Config{
 		Units: cfg.WatchUnits, TimerPrefix: cfg.WatchTimers, SmartFile: cfg.SmartFile,
+		DriftFile: cfg.DriftFile,
 	})
 	// Unit state changes rarely and is one shell-out for all of them, so 15 s
 	// is plenty — and like every live screen, only while somebody watches.

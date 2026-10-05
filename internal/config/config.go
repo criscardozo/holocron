@@ -30,6 +30,10 @@ type Config struct {
 	WatchUnits  []string // HOLOCRON_WATCH_UNITS, space-separated, e.g. "jellyfin caddy mnt-biblioteca.mount"
 	WatchTimers string   // HOLOCRON_WATCH_TIMERS, a name prefix, e.g. "ginebra-"
 	SmartFile   string   // HOLOCRON_SMART_FILE, the JSON a root timer writes
+	// DriftFile is HOLOCRON_DRIFT_FILE, where the server reports what it has
+	// installed that differs from its repo. When unset it is deriva.json
+	// beside the SMART file, which is where Ginebra writes it.
+	DriftFile string
 
 	// MachineName is what the screens call this computer ("Apagar Ginebra").
 	// HOLOCRON_MACHINE_NAME, or the hostname with a capital letter.
@@ -80,9 +84,13 @@ func Load() Config {
 		WatchUnits:  strings.Fields(os.Getenv("HOLOCRON_WATCH_UNITS")),
 		WatchTimers: os.Getenv("HOLOCRON_WATCH_TIMERS"),
 		SmartFile:   os.Getenv("HOLOCRON_SMART_FILE"),
+		DriftFile:   os.Getenv("HOLOCRON_DRIFT_FILE"),
 		MachineName: envOr("HOLOCRON_MACHINE_NAME", hostTitle()),
 	}
 	c.MediaFolders, c.BadFolders = parseFolders(os.Getenv("HOLOCRON_MEDIA_FOLDERS"))
+	if c.DriftFile == "" && c.SmartFile != "" {
+		c.DriftFile = filepath.Join(filepath.Dir(c.SmartFile), "deriva.json")
+	}
 
 	flag.StringVar(&c.Addr, "addr", c.Addr, "listen address (host:port)")
 	flag.StringVar(&c.DBPath, "db", c.DBPath, "path to the SQLite database file")

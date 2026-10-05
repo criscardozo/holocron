@@ -1,6 +1,7 @@
 {
  "playing": [
   {
+   "art": "",
    "title": "The Bear",
    "subtitle": "T2E04 Honeydew",
    "who": "cristian · Living (Jellyfin Android TV)",
@@ -51,7 +52,8 @@
   {
    "title": "The Social Dilemma",
    "subtitle": "(2020)",
-   "when": "hace 3 h"
+   "when": "hace 3 h",
+   "art": ""
   }
  ],
  "down": "4.8 MiB/s",
@@ -68,7 +70,8 @@
    "when": "hace 2 días",
    "state": "en cines en 8 días",
    "done": false,
-   "stuck": false
+   "stuck": false,
+   "art": ""
   },
   {
    "title": "Deadloch (2023)",
@@ -77,7 +80,8 @@
    "when": "hace 3 días",
    "state": "disponible en parte",
    "done": false,
-   "stuck": false
+   "stuck": false,
+   "art": ""
   }
  ],
  "reqSummary": "21 pedidos",

@@ -74,5 +74,16 @@
   }
  ],
  "smartAge": "medido hace 3 h",
+ "drift": {
+  "age": "revisado recién",
+  "commit": "3187b01",
+  "stale": false,
+  "differ": [
+   {
+    "file": "/usr/local/bin/ginebra-trampa",
+    "problem": "no está instalado"
+   }
+  ]
+ },
  "errors": null
 }

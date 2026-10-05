@@ -20,6 +20,7 @@ struct ServicesView: View {
                     }
                     if !svc.units.isEmpty { unitsCard(svc) }
                     if !svc.timers.isEmpty { timersCard(svc.timers) }
+                    if let drift = svc.drift { driftCard(drift) }
                     if !svc.disks.isEmpty { disksCard(svc) }
                 }
                 .padding(16)
@@ -70,6 +71,38 @@ struct ServicesView: View {
             }
         }
         .card()
+    }
+
+    /// The server's own check that what runs is what its repo says.
+    private func driftCard(_ d: SvcDrift) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Instalación", systemImage: "checklist").sectionTitle()
+                Spacer()
+                Text(d.age).font(.caption).foregroundStyle(Palette.muted)
+            }
+            if d.differ.isEmpty {
+                HStack {
+                    Pill(text: "coincide con el repo", kind: .yes)
+                    if !d.commit.isEmpty {
+                        Text(d.commit).font(.caption.monospaced()).foregroundStyle(Palette.muted)
+                    }
+                }
+            } else {
+                Pill(text: "\(d.differ.count) \(d.differ.count == 1 ? "diferencia" : "diferencias") con el repo", kind: .no)
+                ForEach(d.differ) { it in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(it.file).font(.caption.monospaced()).lineLimit(2)
+                        Text(it.problem).font(.caption).foregroundStyle(Palette.accent300)
+                    }
+                }
+            }
+            if d.stale {
+                Text("El chequeo dejó de correr: este resultado es viejo.")
+                    .font(.caption).foregroundStyle(Palette.accent300)
+            }
+        }
+        .card(accented: !d.differ.isEmpty || d.stale)
     }
 
     private func disksCard(_ svc: ServicesReading) -> some View {

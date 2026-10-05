@@ -132,6 +132,10 @@ func servicesTile(sv templates.ServicesView) templates.Tile {
 	}
 	t.Sub = templates.Plural(len(sv.Units), "unidad", "unidades") + " · " +
 		templates.Plural(len(sv.Timers), "tarea", "tareas")
+	if d := sv.Drift; d != nil && len(d.Differ) > 0 {
+		t.Sub += " · " + templates.Plural(len(d.Differ), "diferencia con el repo", "diferencias con el repo")
+		t.Warn = true
+	}
 	if len(sv.Errors) > 0 {
 		t.Warn = true
 	}
