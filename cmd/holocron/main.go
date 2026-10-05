@@ -63,6 +63,19 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	jobManager := jobs.NewManager()
 	folderStore := folders.NewStore(database)
 	settingsStore := settings.NewStore(database)
+	if len(cfg.BadFolders) > 0 {
+		logger.Warn("ignored malformed HOLOCRON_MEDIA_FOLDERS entries", "entries", strings.Join(cfg.BadFolders, ";"))
+	}
+	if len(cfg.MediaFolders) > 0 {
+		specs := make([]folders.Spec, 0, len(cfg.MediaFolders))
+		for _, f := range cfg.MediaFolders {
+			specs = append(specs, folders.Spec{Label: f.Label, Purpose: f.Purpose, Path: f.Path})
+		}
+		if err := folderStore.Manage(ctx, specs); err != nil {
+			return fmt.Errorf("managed folders: %w", err)
+		}
+		logger.Info("folders provided by the server", "count", len(specs))
+	}
 	power.SetMachineName(cfg.MachineName)
 	// On Ginebra, systemd hands the services' keys over with LoadCredential.
 	// Elsewhere the directory does not exist and the settings form is used.

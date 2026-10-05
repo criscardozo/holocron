@@ -34,6 +34,39 @@ type Config struct {
 	// MachineName is what the screens call this computer ("Apagar Ginebra").
 	// HOLOCRON_MACHINE_NAME, or the hostname with a capital letter.
 	MachineName string
+
+	// MediaFolders, when set, is the watched-folder list and the settings form
+	// stops editing it. HOLOCRON_MEDIA_FOLDERS, entries separated by ";",
+	// each "label:purpose:path" with purpose disk, movies or tv:
+	//   Películas:movies:/mnt/biblioteca/Peliculas;Disco4:disk:/mnt/disco4
+	MediaFolders []FolderSpec
+	// BadFolders are entries of HOLOCRON_MEDIA_FOLDERS that could not be read,
+	// for the log.
+	BadFolders []string
+}
+
+// FolderSpec is one entry of HOLOCRON_MEDIA_FOLDERS.
+type FolderSpec struct{ Label, Purpose, Path string }
+
+// parseFolders reads HOLOCRON_MEDIA_FOLDERS. A malformed entry is skipped
+// rather than fatal, and reported by the caller as a count mismatch would
+// hide it: so it is returned in bad.
+func parseFolders(v string) (specs []FolderSpec, bad []string) {
+	for _, e := range strings.Split(v, ";") {
+		e = strings.TrimSpace(e)
+		if e == "" {
+			continue
+		}
+		parts := strings.SplitN(e, ":", 3)
+		if len(parts) != 3 || parts[0] == "" || parts[2] == "" {
+			bad = append(bad, e)
+			continue
+		}
+		specs = append(specs, FolderSpec{
+			Label: strings.TrimSpace(parts[0]), Purpose: strings.TrimSpace(parts[1]), Path: strings.TrimSpace(parts[2]),
+		})
+	}
+	return specs, bad
 }
 
 // Load parses flags and environment variables into a Config. It is meant to be
@@ -49,6 +82,7 @@ func Load() Config {
 		SmartFile:   os.Getenv("HOLOCRON_SMART_FILE"),
 		MachineName: envOr("HOLOCRON_MACHINE_NAME", hostTitle()),
 	}
+	c.MediaFolders, c.BadFolders = parseFolders(os.Getenv("HOLOCRON_MEDIA_FOLDERS"))
 
 	flag.StringVar(&c.Addr, "addr", c.Addr, "listen address (host:port)")
 	flag.StringVar(&c.DBPath, "db", c.DBPath, "path to the SQLite database file")

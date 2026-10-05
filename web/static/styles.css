@@ -544,11 +544,13 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .hw-disks li { display: grid; gap: 4px; font-size: 12.5px; }
 .hw-disk-name { display: flex; gap: var(--space-2); align-items: baseline; }
 
-.spark-wrap { position: relative; }
+/* The scale sits on its own line above the chart: overlaid, it collided with
+   the line whenever traffic peaked near the top right. */
+.spark-wrap { display: grid; gap: 2px; }
 .spark { width: 100%; height: 48px; display: block; }
 .spark polyline { stroke: var(--color-accent); stroke-width: 1.5; }
 .spark-net polyline { stroke: var(--color-pink); }
-.spark-max { position: absolute; top: 0; right: 0; font-size: 11px; }
+.spark-max { order: -1; justify-self: end; font-size: 11px; }
 
 .stat-val.hot { color: var(--danger); }
 .hw-ups-off { border-color: var(--danger); }
@@ -572,3 +574,10 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .btn-secondary:hover:not(:disabled) { border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); }
 .btn-primary { color: var(--color-bg); background: var(--color-accent); border-color: var(--color-accent); }
 .btn-primary:hover:not(:disabled) { background: var(--color-accent-200); border-color: var(--color-accent-200); }
+
+/* Labels and states that must stay on one line: an interface name with its
+   speed, a unit name, a badge. The free text beside them is what gives way. */
+.hw-card .stat-key, .act-card .badge, .svc-state, .stat-key.mono { white-space: nowrap; }
+.act-recent li > span:first-child { min-width: 0; }
+.svc-state { display: inline-flex; align-items: center; gap: var(--space-2); }
+.svc-since { font-size: 12px; font-weight: 400; color: color-mix(in srgb, var(--color-text) 52%, transparent); }

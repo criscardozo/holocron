@@ -21,9 +21,10 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	view := templates.SettingsView{
-		Purposes:    []string{folders.PurposeDisk, folders.PurposeMovies, folders.PurposeTV},
-		Notice:      r.URL.Query().Get("notice"),
-		JellyfinURL: s.deps.Settings.GetDefault(ctx, settings.KeyJellyfinURL, ""),
+		Purposes:       []string{folders.PurposeDisk, folders.PurposeMovies, folders.PurposeTV},
+		Notice:         r.URL.Query().Get("notice"),
+		FoldersManaged: s.deps.Folders.Managed(),
+		JellyfinURL:    s.deps.Settings.GetDefault(ctx, settings.KeyJellyfinURL, ""),
 	}
 	view.QbitURL = s.deps.Settings.GetDefault(ctx, settings.KeyQbitURL, "")
 	view.QbitUser = s.deps.Settings.GetDefault(ctx, settings.KeyQbitUser, "")
@@ -75,6 +76,9 @@ func (s *Server) handleAddFolder(w http.ResponseWriter, r *http.Request) {
 	_, err := s.deps.Folders.Add(r.Context(),
 		r.PostFormValue("label"), r.PostFormValue("path"), r.PostFormValue("purpose"))
 	switch {
+	case errors.Is(err, folders.ErrManaged):
+		s.redirect(w, r, "/settings?notice="+url.QueryEscape("Las carpetas las define el servidor."))
+		return
 	case errors.Is(err, folders.ErrNotADirectory):
 		s.log.Warn("add folder", "error", err)
 		s.redirect(w, r, "/settings?notice="+url.QueryEscape("Esa ruta no existe o no es una carpeta."))

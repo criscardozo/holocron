@@ -138,3 +138,16 @@ func TestParseUnix(t *testing.T) {
 		}
 	}
 }
+
+func TestMountUnitsReadAsTheirFolder(t *testing.T) {
+	t.Parallel()
+	for id, want := range map[string]string{
+		"mnt-biblioteca.mount": "biblioteca (montaje)",
+		"mnt-disco4.mount":     "disco4 (montaje)",
+		"jellyfin.service":     "jellyfin",
+	} {
+		if got := displayName(id); got != want {
+			t.Errorf("displayName(%q) = %q, want %q", id, got, want)
+		}
+	}
+}

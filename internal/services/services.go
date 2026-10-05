@@ -147,7 +147,7 @@ func (r *Reader) Read(ctx context.Context) Snapshot {
 
 	for _, u := range r.cfg.Units {
 		id := serviceID(u)
-		name := strings.TrimSuffix(id, ".service")
+		name := displayName(id)
 		blk, ok := state[id]
 		if !ok {
 			s.Units = append(s.Units, Unit{Name: name, Active: "desconocido"})
@@ -187,6 +187,17 @@ func (r *Reader) Read(ctx context.Context) Snapshot {
 	}
 	sort.Slice(s.Timers, func(i, j int) bool { return s.Timers[i].Name < s.Timers[j].Name })
 	return s
+}
+
+// displayName is how a unit reads on screen. A mount unit's name is its path
+// with dashes ("mnt-biblioteca.mount"), which says less than the folder's own
+// name and wraps badly; it becomes "biblioteca (montaje)".
+func displayName(id string) string {
+	if base, ok := strings.CutSuffix(id, ".mount"); ok {
+		parts := strings.Split(base, "-")
+		return parts[len(parts)-1] + " (montaje)"
+	}
+	return strings.TrimSuffix(id, ".service")
 }
 
 func serviceID(u string) string {

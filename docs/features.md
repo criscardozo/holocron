@@ -870,3 +870,21 @@ simplemente no se apaga, y del lado de Holocron eso se ve igual que un pedido
 perdido. Así que los scripts dejan su respuesta en `.last-action.json` y la
 pantalla de Gestión la muestra, con el motivo, durante 24 horas.
 
+## Carpetas que define el servidor
+
+Con `HOLOCRON_MEDIA_FOLDERS` el servidor fija las carpetas vigiladas, igual que
+las claves: Ajustes las muestra como «gestionadas por el servidor» y deja de
+ofrecer agregar o quitar. El formato es `etiqueta:uso:ruta`, separado por `;`,
+con uso `disk`, `movies` o `tv`:
+
+```
+Películas:movies:/mnt/biblioteca/Peliculas;Series:tv:/mnt/biblioteca/Series;Disco4:disk:/mnt/disco4
+```
+
+La lista se reconcilia en la base al arrancar, y no se guarda aparte, porque el
+último escaneo de disco está atado al id de cada carpeta: una carpeta que
+conserva su ruta conserva su id y su escaneo. **Las rutas no se verifican al
+arrancar**: Holocron tiene que levantar aunque un disco USB se haya caído del
+bus, que es justo cuando más hacen falta sus pantallas, y la de disco ya dice
+que la carpeta no está disponible.
+

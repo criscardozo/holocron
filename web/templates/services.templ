@@ -48,11 +48,11 @@ templ ServicesLive(v ServicesView) {
 						for _, u := range v.Units {
 							<li>
 								<span class="stat-key mono">{ u.Name }</span>
-								<span class="stat-val">
-									<span class={ "badge", templ.KV("badge-yes", u.OK), templ.KV("badge-no", !u.OK) }>{ u.State }</span>
+								<span class="svc-state">
 									if u.Since != "" {
-										<span class="muted">{ u.Since }</span>
+										<span class="svc-since">{ u.Since }</span>
 									}
+									<span class={ "badge", templ.KV("badge-yes", u.OK), templ.KV("badge-no", !u.OK) }>{ u.State }</span>
 								</span>
 							</li>
 						}

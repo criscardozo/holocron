@@ -92,7 +92,9 @@ templ HardwareLive(v HardwareView) {
 						<span class="stat-key mono">
 							{ l.Name }
 							if !l.Up {
-								<span class="badge badge-no">caído</span>
+								// Grey, not red: an interface with no link is usually one
+								// nobody uses, such as Wi-Fi on a machine on a cable.
+								<span class="badge badge-neutral">sin enlace</span>
 							} else if l.Speed != "" {
 								<span class="muted">{ l.Speed }</span>
 							}

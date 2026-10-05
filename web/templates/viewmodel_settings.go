@@ -3,13 +3,16 @@ package templates
 // SettingsView is the settings page: the list of watched folders and a form to
 // add more.
 type SettingsView struct {
-	Folders     []SettingsFolderRow
-	Purposes    []string
-	Notice      string
-	JellyfinURL string
-	QbitURL     string
-	QbitUser    string
-	QbitSet     bool
+	Folders []SettingsFolderRow
+	// FoldersManaged means the server configures the folders
+	// (HOLOCRON_MEDIA_FOLDERS), so the list is shown but not edited.
+	FoldersManaged bool
+	Purposes       []string
+	Notice         string
+	JellyfinURL    string
+	QbitURL        string
+	QbitUser       string
+	QbitSet        bool
 	// APITokenSet reports whether a JSON API token exists. The token itself is
 	// never shown again: only its digest is stored.
 	APITokenSet bool

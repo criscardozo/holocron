@@ -24,7 +24,8 @@ func newFakeHost(t *testing.T) fakeHost {
 		"sys/class/net/lo/statistics/rx_bytes":                 "999\n",
 		"sys/class/net/lo/statistics/tx_bytes":                 "999\n",
 		"sys/block/nvme0n1/device/model":                       "WDC PC SN530\n",
-		"sys/block/sda/device/model":                           "ST4000LM024\n",
+		"sys/block/sda/device/model":                           "EZRX-00D8PB0\n",
+		"sys/block/sda/device/vendor":                          "WDC WD30\n",
 		"sys/block/zram0/mm_stat":                              "4000000 1000000 1200000 0 0 0 0 0\n",
 		"sys/block/zram0/disksize":                             "4294967296\n",
 		"sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq": "3900000\n",
@@ -132,6 +133,11 @@ func TestSampleReportsRatesBetweenTwoReadings(t *testing.T) {
 	}
 	if d := s.Disks[1]; d.ReadBps != 0 || d.BusyPct != 0 {
 		t.Errorf("an idle disk must read as idle: %+v", d)
+	}
+	// A USB bridge splits the model across vendor and model; alone, the
+	// second half is a string nobody recognises.
+	if got := s.Disks[1].Model; got != "WDC WD30EZRX-00D8PB0" {
+		t.Errorf("USB disk model = %q", got)
 	}
 
 	if s.Memory.Total != 20328448*1024 || s.Memory.ZramData != 4000000 || s.Memory.ZramStored != 1200000 {

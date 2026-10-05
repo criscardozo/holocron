@@ -33,10 +33,13 @@ templ settingsContent(v SettingsView) {
 			} else {
 				<div>
 					for _, f := range v.Folders {
-						@folderRow(f)
+						@folderRow(f, v.FoldersManaged)
 					}
 				</div>
 			}
+			if v.FoldersManaged {
+				<p class="muted">Gestionadas por el servidor: las define Ginebra y no se editan desde acá.</p>
+			} else {
 			<form class="add-row" method="post" action="/settings/folders" hx-post="/settings/folders" hx-target="body">
 				<input class="input" type="text" name="label" required placeholder="Etiqueta (Películas)"/>
 				<input class="input" type="text" name="path" required placeholder="/ruta/a/la/carpeta"/>
@@ -50,6 +53,7 @@ templ settingsContent(v SettingsView) {
 					Agregá carpeta
 				</button>
 			</form>
+			}
 		</div>
 
 		<div class="card elev-sm block">
@@ -212,16 +216,18 @@ templ CredStatus(ok bool, detail string) {
 	}
 }
 
-templ folderRow(f SettingsFolderRow) {
+templ folderRow(f SettingsFolderRow, managed bool) {
 	<div class="folder-row">
 		<span class="badge badge-neutral">{ f.Label }</span>
 		<span class="mono">{ f.Path }</span>
-		<form method="post" action="/settings/folders/delete" hx-post="/settings/folders/delete" hx-confirm="¿Quitar esta carpeta?" hx-target="body">
-			<input type="hidden" name="id" value={ intToStr(f.ID) }/>
-			<button type="submit" class="btn btn-icon btn-danger" aria-label="Quitar">
-				@IconSm("trash")
-			</button>
-		</form>
+		if !managed {
+			<form method="post" action="/settings/folders/delete" hx-post="/settings/folders/delete" hx-confirm="¿Quitar esta carpeta?" hx-target="body">
+				<input type="hidden" name="id" value={ intToStr(f.ID) }/>
+				<button type="submit" class="btn btn-icon btn-danger" aria-label="Quitar">
+					@IconSm("trash")
+				</button>
+			</form>
+		}
 	</div>
 }
 

@@ -371,9 +371,17 @@ type Disk struct {
 	BusyPct float64
 }
 
+// diskModel is the disk's model as the kernel knows it. USB-to-SATA bridges
+// split it: /sys says vendor "WDC WD30" and model "EZRX-00D8PB0", and the model
+// alone is a string nobody recognises. Vendors that are only the bridge's
+// generic "ATA" are left off.
 func diskModel(name string) string {
 	m, _ := readTrim(filepath.Join(sysRoot, "block", name, "device/model"))
-	return m
+	v, _ := readTrim(filepath.Join(sysRoot, "block", name, "device/vendor"))
+	if v == "" || v == "ATA" || strings.HasPrefix(m, v) {
+		return m
+	}
+	return v + m
 }
 
 // Battery is the laptop's battery, which on Ginebra is the UPS.
