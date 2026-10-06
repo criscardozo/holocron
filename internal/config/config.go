@@ -5,6 +5,8 @@ package config
 
 import (
 	"flag"
+	"fmt"
+	"github.com/cristian/holocron/internal/version"
 	"os"
 	"path/filepath"
 	"strings"
@@ -91,7 +93,22 @@ func Load() Config {
 	flag.StringVar(&c.Addr, "addr", c.Addr, "listen address (host:port)")
 	flag.StringVar(&c.DBPath, "db", c.DBPath, "path to the SQLite database file")
 	flag.StringVar(&c.LogLevel, "log-level", c.LogLevel, "log level: debug, info, warn, error")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
+
+	// Both before anything is opened: run by hand to check the version, the
+	// binary used to start a server instead, and on the way create a database
+	// in the home of whoever ran it. A stray argument ("holocron version") is
+	// refused for the same reason rather than ignored.
+	if *showVersion {
+		fmt.Println(version.Current())
+		os.Exit(0)
+	}
+	if flag.NArg() > 0 {
+		fmt.Fprintf(os.Stderr, "holocron: unexpected argument %q (flags only; -version prints the version)\n", flag.Arg(0))
+		flag.Usage()
+		os.Exit(2)
+	}
 
 	return c
 }
