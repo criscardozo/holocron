@@ -11,6 +11,7 @@ templ ServicesPage(v ServicesView) {
 			</div>
 		</div>
 		<div hx-ext="sse" sse-connect="/events/services">
+			<div class="sr-only" aria-live="polite" sse-swap="services-alert" hx-swap="innerHTML"></div>
 			<div sse-swap="services" hx-swap="innerHTML">
 				@ServicesLive(v)
 			</div>

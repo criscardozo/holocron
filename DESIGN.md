@@ -19,6 +19,10 @@ colors:
   luz-ok: "#34d399"
   luz-alarma: "#f43f5e"
   luz-aviso: "#facc15"
+  luz-alarma-texto: "#fb7185"
+  cielo: "#0ea5e9"
+  texto-suave: "color-mix(in srgb, #eef1f6 65%, transparent)"
+  texto-tenue: "color-mix(in srgb, #eef1f6 55%, transparent)"
 typography:
   display:
     fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
@@ -172,9 +176,9 @@ facetas lila y rosa, y tres luces de estado que se encienden sólo cuando hace f
 - **Violeta Ginebra** (#a78bfa): el acento de la portada de Ginebra. Botones
   principales (en el borde y el texto, nunca de relleno), el link activo del menú,
   las barras de progreso, el foco del teclado y el número de lo que pide atención.
-- **Lila faceta** (#c084fc): la segunda luz del acento. La etiqueta «GINEBRA», el
-  kicker sobre los títulos, los textos de párrafo que van en acento (más legibles
-  que el violeta puro) y los avisos que no son alarma.
+- **Lila faceta** (#c084fc): la segunda luz del acento. La etiqueta «GINEBRA», los
+  textos de párrafo que van en acento (más legibles que el violeta puro) y los
+  avisos que no son alarma.
 - **Violeta profundo** (#7c3aed): el extremo oscuro de los degradados de los íconos
   y de las barras «calientes».
 
@@ -195,15 +199,19 @@ facetas lila y rosa, y tres luces de estado que se encienden sólo cuando hace f
   secundarios, filas.
 - **Superficie alta** (#1d2432): placeholders de pósters, barras de trabajos en
   curso, el hover de lo que ya es superficie.
-- **Texto** (#eef1f6): todo el texto. Los textos secundarios son este mismo color
-  mezclado con el fondo (al 52–62 %), no un gris aparte.
+- **Texto** (#eef1f6): todo el texto. Los secundarios son este mismo color con
+  transparencia, en dos pasos y no en opacidades sueltas: **texto suave** (65 %)
+  para rótulos y claves, y **texto tenue** (55 %) para lo que acompaña a un dato.
+  Los dos pasan AA (7,5:1 y 5,5:1).
 - **Borde fino** (blanco al 9 %): el borde de todo panel, campo y botón secundario.
 - **Vidrio** (rgba(24, 29, 40, .72)) y **Vidrio encendido** (rgba(32, 39, 54, .9)):
   los paneles sobre el mural, en reposo y al pasar el mouse.
 
 ### Luces de estado
 - **Luz ok** (#34d399): en línea, todo arriba, disponible.
-- **Luz de alarma** (#f43f5e): caído, falló, sin luz, borrar.
+- **Luz de alarma** (#f43f5e): caído, falló, sin luz, borrar. Sobre su propio
+  fondo rojo, el texto chico va en **alarma para texto** (#fb7185), que llega a
+  5,7:1 donde el rojo base no pasa de 4,2:1.
 - **Luz de aviso** (#facc15): temperatura alta y lo que conviene mirar.
 
 ### Named Rules
@@ -231,7 +239,7 @@ disco y velocidades.
   baldosa y de cada indicador. Es la voz principal del sistema.
 - **Title** (600, 15–17px): títulos de panel y de sección.
 - **Body** (400, 15px, 1.55): el texto corrido y las filas de datos.
-- **Label** (600, 10.5–12px, 0.14–0.16em, mayúsculas): kickers, grupos del menú,
+- **Label** (600, 11–12px, 0.14–0.16em, mayúsculas): grupos del menú y
   encabezados de tabla. Los textos de apoyo bajo un número van en 12–13px sin
   mayúsculas.
 
@@ -239,6 +247,10 @@ disco y velocidades.
 **The Tabular Numbers Rule.** Todo número que se actualiza o se compara lleva
 cifras tabulares (`font-variant-numeric: tabular-nums`): los dígitos no bailan
 cuando el valor cambia en vivo.
+
+**The 11px Floor Rule.** Ningún texto baja de 11px: ni insignias, ni rótulos, ni
+la etiqueta «GINEBRA». Lo que se lee (pies de póster, rutas, explicaciones) va en
+12px como mínimo.
 
 **The One Family Rule.** No se suma un webfont. La fuente del sistema es la de la
 portada y no le agrega peso al binario.
@@ -249,6 +261,9 @@ Una barra lateral fija de 236px (la marca y el menú en cuatro grupos: Ahora,
 Biblioteca, Descargas, Equipo) y el contenido a la derecha, con un ancho máximo de
 1240px y 32px de margen. Inicio cambia el modelo: el contenido se centra, como la
 portada, con el nombre arriba y las baldosas en una grilla de hasta 980px.
+
+En pantallas táctiles, todo lo que se toca mide al menos 44px de alto (links
+del menú, botones, chips, campos); con mouse, los controles quedan más densos.
 
 Las grillas se acomodan solas (`auto-fill`/`auto-fit` con mínimos de 140–340px
 según el contenido) en vez de fijar columnas. La escala de espacios es de 4px (4,
@@ -265,7 +280,9 @@ Sin sombras. La profundidad sale de tres capas: el mural de pósters al fondo
 (opacidad .34 en Inicio y .16 en el resto, bajo un velo que oscurece donde va el
 contenido), los paneles de vidrio con desenfoque de 14px encima, y el borde fino
 que recorta cada panel. Un panel se levanta sólo en el hover de una baldosa: sube
-4px y su vidrio se aclara, sin sombra.
+4px y su vidrio se aclara, sin sombra. Por debajo de 900px el vidrio se aplana a
+la superficie sólida: ahí el velo deja casi nada del mural, y el desenfoque es
+trabajo que el teléfono paga en cada cuadro del scroll.
 
 ### Named Rules
 **The No-Shadow Rule.** Ningún `box-shadow` de profundidad. Si algo necesita
@@ -335,11 +352,19 @@ sube 4px y el borde se pone violeta. Si algo pide atención, el número pasa a l
 faceta y el borde también; si el área no está configurada, la baldosa baja a
 opacidad .55.
 
+### Movimiento
+Poco y con sentido: el cambio de estado de botones y links (.15s), la baldosa que
+sube al pasar el mouse (.18s), el spinner de un trabajo y el punto «en vivo»
+que late. Con «reducir movimiento», lo que se mueve en el espacio se detiene y lo
+que dice un estado lo sigue diciendo: el punto queda fijo, la baldosa cambia su
+borde y su vidrio sin subir, y el spinner late en lugar de girar.
+
 ### Póster
 Proporción 2:3, esquinas de 10px, carga diferida. Sin imagen, la inicial del
 título sobre un degradado de superficie alta a violeta sombra; nunca un ícono de
 imagen rota. En la cabecera de Actividad, el póster de lo que se reproduce aparece
-dos veces: nítido, con su sombra, y desenfocado de fondo.
+dos veces: nítido, con su sombra, y desenfocado de fondo. El estado («reproduciendo»,
+«en pausa») va como insignia junto a la posición, no como rótulo sobre el título.
 
 ## Do's and Don'ts
 
@@ -356,3 +381,5 @@ dos veces: nítido, con su sombra, y desenfocado de fondo.
 - **Don't** agregar `box-shadow` para dar profundidad.
 - **Don't** encender una luz de estado (verde, rojo, amarillo) cuando no dice nada.
 - **Don't** sumar un webfont ni una segunda familia tipográfica.
+- **Don't** poner un rótulo en mayúsculas encima de un título: el título habla solo, y un estado va como insignia al lado del dato que califica.
+- **Don't** bajar un texto de 11px ni inventar otra opacidad para el texto secundario: hay dos, suave y tenue.

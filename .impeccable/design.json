@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-06T04:35:37+00:00",
+  "generatedAt": "2026-10-06T05:06:04+00:00",
   "title": "Design System: Holocron",
   "extensions": {
     "colorMeta": {
@@ -228,6 +228,26 @@
         "role": "neutral",
         "displayName": "Vidrio encendido",
         "canonical": "rgba(32, 39, 54, 0.9)"
+      },
+      "luz-alarma-texto": {
+        "role": "status",
+        "displayName": "Alarma para texto",
+        "canonical": "#fb7185"
+      },
+      "cielo": {
+        "role": "tertiary",
+        "displayName": "Cielo",
+        "canonical": "#0ea5e9"
+      },
+      "texto-suave": {
+        "role": "neutral",
+        "displayName": "Texto suave",
+        "canonical": "color-mix(in srgb, #eef1f6 65%, transparent)"
+      },
+      "texto-tenue": {
+        "role": "neutral",
+        "displayName": "Texto tenue",
+        "canonical": "color-mix(in srgb, #eef1f6 55%, transparent)"
       }
     },
     "typographyMeta": {
@@ -287,6 +307,11 @@
         "name": "pulse",
         "value": "1.6s ease-in-out infinite",
         "purpose": "Punto «en vivo» de las pantallas por SSE."
+      },
+      {
+        "name": "reduced",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "Detiene lo que se mueve en el espacio (punto en vivo, baldosa que sube, spinner que gira) y conserva los cambios de estado."
       }
     ],
     "breakpoints": [
@@ -411,6 +436,11 @@
         "section": "typography"
       },
       {
+        "name": "The 11px Floor Rule",
+        "body": "Ningún texto baja de 11px: ni insignias, ni rótulos, ni la etiqueta «GINEBRA». Lo que se lee (pies de póster, rutas, explicaciones) va en 12px como mínimo.",
+        "section": "typography"
+      },
+      {
         "name": "The No-Shadow Rule",
         "body": "Ningún `box-shadow` de profundidad. Si algo necesita separarse, se resuelve con vidrio, con el borde fino o con el fondo; nunca con una sombra. Las únicas excepciones son el resplandor violeta de la marca y la sombra del póster en la cabecera de Actividad, que es parte de la imagen.",
         "section": "elevation"
@@ -433,7 +463,9 @@
       "**Don't** rellenar los botones de color sólido: son de contorno fino.",
       "**Don't** agregar `box-shadow` para dar profundidad.",
       "**Don't** encender una luz de estado (verde, rojo, amarillo) cuando no dice nada.",
-      "**Don't** sumar un webfont ni una segunda familia tipográfica."
+      "**Don't** sumar un webfont ni una segunda familia tipográfica.",
+      "**Don't** poner un rótulo en mayúsculas encima de un título: el título habla solo, y un estado va como insignia al lado del dato que califica.",
+      "**Don't** bajar un texto de 11px ni inventar otra opacidad para el texto secundario: hay dos, suave y tenue."
     ]
   }
 }

@@ -128,7 +128,10 @@ En `web/templates/`. Los principales:
   `-ghost`, `-icon`, `-danger`), `.table`, `.input`, `.field`, `.badge`
   (`-yes/-no/-warn/-neutral`), `.st` (pills de torrent), `.notice`, `.tabs`,
   `.bar`/`.bar-fill` (+ `.hot`), `.stat-list`, `.stat-trio`, `.glass-chip`,
-  `.kicker`.
+  `.sr-only` (para lectores de pantalla).
+
+El sistema completo (tokens, reglas y componentes) está en
+[`DESIGN.md`](../DESIGN.md); este documento cuenta cómo está construido.
 
 ## Pósters
 
@@ -177,6 +180,12 @@ solos (`auto-fill` / `auto-fit`). Breakpoints fijos:
 - Todo lo que sea accionable es `<button>` o `<a>` real, nunca un `<div>` con
   `hx-get`: las filas del explorador y de «carpetas más grandes» son botones para
   que se puedan recorrer con el teclado (`button.fs-row` neutraliza el estilo).
+- Un link «Saltar al contenido» antes del menú, que aparece al tomar foco.
+- Los avisos en vivo (corte de luz, servicios caídos) se anuncian al lector de
+  pantalla **una sola vez**: van por un evento SSE aparte (`<evento>-alert`) que
+  el servidor manda sólo cuando cambia su texto, hacia una región `aria-live`.
+- Con `prefers-reduced-motion`, lo que se mueve en el espacio se detiene; en
+  pantallas táctiles, lo que se toca mide 44 px.
 - `aria-current="page"` en el link activo (menú lateral y tabs de Disco), y las tabs
   van en un `<nav aria-label="Carpetas vigiladas">`.
 - Contraste suficiente sobre el fondo oscuro: para texto de párrafo en acento

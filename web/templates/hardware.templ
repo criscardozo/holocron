@@ -15,6 +15,9 @@ templ HardwarePage(v HardwareView) {
 			</div>
 		</div>
 		<div hx-ext="sse" sse-connect="/events/hardware">
+			// Read out once when a power cut starts or changes, not on every
+			// reading: the server sends this event only when its text changes.
+			<div class="sr-only" aria-live="polite" sse-swap="hardware-alert" hx-swap="innerHTML"></div>
 			<div sse-swap="hardware" hx-swap="innerHTML">
 				@HardwareLive(v)
 			</div>

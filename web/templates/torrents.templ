@@ -19,8 +19,11 @@ templ TorrentsPage(v TorrentsPageView) {
 			<p class="muted">Configurá tu qBittorrent en <a href="/settings">Ajustes</a>.</p>
 		} else {
 			<form class="card elev-sm magnet-form" hx-post="/torrents/add" hx-target="#add-status" hx-swap="innerHTML">
-				@Icon("plus")
-				<input class="input" type="text" name="magnet" required placeholder="Pegá un magnet: aquí…"/>
+				<label for="magnet" class="magnet-label">
+					@Icon("plus")
+					<span class="sr-only">Link magnet</span>
+				</label>
+				<input class="input" id="magnet" type="text" name="magnet" required placeholder="Pegá un magnet: aquí…"/>
 				if len(v.Categories) > 0 {
 					<select class="input cat-select" name="category" aria-label="Categoría">
 						<option value="">Sin categoría</option>

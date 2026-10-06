@@ -47,7 +47,7 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " · Holocron · Ginebra</title><meta name=\"htmx-config\" content=\"{&#34;includeIndicatorStyles&#34;:false}\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/holocron.svg\"><link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/static/holocron-32.png\"><link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/static/holocron-180.png\"><link rel=\"stylesheet\" href=\"/static/styles.css\"><script src=\"/static/htmx.min.js\" defer></script><script src=\"/static/htmx-ext-sse.min.js\" defer></script></head><body hx-boost=\"true\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " · Holocron · Ginebra</title><meta name=\"htmx-config\" content=\"{&#34;includeIndicatorStyles&#34;:false}\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/holocron.svg\"><link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/static/holocron-32.png\"><link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/static/holocron-180.png\"><link rel=\"stylesheet\" href=\"/static/styles.css\"><script src=\"/static/htmx.min.js\" defer></script><script src=\"/static/htmx-ext-sse.min.js\" defer></script></head><body hx-boost=\"true\"><a class=\"skip-link\" href=\"#contenido\">Saltar al contenido</a>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -77,7 +77,7 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><aside class=\"side\"><a class=\"side-brand\" href=\"/\" aria-label=\"Holocron · Ginebra\"><img src=\"/static/holocron.svg\" alt=\"\" width=\"34\" height=\"34\"> <span class=\"side-brand-name\">Holocron <span class=\"side-brand-org\">GINEBRA</span></span></a><nav class=\"side-nav\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><aside class=\"side\"><a class=\"side-brand\" href=\"/\" aria-label=\"Holocron · Ginebra\"><img src=\"/static/holocron.svg\" alt=\"\" width=\"34\" height=\"34\"> <span class=\"side-brand-name\">Holocron <span class=\"side-brand-org\">GINEBRA</span></span></a><nav class=\"side-nav\" aria-label=\"Secciones\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -94,7 +94,7 @@ func Layout(title string) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(g.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 51, Col: 43}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 54, Col: 43}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -116,7 +116,7 @@ func Layout(title string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</nav></aside><main class=\"page\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</nav></aside><main class=\"page\" id=\"contenido\" tabindex=\"-1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -170,7 +170,7 @@ func muralWall(urls []string) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(u)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 76, Col: 16}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 79, Col: 16}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 				if templ_7745c5c3_Err != nil {

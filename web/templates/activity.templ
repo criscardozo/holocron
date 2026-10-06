@@ -1,5 +1,7 @@
 package templates
 
+import "strings"
+
 // ActivityPage is what is happening right now: who is watching what, what
 // arrived, what was asked for and what is downloading. Live over /events/activity, like the hardware screen.
 templ ActivityPage(v ActivityView) {
@@ -23,25 +25,18 @@ templ ActivityLive(v ActivityView) {
 		<div class="notice error mb-6">
 			@IconSm("alert")
 			<span>
-				No responden:
-				for i, e := range v.Errors {
-					if i > 0 {
-						,
-					}
-					<strong>{ e }</strong>
-				}
-				. Lo que muestran esas fuentes puede estar desactualizado o faltar.
+				{ notResponding(len(v.Errors)) } <strong>{ strings.Join(v.Errors, ", ") }</strong>. Lo que { showWhat(len(v.Errors)) } puede estar desactualizado o faltar.
 			</span>
 		</div>
 	}
 	if !v.HasJellyfin {
 		<section class="card act-hero act-hero-empty">
-			<span class="kicker">Reproduciendo</span>
+			<h2>Reproduciendo</h2>
 			<p class="muted">Jellyfin no está vinculado. Se configura en <a href="/settings">Ajustes</a>.</p>
 		</section>
 	} else if len(v.Playing) == 0 {
 		<section class="card act-hero act-hero-empty">
-			<span class="kicker">Reproduciendo</span>
+			<h2>Reproduciendo</h2>
 			<p class="act-hero-none">Nadie está mirando nada.</p>
 			if v.Idle > 0 {
 				<p class="muted">{ Plural(v.Idle, "cliente conectado sin reproducir", "clientes conectados sin reproducir") }</p>
@@ -160,13 +155,6 @@ templ actHero(p ActPlaying) {
 		<div class="act-hero-in">
 			@poster(p.Art, p.Title)
 			<div class="act-hero-text">
-				<span class="kicker">
-					if p.Paused {
-						En pausa
-					} else {
-						Reproduciendo
-					}
-				</span>
 				<h2 class="act-hero-title">{ p.Title }</h2>
 				if p.Subtitle != "" {
 					<p class="act-hero-sub">{ p.Subtitle }</p>
@@ -174,6 +162,19 @@ templ actHero(p ActPlaying) {
 				<p class="muted">{ p.Who }</p>
 				@hwBar(p.Width, false)
 				<div class="act-meta">
+					// The state reads beside the position it qualifies, not as a
+					// label stacked over the title.
+					if p.Paused {
+						<span class="badge badge-neutral">
+							@IconSm("pause")
+							en pausa
+						</span>
+					} else {
+						<span class="badge badge-play">
+							@IconSm("play")
+							reproduciendo
+						</span>
+					}
 					<span class="mono num muted">{ p.Position }</span>
 					<span class={ "badge", templ.KV("badge-yes", !p.Transcode), templ.KV("badge-neutral", p.Transcode) }>{ p.Method }</span>
 					if p.Hardware != "" {

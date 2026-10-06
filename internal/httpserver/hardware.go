@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"html"
 	"math"
 	"net/http"
 	"strconv"
@@ -26,18 +27,37 @@ func (s *Server) handleHardwarePage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHardwareEvents(w http.ResponseWriter, r *http.Request) {
 	streamLive(s, w, r, s.deps.Hardware, "hardware", func(v hardware.Snapshot) templ.Component {
 		return templates.HardwareLive(hardwareView(v))
-	})
+	}, hardwareAlert)
+}
+
+// hardwareAlert is what a screen reader should hear about the machine: only a
+// power cut. Everything else on the screen is a reading, not news.
+func hardwareAlert(v hardware.Snapshot) string {
+	b := v.Battery
+	if !b.Discharging() {
+		return ""
+	}
+	msg := fmt.Sprintf("Se cortó la luz: el equipo está andando con la batería, al %d %%.", b.Percent)
+	if b.Left > 0 {
+		msg += " Quedan unos " + system.HumanDuration(b.Left) + "."
+	}
+	return msg
 }
 
 // streamLive sends a hub's readings as Server-Sent Events, one rendered
 // fragment per reading, until the client goes away.
+//
+// announce, when not nil, names what a screen reader should be told. It goes
+// out as its own event, "<event>-alert", and only when its text changes: the
+// readings arrive every couple of seconds, and a live region refilled with
+// each of them would repeat the same alarm until the tab closed.
 //
 // The connection outlives the server's 60 s WriteTimeout by design, so the
 // deadline is pushed forward before each write instead of being dropped: a
 // client that stops reading still gets cut off, just not one that is merely
 // watching. Behind Caddy nothing else is needed — reverse_proxy flushes
 // text/event-stream as it arrives (measured on Ginebra: 29 events in 60 s).
-func streamLive[T any](s *Server, w http.ResponseWriter, r *http.Request, hub *live.Hub[T], event string, render func(T) templ.Component) {
+func streamLive[T any](s *Server, w http.ResponseWriter, r *http.Request, hub *live.Hub[T], event string, render func(T) templ.Component, announce func(T) string) {
 	rc := http.NewResponseController(w)
 	h := w.Header()
 	h.Set("Content-Type", "text/event-stream")
@@ -54,6 +74,7 @@ func streamLive[T any](s *Server, w http.ResponseWriter, r *http.Request, hub *l
 
 	ctx := r.Context()
 	var buf bytes.Buffer
+	var said string
 	for {
 		select {
 		case <-ctx.Done():
@@ -67,6 +88,14 @@ func streamLive[T any](s *Server, w http.ResponseWriter, r *http.Request, hub *l
 			_ = rc.SetWriteDeadline(time.Now().Add(15 * time.Second))
 			if err := writeEvent(w, event, buf.Bytes()); err != nil {
 				return // the client went away
+			}
+			if announce != nil {
+				if a := announce(v); a != said {
+					said = a
+					if err := writeEvent(w, event+"-alert", []byte(html.EscapeString(a))); err != nil {
+						return
+					}
+				}
 			}
 			if err := rc.Flush(); err != nil {
 				return

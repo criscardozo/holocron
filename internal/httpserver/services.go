@@ -21,7 +21,22 @@ func (s *Server) handleServicesPage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleServicesEvents(w http.ResponseWriter, r *http.Request) {
 	streamLive(s, w, r, s.deps.Services, "services", func(v services.Snapshot) templ.Component {
 		return templates.ServicesLive(servicesView(v, s.deps.ServicesConfigured, time.Now()))
-	})
+	}, servicesAlert)
+}
+
+// servicesAlert is what a screen reader should hear: which units are down,
+// said once when that changes.
+func servicesAlert(v services.Snapshot) string {
+	var down []string
+	for _, u := range v.Units {
+		if !u.OK() {
+			down = append(down, u.Name)
+		}
+	}
+	if len(down) == 0 {
+		return ""
+	}
+	return templates.Plural(len(down), "servicio caído", "servicios caídos") + ": " + strings.Join(down, ", ") + "."
 }
 
 func servicesView(sn services.Snapshot, configured bool, now time.Time) templates.ServicesView {

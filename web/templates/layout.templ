@@ -33,6 +33,9 @@ templ Layout(title string) {
 			<script src="/static/htmx-ext-sse.min.js" defer></script>
 		</head>
 		<body hx-boost="true">
+			// Twelve menu links come before the page on every screen; a keyboard
+			// user can skip them. Hidden until it takes focus.
+			<a class="skip-link" href="#contenido">Saltar al contenido</a>
 			@iconSprite()
 			@muralWall(muralFrom(ctx))
 			<div class={ "shell", templ.KV("is-home", title == "Inicio") }>
@@ -44,7 +47,7 @@ templ Layout(title string) {
 							<span class="side-brand-org">GINEBRA</span>
 						</span>
 					</a>
-					<nav class="side-nav">
+					<nav class="side-nav" aria-label="Secciones">
 						for _, g := range navGroups {
 							<div class="side-group">
 								if g.Label != "" {
@@ -57,7 +60,7 @@ templ Layout(title string) {
 						}
 					</nav>
 				</aside>
-				<main class="page">
+				<main class="page" id="contenido" tabindex="-1">
 					{ children... }
 				</main>
 			</div>

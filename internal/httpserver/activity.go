@@ -24,7 +24,7 @@ func (s *Server) handleActivityPage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleActivityEvents(w http.ResponseWriter, r *http.Request) {
 	streamLive(s, w, r, s.deps.Activity, "activity", func(v activity.Snapshot) templ.Component {
 		return templates.ActivityLive(activityView(v, time.Now()))
-	})
+	}, nil)
 }
 
 func activityView(a activity.Snapshot, now time.Time) templates.ActivityView {

@@ -207,3 +207,19 @@ func prefixed(label, v string) string {
 	}
 	return label + v
 }
+
+// notResponding and showWhat agree in number with how many sources failed:
+// "No responde: qBittorrent." reads right; "No responden: qBittorrent." does not.
+func notResponding(n int) string {
+	if n == 1 {
+		return "No responde:"
+	}
+	return "No responden:"
+}
+
+func showWhat(n int) string {
+	if n == 1 {
+		return "muestra esa fuente"
+	}
+	return "muestran esas fuentes"
+}
