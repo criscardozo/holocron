@@ -25,3 +25,6 @@ CLAUDE.md
 
 # Herramientas locales (gstack): reportes y, sobre todo, un token de sesión
 /.gstack/
+
+# Impeccable: la configuración local de cada máquina no va al repo
+/.impeccable/config.local.json
