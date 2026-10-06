@@ -6,6 +6,9 @@
    and the system font stack the portal uses — no webfont to embed. */
 
 :root {
+	/* Native controls (select lists, scrollbars, autofill, date pickers) draw
+	   in the dark scheme instead of flashing white on a dark page. */
+	color-scheme: dark;
 	/* ground — the portal's page and tile colours. Cards are its tiles,
 	   rgba(24,29,40,.72) blurred over the poster wall; the solid surfaces
 	   are the same colour flattened, for controls that sit on a card. */
@@ -26,6 +29,8 @@
 	--color-pink: #f472b6;
 	/* a third tone for the tile icons, beside the G▶'s facets */
 	--color-sky: #0ea5e9;
+	--color-indigo: #4f46e5;
+	--color-ember: #f97316;
 
 	/* text on the dark ground, in two steps rather than seven ad-hoc
 	   alphas: soft for labels and keys (7.5:1 on the sidebar), muted for
@@ -100,8 +105,11 @@ a:hover { color: var(--color-accent-200); }
 .skip-link:focus-visible { top: var(--space-4); }
 main:focus { outline: none; }
 .magnet-label { display: inline-flex; color: var(--text-muted); }
+.manage-action-title { margin: 0; font-size: 15px; font-weight: 600; }
 
-/* The parts the browser draws carry the palette too. */
+/* The parts the browser draws carry the palette too. A placeholder in the
+   browser's own grey reads at 3.9:1 here; the muted text reads at 5.5:1. */
+::placeholder { color: var(--text-muted); opacity: 1; }
 html { scrollbar-color: color-mix(in srgb, var(--color-text) 22%, transparent) transparent; accent-color: var(--color-accent); }
 ::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
 
@@ -488,8 +496,8 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .tone-violet { background: linear-gradient(135deg, var(--color-accent), var(--color-accent-400)); }
 .tone-teal { background: linear-gradient(135deg, var(--ok), var(--color-sky)); }
 .tone-lilac { background: linear-gradient(135deg, var(--color-accent-300), var(--color-pink)); }
-.tone-indigo { background: linear-gradient(135deg, var(--color-accent-400), #4f46e5); }
-.tone-amber { background: linear-gradient(135deg, var(--warn), #f97316); }
+.tone-indigo { background: linear-gradient(135deg, var(--color-accent-400), var(--color-indigo)); }
+.tone-amber { background: linear-gradient(135deg, var(--warn), var(--color-ember)); }
 .tone-sky { background: linear-gradient(135deg, var(--color-sky), var(--color-accent)); }
 .tone-mint { background: linear-gradient(135deg, var(--ok), var(--color-accent)); }
 

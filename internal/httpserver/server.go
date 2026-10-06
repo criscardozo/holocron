@@ -75,7 +75,7 @@ func (s *Server) Handler() http.Handler {
 	if err != nil {
 		panic(err) // embedded layout is fixed at build time
 	}
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(staticFS)))
+	mux.Handle("GET /static/", cacheStatic(http.StripPrefix("/static/", http.FileServerFS(staticFS))))
 
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /art/{kind}/{id}", s.handleArt)

@@ -248,6 +248,16 @@
         "role": "neutral",
         "displayName": "Texto tenue",
         "canonical": "color-mix(in srgb, #eef1f6 55%, transparent)"
+      },
+      "indigo": {
+        "role": "tertiary",
+        "displayName": "Índigo",
+        "canonical": "#4f46e5"
+      },
+      "brasa": {
+        "role": "tertiary",
+        "displayName": "Brasa",
+        "canonical": "#f97316"
       }
     },
     "typographyMeta": {

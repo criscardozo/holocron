@@ -1,7 +1,9 @@
 package httpserver
 
 import (
+	"github.com/cristian/holocron/internal/version"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -172,6 +174,32 @@ func TestNoInlineStylesAnywhere(t *testing.T) {
 		}
 		if strings.Contains(resp.Body, `style="`) {
 			t.Errorf("%s has an inline style, which the CSP silently drops", path)
+		}
+	}
+}
+
+// TestStaticAssetsAreKeptPerRelease. Embedded files have no modification
+// time, so without this the browser fetched ~100 KB on every full page load.
+// A versioned URL is kept for a year; development builds ask every time.
+func TestStaticAssetsAreKeptPerRelease(t *testing.T) {
+	old := version.Version
+	t.Cleanup(func() { version.Version = old })
+	ok := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+
+	cases := []struct {
+		build, url, want string
+	}{
+		{"0.21.1", "/static/styles.css?v=0.21.1", "public, max-age=31536000, immutable"},
+		{"0.21.1", "/static/styles.css?v=0.21.0", "public, max-age=86400"},
+		{"0.21.1", "/static/holocron.svg", "public, max-age=86400"},
+		{"dev", "/static/styles.css?v=dev", "no-cache"},
+	}
+	for _, c := range cases {
+		version.Version = c.build
+		rec := httptest.NewRecorder()
+		cacheStatic(ok).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, c.url, nil))
+		if got := rec.Header().Get("Cache-Control"); got != c.want {
+			t.Errorf("build %s, %s: Cache-Control %q, want %q", c.build, c.url, got, c.want)
 		}
 	}
 }

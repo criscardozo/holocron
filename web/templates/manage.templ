@@ -33,6 +33,7 @@ templ ManageSection(v ManagePageView) {
 		}
 
 		<div class="card elev-sm">
+			<h2 class="sr-only">Estado del equipo</h2>
 			<div class="stat-trio">
 				<div><div class="n">{ v.Host.CPU }</div><div class="cap">CPU</div></div>
 				<div><div class="n">{ v.Host.Temp }</div><div class="cap">temperatura</div></div>
@@ -124,7 +125,7 @@ templ preflight(v ManagePageView) {
 templ actionCard(a ManageActionRow) {
 	<div class="card elev-sm manage-action">
 		<div class="manage-action-text">
-			<strong>{ a.Label }</strong>
+			<h2 class="manage-action-title">{ a.Label }</h2>
 			<span class="muted">{ a.Detail }</span>
 		</div>
 		if a.Destructive {

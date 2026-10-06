@@ -22,6 +22,7 @@ templ QualityPage(v QualityPageView) {
 templ QualityDetailSection(v QualityPageView) {
 	<section id="quality-detail">
 		<div class="card elev-sm stat-band">
+			<h2 class="sr-only">Resumen</h2>
 			<div class="stat-trio">
 				<div>
 					<div class="n warn">{ fmt.Sprintf("%d", v.Total) }</div>
@@ -93,6 +94,7 @@ templ QualityDetailSection(v QualityPageView) {
 }
 
 templ qualityGroup(g QualityGroupView, admin bool) {
+	<h2 class="sr-only">{ g.Label }</h2>
 	if g.Hint != "" {
 		<p class="muted mb-6">{ g.Hint }</p>
 	}

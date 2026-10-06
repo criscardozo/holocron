@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"compress/gzip"
+	"github.com/cristian/holocron/internal/version"
 	"net/http"
 	"net/url"
 	"strings"
@@ -194,4 +195,28 @@ func (r *statusRecorder) Write(b []byte) (int, error) {
 		r.wrote = true
 	}
 	return r.ResponseWriter.Write(b)
+}
+
+// cacheStatic lets the browser keep the embedded assets. Embedded files carry
+// no modification time, so the file server sends neither
+// Last-Modified nor an ETag, and without Cache-Control a full page load fetched
+// the stylesheet and htmx again every time, about 100 KB. The layout links them
+// with the build's version in the query, so a URL names one exact file: it can
+// be kept for a year, and a new release changes the URL. Development builds
+// share a version across edits, so there the browser asks every time.
+func cacheStatic(next http.Handler) http.Handler {
+	immutable := !strings.HasPrefix(version.Current(), "dev")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case immutable && r.URL.Query().Get("v") == version.Current():
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		case immutable:
+			// The icons are linked without a version (browsers and iOS keep
+			// their own copies of those); a day is plenty for them.
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+		default:
+			w.Header().Set("Cache-Control", "no-cache")
+		}
+		next.ServeHTTP(w, r)
+	})
 }

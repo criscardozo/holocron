@@ -1,7 +1,10 @@
 package templates
 
 import (
+	"net/url"
+
 	"context"
+	"github.com/cristian/holocron/internal/version"
 	"strconv"
 	"strings"
 )
@@ -222,4 +225,11 @@ func showWhat(n int) string {
 		return "muestra esa fuente"
 	}
 	return "muestran esas fuentes"
+}
+
+// asset is a static file's URL with the build's version in it, so the
+// browser can keep it for a year and a release still reaches it (see
+// cacheStatic in internal/httpserver).
+func asset(name string) string {
+	return "/static/" + name + "?v=" + url.QueryEscape(version.Current())
 }

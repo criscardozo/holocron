@@ -191,6 +191,14 @@ solos (`auto-fill` / `auto-fit`). Breakpoints fijos:
 - Contraste suficiente sobre el fondo oscuro: para texto de párrafo en acento
   usar `--color-accent-300`, no el acento puro.
 
+## Archivos estáticos
+
+El CSS y los `.js` se enlazan con la versión en la URL (`/static/styles.css?v=0.21.1`,
+helper `asset()`), y con esa versión se sirven como inmutables por un año: los
+archivos embebidos no tienen fecha, así que sin esto el navegador los volvía a
+bajar en cada carga completa (unos 100 KB, medido en Ginebra). Una release nueva
+cambia la URL. En compilaciones de desarrollo se piden siempre (`no-cache`).
+
 ## Al tocar la UI
 
 ```sh

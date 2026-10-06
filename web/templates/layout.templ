@@ -24,13 +24,13 @@ templ Layout(title string) {
 			<link rel="icon" type="image/svg+xml" href="/static/holocron.svg"/>
 			<link rel="icon" type="image/png" sizes="32x32" href="/static/holocron-32.png"/>
 			<link rel="apple-touch-icon" sizes="180x180" href="/static/holocron-180.png"/>
-			<link rel="stylesheet" href="/static/styles.css"/>
-			<script src="/static/htmx.min.js" defer></script>
+			<link rel="stylesheet" href={ asset("styles.css") }/>
+			<script src={ asset("htmx.min.js") } defer></script>
 			// htmx-ext-sse 2.2.4, vendored from npm with its sha512 integrity
 			// checked. Deferred scripts run in document order, so it registers
 			// after htmx itself. It is what lets the live screens receive data
 			// over one connection instead of polling every few seconds.
-			<script src="/static/htmx-ext-sse.min.js" defer></script>
+			<script src={ asset("htmx-ext-sse.min.js") } defer></script>
 		</head>
 		<body hx-boost="true">
 			// Twelve menu links come before the page on every screen; a keyboard

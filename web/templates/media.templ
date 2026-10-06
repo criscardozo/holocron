@@ -38,6 +38,7 @@ templ MediaPage(v MediaPageView) {
 templ MediaDetailSection(v MediaPageView) {
 	<section id="media-detail">
 		<div class="card stat-band">
+			<h2 class="sr-only">Resumen</h2>
 			<div class="stat-trio">
 				<div><div class="n">{ fmt.Sprintf("%d", v.Total) }</div><div class="cap">ítems</div></div>
 				<div><div class="n">{ fmt.Sprintf("%d", v.Movies) }</div><div class="cap">películas</div></div>
@@ -61,6 +62,7 @@ templ MediaDetailSection(v MediaPageView) {
 			// Posters, not a table: this is a film library, and a cover is
 			// found at a glance where a title has to be read. The path stays
 			// in the tooltip for when it is the path that matters.
+			<h2 class="sr-only">Biblioteca</h2>
 			<ul class="poster-grid">
 				for _, it := range v.Items {
 					<li class="poster-card" title={ it.Path }>

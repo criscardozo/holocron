@@ -21,6 +21,8 @@ colors:
   luz-aviso: "#facc15"
   luz-alarma-texto: "#fb7185"
   cielo: "#0ea5e9"
+  indigo: "#4f46e5"
+  brasa: "#f97316"
   texto-suave: "color-mix(in srgb, #eef1f6 65%, transparent)"
   texto-tenue: "color-mix(in srgb, #eef1f6 55%, transparent)"
 typography:
@@ -213,6 +215,15 @@ facetas lila y rosa, y tres luces de estado que se encienden sólo cuando hace f
   fondo rojo, el texto chico va en **alarma para texto** (#fb7185), que llega a
   5,7:1 donde el rojo base no pasa de 4,2:1.
 - **Luz de aviso** (#facc15): temperatura alta y lo que conviene mirar.
+
+### Tonos de ícono
+- **Cielo** (#0ea5e9), **Índigo** (#4f46e5) y **Brasa** (#f97316): sólo el segundo
+  extremo de los degradados de los íconos de las baldosas, junto a una faceta del
+  G▶. Nunca texto ni acción.
+
+La página declara el esquema oscuro (`color-scheme: dark`), así que los controles
+que dibuja el navegador (listas desplegables, barras de scroll, autocompletado)
+salen oscuros, y el texto guía de los campos usa el texto tenue.
 
 ### Named Rules
 **The One Voice Rule.** El violeta Ginebra es el único acento de interacción. El

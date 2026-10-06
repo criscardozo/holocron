@@ -18,6 +18,7 @@ templ TorrentsPage(v TorrentsPageView) {
 		if !v.Configured {
 			<p class="muted">Configurá tu qBittorrent en <a href="/settings">Ajustes</a>.</p>
 		} else {
+			<h2 class="sr-only">Agregar un torrent</h2>
 			<form class="card elev-sm magnet-form" hx-post="/torrents/add" hx-target="#add-status" hx-swap="innerHTML">
 				<label for="magnet" class="magnet-label">
 					@Icon("plus")
@@ -44,6 +45,7 @@ templ TorrentsPage(v TorrentsPageView) {
 // seconds.
 templ TorrentsTable(v TorrentsPageView) {
 	<div id="torrents-table" hx-get="/torrents/list" hx-trigger={ "every " + v.RefreshEvery } hx-swap="outerHTML">
+		<h2 class="sr-only">Torrents en qBittorrent</h2>
 		if v.Err != "" {
 			<p class="error">{ v.Err }</p>
 		} else if len(v.Rows) == 0 {
