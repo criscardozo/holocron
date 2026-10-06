@@ -36,6 +36,7 @@ import (
 	"github.com/cristian/holocron/internal/seerr"
 	"github.com/cristian/holocron/internal/services"
 	"github.com/cristian/holocron/internal/settings"
+	"github.com/cristian/holocron/internal/stack"
 	"github.com/cristian/holocron/internal/torrents"
 	"github.com/cristian/holocron/internal/updates"
 	"github.com/cristian/holocron/internal/widgets"
@@ -142,6 +143,8 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Updates:            updatesService,
 		Power:              powerService,
 		Art:                artStore,
+		Versions:           newVersions(libraryService, torrentsService, settingsStore),
+		DirectHost:         directHost(cfg.DirectHost),
 	})
 
 	httpSrv := &http.Server{
@@ -245,4 +248,45 @@ func newActivityHub(lib *library.Service, tor *torrents.Service, st *settings.St
 		return src
 	})
 	return live.NewHub(5*time.Second, sampler.Sample)
+}
+
+// newVersions reads each app's version through the clients Holocron already
+// has, with the keys the server provides. Trailarr is left out: its API wants
+// a login Holocron does not hold.
+func newVersions(lib *library.Service, tor *torrents.Service, st *settings.Store) *stack.Versions {
+	fetch := map[string]stack.VersionFunc{
+		"jellyfin": func(ctx context.Context) (string, error) {
+			info, err := lib.Reachable(ctx)
+			return info.Version, err
+		},
+		"seerr": seerr.New(seerrAddr, "").Version,
+		"qbittorrent": func(ctx context.Context) (string, error) {
+			if !tor.Configured(ctx) {
+				return "", nil
+			}
+			return tor.Version(ctx)
+		},
+	}
+	if key, ok := st.Credential(settings.CredRadarr); ok {
+		fetch["radarr"] = arr.New(arr.Radarr, radarrAddr, key).Version
+	}
+	if key, ok := st.Credential(settings.CredSonarr); ok {
+		fetch["sonarr"] = arr.New(arr.Sonarr, sonarrAddr, key).Version
+	}
+	if key, ok := st.Credential(settings.CredProwlarr); ok {
+		fetch["prowlarr"] = arr.New(arr.Prowlarr, prowlarrAddr, key).Version
+	}
+	if key, ok := st.Credential(settings.CredBazarr); ok {
+		fetch["bazarr"] = bazarr.New(bazarrAddr, key).Version
+	}
+	return stack.NewVersions(fetch)
+}
+
+// directHost is the configured home-network address, or the one found on the
+// machine's interfaces.
+func directHost(configured string) string {
+	if configured != "" {
+		return configured
+	}
+	return stack.DirectHost()
 }

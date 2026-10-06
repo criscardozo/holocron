@@ -712,7 +712,7 @@ func (s *Server) apiServices(w http.ResponseWriter, r *http.Request) {
 // apiHome is the start screen: the same view the web's start page renders,
 // plus the mural's posters, which the web takes from its layout instead.
 func (s *Server) apiHome(w http.ResponseWriter, r *http.Request) {
-	v := s.homeView(r.Context())
+	v := s.homeView(r.Context(), r.Host)
 	// The web's wall repeats posters to fill a wide screen; the app lays out
 	// its own and needs each one once.
 	seen := map[string]bool{}

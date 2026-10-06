@@ -122,6 +122,13 @@ En `web/templates/`. Los principales:
   scroll horizontal (Agregado hace poco) o grilla (Medios), siempre con
   `loading="lazy"`. Sin imagen, la inicial del título sobre un degradé.
 - **`kpi(...)`** — número de cabecera con icono y aclaración (Hardware).
+- **`homeApps`, `.app-card`, `.app-chip`** — las puertas a las otras apps del
+  servidor: tarjeta grande para Jellyfin y Seerr, chip para el resto. Son links a
+  otros hosts, con `hx-boost="false"`.
+- **`StackPage`** — cada app con su logo, propósito, links y estado; las dos de
+  todos los días arriba, en grande.
+- **`moreLink`** — el «Ver …» de una sección, con el chevron del sprite y no un
+  carácter que el lector de pantalla leería en voz alta.
 - **`JobStatus` / `ScanStatus`** — feedback de trabajos en background: spinner +
   polling cada 2 s, y al terminar recarga la sección con `hx-select`.
 - Utilitarios: `.card`, `.btn` (`-primary` outline de acento, `-secondary`,

@@ -19,8 +19,8 @@ reutiliza. El orden de construcción está en [roadmap.md](roadmap.md).
 
 ## Feature 1 — Inicio
 
-Pantalla principal, armada como la portada de Ginebra: el nombre sobre el mural
-de pósters, una fila de lecturas (en línea desde hace cuánto, CPU, temperatura,
+Pantalla principal, armada como la portada de Ginebra: la marca de Ginebra sobre
+el mural de pósters, una fila de lecturas (en línea desde hace cuánto, CPU, temperatura,
 RAM, batería), la tira «Atención» y **una baldosa por área**: Actividad,
 Hardware, Servicios, Disco, Medios, Calidad, Nombres y Torrents. Cada baldosa es
 el link a su pantalla y dice, en un número, si vale la pena entrar. Cierra con
@@ -934,3 +934,32 @@ reproduciendo, los pedidos de Seerr y la grilla de Medios.
 - **Lo que falta** se sirve como un SVG en blanco, no como un 404, y se recuerda
   una hora. Detalle en [ui.md](ui.md#pósters).
 
+---
+
+## Feature 13 — La puerta del servidor: apps y Stack
+
+Desde octubre de 2026 Holocron reemplaza la portada estática de Ginebra: el
+proxy sirve la misma app en `merli.store` y en `holocron.merli.store`.
+
+- **Inicio** abre con la marca de Ginebra (`ginebra-marca.svg`, embebida) y, antes
+  de lo agregado hace poco, una sección **Apps**: Jellyfin y Seerr como tarjetas
+  grandes y el resto (Radarr, Sonarr, Prowlarr, Bazarr, Trailarr, qBittorrent) como
+  chips, con la descripción en el `title`.
+- **Stack** (`/stack`, en el menú debajo de Inicio): cada app con su logo, para qué
+  sirve, el link por nombre, el acceso directo por IP y puerto, la versión que
+  corre y el estado de su unidad de systemd (de lo que ya lee Servicios).
+- **Los links salen del host del pedido**: `holocron.merli.store` y `merli.store`
+  dan los dos `https://<app>.merli.store/`. Ningún link, redirect ni cookie lleva
+  el host de Holocron, así que anda igual bajo los dos nombres.
+- **El acceso directo** usa la IP de la red de casa: la primera IPv4 privada de una
+  interfaz activa (en Ginebra, `192.168.0.2`; la de Tailscale no es privada), o
+  `HOLOCRON_DIRECT_HOST` si se configura. Sin ninguna, la página no lo muestra.
+- **Versiones**: se piden a cada app con los clientes que Holocron ya tiene
+  (`system/status` de las *arr, `/api/v1/status` de Seerr, el de Bazarr, la info
+  pública de Jellyfin y `app/version` de qBittorrent), todas a la vez, con 3 s por
+  app, y se guardan media hora. Trailarr no tiene: su API pide un login que
+  Holocron no tiene.
+- **Logos** embebidos en `web/static/apps/`, los PNG reducidos a 96 px (se muestran
+  a 48).
+- La ruta `/jellyfin/` de `merli.store` la sirve el proxy (el fondo del login de
+  Jellyfin) y nunca llega a Holocron: no usarla.

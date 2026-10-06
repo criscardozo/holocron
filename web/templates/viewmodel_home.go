@@ -10,6 +10,8 @@ type HomeView struct {
 	Attn   []AttnChip  `json:"attention"`
 	Tiles  []Tile      `json:"tiles"`
 	Recent []ActRecent `json:"recent"`
+	// Apps are the doors to the rest of the stack, in the order they are used.
+	Apps []AppLink `json:"apps"`
 	// Mural is filled in for the app only: the web draws its wall from the
 	// request context, in the layout.
 	Mural []string `json:"mural,omitempty"`

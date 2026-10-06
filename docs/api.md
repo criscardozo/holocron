@@ -251,7 +251,7 @@ Jellyfin vinculada no es administradora (releer metadata lo requiere).
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| `GET` | `/api/v1/home` | El Inicio: baldosas por área, lecturas, avisos, lo agregado hace poco y los pósters del mural |
+| `GET` | `/api/v1/home` | El Inicio: baldosas por área, lecturas, avisos, lo agregado hace poco, los pósters del mural y los links a las apps (`apps`, sobre el dominio del pedido) |
 | `GET` | `/api/v1/hardware` | CPU por núcleo, memoria, red, discos y batería |
 | `GET` | `/api/v1/activity` | Reproducciones, descargas, pedidos de Seerr, calendario y avisos |
 | `GET` | `/api/v1/services` | Unidades de systemd, tareas programadas y SMART |

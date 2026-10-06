@@ -228,3 +228,15 @@ func (c *Client) Count(ctx context.Context) (Counts, error) {
 	err := c.get(ctx, "/api/v1/request/count", nil, &n)
 	return n, err
 }
+
+// Version is the running Seerr's version. The status endpoint needs no key,
+// but sending it costs nothing and keeps one path for every call.
+func (c *Client) Version(ctx context.Context) (string, error) {
+	var st struct {
+		Version string `json:"version"`
+	}
+	if err := c.get(ctx, "/api/v1/status", nil, &st); err != nil {
+		return "", err
+	}
+	return st.Version, nil
+}

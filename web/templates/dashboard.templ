@@ -6,8 +6,11 @@ package templates
 templ Home(v HomeView) {
 	@Layout("Inicio") {
 		<section class="home-hero">
-			<h1 class="home-title">Holocron</h1>
-			<p class="home-sub">El panel de { v.Machine }</p>
+			// Ginebra's own mark, as on the portal this page replaced: under
+			// merli.store this is the server's front door, not only its panel.
+			<h1 class="home-marca">
+				<img src="/static/ginebra-marca.svg" alt="Ginebra, HTPC Server" width="476" height="128"/>
+			</h1>
 			<div class="home-status">
 				for _, st := range v.Status {
 					<span class={ "glass-chip", templ.KV("tone-ok", st.Tone == "ok"), templ.KV("tone-warn", st.Tone == "warn"), templ.KV("tone-danger", st.Tone == "danger") }>{ st.Text }</span>
@@ -26,11 +29,14 @@ templ Home(v HomeView) {
 				@tile(t)
 			}
 		</div>
+		if len(v.Apps) > 0 {
+			@homeApps(v.Apps)
+		}
 		if len(v.Recent) > 0 {
 			<section class="home-recent">
 				<header class="section-head">
 					<h2>Agregado hace poco</h2>
-					<a href="/media" class="muted">Ver la biblioteca ›</a>
+					@moreLink("/media", "Ver la biblioteca")
 				</header>
 				@posterRow(v.Recent)
 			</section>
@@ -83,3 +89,53 @@ templ attnChip(c AttnChip) {
 		{ c.Label }
 	</a>
 }
+
+// homeApps are the doors to the rest of the stack: the two apps the house
+// uses every day as large cards, the machinery behind them as chips. Plain
+// links to other hosts, so htmx's boost leaves them alone.
+templ homeApps(apps []AppLink) {
+	<section class="home-apps">
+		<header class="section-head">
+			<h2>Apps</h2>
+			@moreLink("/stack", "Ver el stack")
+		</header>
+		<div class="apps-main">
+			for _, a := range apps {
+				if a.Featured {
+					<a class="app-card" href={ templ.SafeURL(a.URL) } hx-boost="false">
+						<img src={ a.Logo } alt="" width="48" height="48"/>
+						<span class="app-card-text">
+							<strong>{ a.Name }</strong>
+							<span class="muted">{ a.Short }</span>
+						</span>
+						<span class="app-go">
+							@IconSm("chev")
+						</span>
+					</a>
+				}
+			}
+		</div>
+		<ul class="apps-chips">
+			for _, a := range apps {
+				if !a.Featured {
+					<li>
+						<a class="app-chip" href={ templ.SafeURL(a.URL) } title={ a.Short } hx-boost="false">
+							<img src={ a.Logo } alt="" width="22" height="22"/>
+							{ a.Name }
+						</a>
+					</li>
+				}
+			}
+		</ul>
+	</section>
+}
+
+// moreLink is a section's "see all" link, with a drawn chevron rather than a
+// typed one a screen reader would read out.
+templ moreLink(href, label string) {
+	<a href={ templ.SafeURL(href) } class="more-link">
+		{ label }
+		@IconSm("chev")
+	</a>
+}
+

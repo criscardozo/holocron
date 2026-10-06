@@ -370,6 +370,13 @@ que late. Con «reducir movimiento», lo que se mueve en el espacio se detiene y
 que dice un estado lo sigue diciendo: el punto queda fijo, la baldosa cambia su
 borde y su vidrio sin subir, y el spinner late en lugar de girar.
 
+### Puertas a las apps
+Jellyfin y Seerr, las dos que la casa usa todos los días, van como tarjetas de
+vidrio grandes (logo de 48px, nombre, para qué sirve y un chevron); el resto del
+stack, como chips en píldora con logo de 22px. Los dos suben 3px y prenden el
+borde violeta al pasar el mouse. En la página Stack las dos principales se repiten
+en grande, con su botón «Abrir», y el resto va en una grilla de tarjetas.
+
 ### Póster
 Proporción 2:3, esquinas de 10px, carga diferida. Sin imagen, la inicial del
 título sobre un degradado de superficie alta a violeta sombra; nunca un ícono de

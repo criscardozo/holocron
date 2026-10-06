@@ -14,6 +14,7 @@ import (
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/scanner"
 	"github.com/cristian/holocron/internal/services"
+	"github.com/cristian/holocron/internal/stack"
 	"github.com/cristian/holocron/internal/system"
 	"github.com/cristian/holocron/web/templates"
 )
@@ -22,12 +23,12 @@ import (
 const homeRecent = 10
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, templates.Home(s.homeView(r.Context())))
+	s.render(w, r, templates.Home(s.homeView(r.Context(), r.Host)))
 }
 
 // homeView reads everything the start page shows. The app's start screen is
 // the same view, over the API.
-func (s *Server) homeView(ctx context.Context) templates.HomeView {
+func (s *Server) homeView(ctx context.Context, host string) templates.HomeView {
 	now := time.Now()
 	// The battery first, before the reads below put the machine to work: its
 	// time left comes from the current it draws, and reading that in the
@@ -69,7 +70,22 @@ func (s *Server) homeView(ctx context.Context) templates.HomeView {
 	}
 	v.Tiles = append(v.Tiles, servicesTile(servicesView(svc, s.deps.ServicesConfigured, now)))
 	v.Tiles = append(v.Tiles, tiles...)
+	v.Apps = appLinks(stack.Domain(host))
 	return v
+}
+
+// appLinks are the start page's doors to the stack, on the domain the page
+// was asked for: the same links work under holocron.merli.store and
+// merli.store.
+func appLinks(domain string) []templates.AppLink {
+	out := make([]templates.AppLink, 0, len(stack.Apps))
+	for _, a := range stack.Apps {
+		out = append(out, templates.AppLink{
+			Name: a.Name, Short: a.Short, URL: a.URL(domain),
+			Logo: "/static/apps/" + a.Logo, Featured: a.Featured,
+		})
+	}
+	return out
 }
 
 // homeStatus is the row of readings under the title.

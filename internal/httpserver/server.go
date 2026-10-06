@@ -24,6 +24,7 @@ import (
 	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/services"
 	"github.com/cristian/holocron/internal/settings"
+	"github.com/cristian/holocron/internal/stack"
 	"github.com/cristian/holocron/internal/torrents"
 	"github.com/cristian/holocron/internal/updates"
 	"github.com/cristian/holocron/internal/widgets"
@@ -53,6 +54,10 @@ type Deps struct {
 	Power              *power.Service
 	// Art serves posters from its cache. Nil in tests that do not need it.
 	Art *artwork.Store
+	// Versions reads the stack's versions for the Stack page; DirectHost is
+	// the server's home-network address for direct links ("" hides them).
+	Versions   *stack.Versions
+	DirectHost string
 }
 
 // Server serves the Holocron web UI.
@@ -79,6 +84,7 @@ func (s *Server) Handler() http.Handler {
 
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /art/{kind}/{id}", s.handleArt)
+	mux.HandleFunc("GET /stack", s.handleStack)
 	mux.HandleFunc("GET /{$}", s.handleDashboard)
 
 	// Phase 1: disk usage.

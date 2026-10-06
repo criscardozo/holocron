@@ -45,22 +45,42 @@ type Badges struct {
 // Badges reads the counts.
 func (c *Client) Badges(ctx context.Context) (Badges, error) {
 	var b Badges
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+"/api/badges", nil)
+	err := c.get(ctx, "/api/badges", &b)
+	return b, err
+}
+
+// Version is the running Bazarr's version.
+func (c *Client) Version(ctx context.Context) (string, error) {
+	var st struct {
+		Data struct {
+			Version string `json:"bazarr_version"`
+		} `json:"data"`
+	}
+	if err := c.get(ctx, "/api/system/status", &st); err != nil {
+		return "", err
+	}
+	return st.Data.Version, nil
+}
+
+func (c *Client) get(ctx context.Context, path string, out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
 	if err != nil {
-		return b, err
+		return err
 	}
 	req.Header.Set("X-API-KEY", c.key)
 	resp, err := c.http.Do(req) //#nosec G704 -- base is loopback from configuration, never from a request
 	if err != nil {
-		return b, fmt.Errorf("bazarr: %w", err)
+		return fmt.Errorf("bazarr: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized:
-		return b, fmt.Errorf("bazarr: %w", ErrUnauthorized)
+		return fmt.Errorf("bazarr: %w", ErrUnauthorized)
 	case resp.StatusCode >= 300:
-		return b, fmt.Errorf("bazarr: HTTP %d", resp.StatusCode)
+		return fmt.Errorf("bazarr %s: HTTP %d", path, resp.StatusCode)
 	}
-	err = json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&b)
-	return b, err
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(out); err != nil {
+		return fmt.Errorf("bazarr %s: decode: %w", path, err)
+	}
+	return nil
 }

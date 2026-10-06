@@ -1,0 +1,91 @@
+package templates
+
+// StackPage is every app that runs beside Holocron: what it is for, its two
+// ways in, its version and whether it runs. Jellyfin and Seerr lead, large,
+// because they are what the house uses; the rest is the machinery behind them.
+templ StackPage(v StackView) {
+	@Layout("Stack") {
+		<div class="page-head">
+			<div>
+				<h1>Stack</h1>
+				<p class="sub">Las herramientas que corren en Ginebra: para qué sirve cada una y cómo entrar</p>
+			</div>
+		</div>
+		<section class="stack-featured" aria-label="Las de todos los días">
+			for _, a := range v.Featured {
+				@stackFeature(a)
+			}
+		</section>
+		<h2 class="stack-heading">Lo que trabaja detrás</h2>
+		<ul class="stack-grid">
+			for _, a := range v.Others {
+				<li>
+					@stackCard(a)
+				</li>
+			}
+		</ul>
+		if v.Direct {
+			<p class="stack-note muted">
+				El acceso directo va por IP y puerto, sin pasar por el proxy: sirve cuando un
+				nombre no responde, y sólo desde la red de casa.
+			</p>
+		}
+	}
+}
+
+templ stackFeature(a StackApp) {
+	<article class="card stack-feature">
+		<header class="stack-head">
+			<img src={ a.Logo } alt="" width="64" height="64"/>
+			<div class="stack-title">
+				<h2>{ a.Name }</h2>
+				@stackMeta(a)
+			</div>
+		</header>
+		<p class="stack-purpose">{ a.Purpose }</p>
+		<div class="stack-actions">
+			<a class="btn btn-primary" href={ templ.SafeURL(a.URL) } hx-boost="false">
+				Abrir { a.Name }
+				@IconSm("external")
+			</a>
+			@stackDirect(a)
+		</div>
+	</article>
+}
+
+templ stackCard(a StackApp) {
+	<article class="card stack-card">
+		<header class="stack-head">
+			<img src={ a.Logo } alt="" width="40" height="40"/>
+			<div class="stack-title">
+				<h3>{ a.Name }</h3>
+				@stackMeta(a)
+			</div>
+		</header>
+		<p class="stack-purpose">{ a.Purpose }</p>
+		<div class="stack-links">
+			<a href={ templ.SafeURL(a.URL) } hx-boost="false">{ a.Host }</a>
+			@stackDirect(a)
+		</div>
+	</article>
+}
+
+// stackMeta is the version and the unit's state, when they are known.
+templ stackMeta(a StackApp) {
+	<span class="stack-meta">
+		if a.State != "" {
+			<span class={ "badge", templ.KV("badge-yes", a.OK), templ.KV("badge-no", !a.OK) }>{ a.State }</span>
+		}
+		if a.Version != "" {
+			<span class="mono muted">{ a.Version }</span>
+		}
+	</span>
+}
+
+templ stackDirect(a StackApp) {
+	if a.Direct != "" {
+		<a class="stack-direct mono" href={ templ.SafeURL(a.Direct) } hx-boost="false" aria-label={ "Acceso directo a " + a.Name + ": " + a.DirectLabel }>
+			{ a.DirectLabel }
+		</a>
+	}
+}

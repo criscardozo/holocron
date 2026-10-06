@@ -188,3 +188,12 @@ func (s *Service) ActiveTorrents(ctx context.Context) (int, error) {
 	}
 	return n, nil
 }
+
+// Version is the running qBittorrent's version.
+func (s *Service) Version(ctx context.Context) (string, error) {
+	c, err := s.client(ctx)
+	if err != nil {
+		return "", err
+	}
+	return c.Version(ctx)
+}

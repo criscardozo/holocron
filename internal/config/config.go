@@ -30,6 +30,9 @@ type Config struct {
 	WatchUnits  []string // HOLOCRON_WATCH_UNITS, space-separated, e.g. "jellyfin caddy mnt-biblioteca.mount"
 	WatchTimers string   // HOLOCRON_WATCH_TIMERS, a name prefix, e.g. "ginebra-"
 	SmartFile   string   // HOLOCRON_SMART_FILE, the JSON a root timer writes
+	// DirectHost is HOLOCRON_DIRECT_HOST, the server's address on the home
+	// network for the Stack page's direct links. Found on its own when unset.
+	DirectHost string
 
 	// MachineName is what the screens call this computer ("Apagar Ginebra").
 	// HOLOCRON_MACHINE_NAME, or the hostname with a capital letter.
@@ -80,6 +83,7 @@ func Load() Config {
 		WatchUnits:  strings.Fields(os.Getenv("HOLOCRON_WATCH_UNITS")),
 		WatchTimers: os.Getenv("HOLOCRON_WATCH_TIMERS"),
 		SmartFile:   os.Getenv("HOLOCRON_SMART_FILE"),
+		DirectHost:  os.Getenv("HOLOCRON_DIRECT_HOST"),
 		MachineName: envOr("HOLOCRON_MACHINE_NAME", hostTitle()),
 	}
 	c.MediaFolders, c.BadFolders = parseFolders(os.Getenv("HOLOCRON_MEDIA_FOLDERS"))

@@ -460,9 +460,10 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .ok-badge { color: var(--ok); }
 
 /* ── start page ────────────────────────────────────────────────────── */
-.home-hero { text-align: center; padding: var(--space-8) 0 var(--space-8); display: grid; justify-items: center; gap: var(--space-2); }
-.home-title { font-size: 44px; font-weight: 800; letter-spacing: -.035em; }
-.home-sub { margin: 0; color: var(--text-soft); }
+.home-hero { text-align: center; padding: var(--space-6) 0; display: grid; justify-items: center; gap: var(--space-2); }
+/* Ginebra's mark, at the size and glow the portal gave it. */
+.home-marca { margin: 0; line-height: 0; }
+.home-marca img { width: min(400px, 80vw); height: auto; display: block; filter: drop-shadow(0 8px 28px rgba(167,139,250,.28)); }
 .home-status { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: center; margin-top: var(--space-3); }
 .glass-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-variant-numeric: tabular-nums; background: var(--glass); backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border); }
 .glass-chip.tone-ok::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
@@ -470,20 +471,20 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .glass-chip.tone-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); }
 .home-hero .attn { justify-content: center; margin-top: var(--space-2); }
 
-.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--space-4); max-width: 980px; margin: 0 auto; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--space-3); max-width: 980px; margin: 0 auto; }
 .tile {
-	display: grid; gap: 4px; align-content: start; min-height: 150px; padding: 18px;
+	display: grid; gap: 4px; align-content: start; min-height: 124px; padding: 14px 16px;
 	color: inherit; border-radius: var(--radius-xl);
 	background: var(--glass); backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border);
 	transition: transform .18s ease, border-color .18s ease, background .18s ease;
 }
 .tile:hover, .tile:focus-visible { color: inherit; transform: translateY(-4px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); }
-.tile-icon { width: 40px; height: 40px; border-radius: var(--radius-md); display: grid; place-items: center; color: #fff; margin-bottom: 10px; }
+.tile-icon { width: 34px; height: 34px; border-radius: var(--radius-md); display: grid; place-items: center; color: #fff; margin-bottom: 6px; }
 .tile-icon .ic { width: 22px; height: 22px; stroke-width: 2; }
 .tile-icon-sm { width: 28px; height: 28px; border-radius: 8px; margin: 0; }
 .tile-icon-sm .ic { width: 15px; height: 15px; }
 .tile-title { font-size: 14px; font-weight: 640; }
-.tile-value { font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.tile-value { font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .tile-sub { font-size: 12px; line-height: 1.4; color: var(--text-muted); }
 .tile-warn { border-color: color-mix(in srgb, var(--color-accent-300) 45%, transparent); }
 .tile-warn .tile-value { color: var(--color-accent-300); }
@@ -501,11 +502,53 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .tone-sky { background: linear-gradient(135deg, var(--color-sky), var(--color-accent)); }
 .tone-mint { background: linear-gradient(135deg, var(--ok), var(--color-accent)); }
 
-.home-recent, .act-section { max-width: 980px; margin: var(--space-8) auto 0; }
+.home-recent, .act-section { max-width: 980px; margin: var(--space-6) auto 0; }
 .act-section { max-width: none; margin: 0 0 var(--space-6); }
 .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
 .section-head h2 { font-size: 17px; font-weight: 650; }
 .section-head a { font-size: 13px; }
+.more-link { display: inline-flex; align-items: center; gap: 2px; color: var(--text-muted); }
+.more-link:hover { color: var(--color-text); }
+
+/* ── apps (start page) ─────────────────────────────────────────────── */
+.home-apps { max-width: 980px; margin: var(--space-6) auto 0; }
+.apps-main { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.app-card, .app-chip {
+	color: inherit; background: var(--glass); backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border);
+	transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.app-card { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: var(--radius-xl); }
+.app-card img { width: 48px; height: 48px; object-fit: contain; flex: none; }
+.app-card-text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.app-card strong { font-size: 17px; font-weight: 650; }
+.app-card .muted { font-size: 13px; }
+.app-go { color: var(--text-muted); }
+.apps-chips { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.app-chip { display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.app-chip img { width: 22px; height: 22px; object-fit: contain; }
+.app-card:hover, .app-card:focus-visible, .app-chip:hover, .app-chip:focus-visible { color: inherit; transform: translateY(-3px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); }
+
+/* ── stack page ────────────────────────────────────────────────────── */
+.stack-featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-4); }
+.stack-feature { gap: var(--space-4); padding: var(--space-6); }
+.stack-head { display: flex; align-items: center; gap: var(--space-4); }
+.stack-head img { flex: none; object-fit: contain; }
+.stack-title { display: grid; gap: 4px; min-width: 0; }
+.stack-feature .stack-title h2 { font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+.stack-card .stack-title h3 { font-size: 16px; font-weight: 650; margin: 0; }
+.stack-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: 12px; }
+.stack-purpose { margin: 0; color: var(--text-soft); max-width: 60ch; }
+.stack-feature .stack-purpose { font-size: 15px; }
+.stack-card .stack-purpose { font-size: 13.5px; }
+.stack-actions, .stack-links { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin-top: auto; }
+.stack-links { font-size: 13px; }
+.stack-direct { color: var(--text-muted); font-size: 12.5px; word-break: normal; }
+.stack-direct:hover { color: var(--color-text); }
+.stack-heading { font-size: 17px; font-weight: 650; margin: var(--space-8) 0 var(--space-3); }
+.stack-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
+.stack-grid > li { display: flex; }
+.stack-card { flex: 1; gap: var(--space-3); }
+.stack-note { margin: var(--space-6) 0 0; font-size: 13px; max-width: 70ch; }
 
 /* ── posters ───────────────────────────────────────────────────────── */
 .poster { display: block; width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px; background: var(--color-surface-2); }
@@ -567,12 +610,12 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 	.side-link { white-space: nowrap; padding: 6px 9px; font-size: 13px; }
 	.act-hero-in { grid-template-columns: 90px minmax(0, 1fr); gap: var(--space-4); padding: var(--space-4); }
 	.act-hero-title { font-size: 24px; }
-	.home-title { font-size: 34px; }
+	.apps-main { grid-template-columns: 1fr; }
 	.page { padding: var(--space-4); }
 	.home-hero { padding: var(--space-6) 0; }
 	.tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
 	.tile { min-height: 0; padding: 14px; }
-	.tile-value { font-size: 20px; }
+	.tile-value { font-size: 19px; }
 }
 @media (max-width: 860px) {
 	.settings-grid { grid-template-columns: 1fr; }
@@ -730,7 +773,9 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
    spinner breathes in place instead of turning. */
 @media (prefers-reduced-motion: reduce) {
 	.live .dot { animation: none; }
-	.tile, .tile:hover, .tile:focus-visible { transform: none; transition: background .15s ease, border-color .15s ease; }
+	.tile, .tile:hover, .tile:focus-visible,
+	.app-card, .app-card:hover, .app-card:focus-visible,
+	.app-chip, .app-chip:hover, .app-chip:focus-visible { transform: none; transition: background .15s ease, border-color .15s ease; }
 	.job .spinner { animation: breathe 1.6s ease-in-out infinite; border-top-color: color-mix(in srgb, var(--color-accent) 30%, transparent); background: color-mix(in srgb, var(--color-accent) 35%, transparent); }
 	.poster-row { scroll-behavior: auto; }
 }
@@ -743,7 +788,8 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 	.side-link { min-height: 44px; }
 	.btn { min-height: 44px; }
 	.btn-icon { width: 44px; height: 44px; }
-	.chip, .glass-chip { min-height: 44px; }
+	.chip, .glass-chip, .app-chip { min-height: 44px; }
+	.stack-direct, .more-link { display: inline-flex; align-items: center; min-height: 44px; }
 	.input { min-height: 44px; }
 }
 
@@ -756,8 +802,8 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
    it, and a blur per panel is GPU work a phone pays on every scroll frame for
    no visible difference. The same glass, flattened. */
 @media (max-width: 900px) {
-	.card, .tile, .glass-chip, .side { backdrop-filter: none; }
-	.card, .tile, .glass-chip { background: var(--color-surface); }
+	.card, .tile, .glass-chip, .app-card, .app-chip, .side { backdrop-filter: none; }
+	.card, .tile, .glass-chip, .app-card, .app-chip { background: var(--color-surface); }
 	.side { background: color-mix(in srgb, var(--color-surface) 60%, var(--color-bg)); }
 }
 

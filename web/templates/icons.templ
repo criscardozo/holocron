@@ -1,13 +1,14 @@
 package templates
 
 // Icon and IconSm reference a symbol from the shared SVG sprite embedded in the
-// layout (see Layout). Stroke line-icons that replace the old emoji/entities.
+// layout (see Layout). They are decoration beside a text or inside a control
+// that carries its own aria-label, so screen readers skip them.
 templ Icon(id string) {
-	<svg class="ic"><use href={ "#" + id }></use></svg>
+	<svg class="ic" aria-hidden="true" focusable="false"><use href={ "#" + id }></use></svg>
 }
 
 templ IconSm(id string) {
-	<svg class="ic ic-sm"><use href={ "#" + id }></use></svg>
+	<svg class="ic ic-sm" aria-hidden="true" focusable="false"><use href={ "#" + id }></use></svg>
 }
 
 // navLink renders one sidebar link, marking it aria-current when its label

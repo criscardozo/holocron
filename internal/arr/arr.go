@@ -373,3 +373,14 @@ func (c *Client) IndexerStatuses(ctx context.Context) ([]IndexerStatus, error) {
 	err := c.get(ctx, c.app.api()+"/indexerstatus", nil, &out)
 	return out, err
 }
+
+// Version is the running version, from the instance's own status.
+func (c *Client) Version(ctx context.Context) (string, error) {
+	var st struct {
+		Version string `json:"version"`
+	}
+	if err := c.get(ctx, c.app.api()+"/system/status", nil, &st); err != nil {
+		return "", err
+	}
+	return st.Version, nil
+}

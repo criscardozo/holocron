@@ -146,35 +146,44 @@ func (c *Client) post(ctx context.Context, path string, form url.Values) error {
 // The session cookie is reused across calls, so an expired one is refreshed and
 // the request retried once rather than surfacing as an error.
 func (c *Client) getJSON(ctx context.Context, path, what string, out any) error {
-	if err := c.ensureLogin(ctx); err != nil {
+	body, err := c.getRaw(ctx, path, what)
+	if err != nil {
 		return err
+	}
+	if err := json.Unmarshal(body, out); err != nil {
+		return fmt.Errorf("decode %s: %w", what, err)
+	}
+	return nil
+}
+
+// getRaw performs an authenticated GET and returns the body as it came.
+func (c *Client) getRaw(ctx context.Context, path, what string) ([]byte, error) {
+	if err := c.ensureLogin(ctx); err != nil {
+		return nil, err
 	}
 
 	body, status, err := c.doGet(ctx, path)
 	if err != nil {
-		return fmt.Errorf("%s: %w", what, err)
+		return nil, fmt.Errorf("%s: %w", what, err)
 	}
 	if status == http.StatusForbidden {
 		c.mu.Lock()
 		c.loggedIn = false
 		c.mu.Unlock()
 		if err := c.ensureLogin(ctx); err != nil {
-			return err
+			return nil, err
 		}
 		if body, status, err = c.doGet(ctx, path); err != nil {
-			return fmt.Errorf("%s: %w", what, err)
+			return nil, fmt.Errorf("%s: %w", what, err)
 		}
 		if status == http.StatusForbidden {
-			return errors.New("qbittorrent rejected the session after re-login")
+			return nil, errors.New("qbittorrent rejected the session after re-login")
 		}
 	}
 	if status < 200 || status >= 300 {
-		return fmt.Errorf("%s returned %d", what, status)
+		return nil, fmt.Errorf("%s returned %d", what, status)
 	}
-	if err := json.Unmarshal(body, out); err != nil {
-		return fmt.Errorf("decode %s: %w", what, err)
-	}
-	return nil
+	return body, nil
 }
 
 // doGet performs one GET and returns the body and status.
@@ -262,4 +271,13 @@ func boolStr(b bool) string {
 		return "true"
 	}
 	return "false"
+}
+
+// Version is the running qBittorrent's version, as it reports it ("v5.1.2").
+func (c *Client) Version(ctx context.Context) (string, error) {
+	body, err := c.getRaw(ctx, "/api/v2/app/version", "version")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(body)), nil
 }

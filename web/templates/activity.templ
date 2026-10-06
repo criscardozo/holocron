@@ -52,7 +52,7 @@ templ ActivityLive(v ActivityView) {
 		<section class="act-section">
 			<header class="section-head">
 				<h2>Agregado hace poco</h2>
-				<a href="/media" class="muted">Ver la biblioteca ›</a>
+				@moreLink("/media", "Ver la biblioteca")
 			</header>
 			@posterRow(v.Recent)
 		</section>

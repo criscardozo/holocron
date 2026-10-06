@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -43,7 +44,8 @@ func TestTheStartPageIsTilesOverTheMural(t *testing.T) {
 	body := ts.get(t, "/", nil).Body
 	for _, want := range []string{
 		`class="mural"`, "/art/jf/" + testPosterID, `hx-preserve="true"`,
-		"El panel de", `href="/activity"`, `href="/services"`, ">Torrents<",
+		"/static/ginebra-marca.svg", `href="/activity"`, `href="/services"`, ">Torrents<",
+		`class="app-card"`, `href="/stack"`,
 		`class="side-label">Biblioteca<`, `aria-current="page"`,
 	} {
 		if !strings.Contains(body, want) {
@@ -55,5 +57,30 @@ func TestTheStartPageIsTilesOverTheMural(t *testing.T) {
 	frag := ts.get(t, "/torrents/list", map[string]string{"HX-Request": "true"}).Body
 	if strings.Contains(frag, `class="mural"`) {
 		t.Error("an htmx fragment carried the mural")
+	}
+}
+
+// TestTheStackPageSaysHowToReachEachApp: by name on the domain the page was
+// asked for, so it works under holocron.merli.store and merli.store alike,
+// and directly by the home-network address when there is one.
+func TestTheStackPageSaysHowToReachEachApp(t *testing.T) {
+	t.Parallel()
+	ts := newTestServer(t)
+
+	for _, host := range []string{"holocron.merli.store", "merli.store"} {
+		req, err := http.NewRequest(http.MethodGet, ts.URL+"/stack", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Host = host
+		body := ts.do(t, req).Body
+		for _, want := range []string{"https://jellyfin.merli.store/", "https://qb.merli.store/", "Seerr", "Lo que trabaja detrás"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("Host %s: the page is missing %q", host, want)
+			}
+		}
+		if strings.Contains(body, "holocron.merli.store") {
+			t.Errorf("Host %s: a link carries Holocron's own host", host)
+		}
 	}
 }
