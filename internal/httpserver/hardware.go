@@ -70,7 +70,13 @@ func streamLive[T any](s *Server, w http.ResponseWriter, r *http.Request, hub *l
 	}
 
 	readings, stop := hub.Subscribe()
-	defer stop()
+	s.log.Info("live subscribers", "stream", event, "count", hub.Watching())
+	// Logged once more after leaving, so the journal says when nobody is
+	// watching: what someone measuring the machine's idle cost needs to know.
+	defer func() {
+		stop()
+		s.log.Info("live subscribers", "stream", event, "count", hub.Watching())
+	}()
 
 	ctx := r.Context()
 	var buf bytes.Buffer

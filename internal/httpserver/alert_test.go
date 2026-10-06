@@ -62,3 +62,26 @@ func TestWhatTheScreenReaderHears(t *testing.T) {
 		t.Errorf("services: %q", got)
 	}
 }
+
+// TestWatchersAreLogged. Measuring what the machine costs with nobody looking
+// needs a way to know nobody is: the stream logs its subscriber count when
+// someone arrives and again when they leave.
+func TestWatchersAreLogged(t *testing.T) {
+	t.Parallel()
+	var logs strings.Builder
+	s := &Server{log: slog.New(slog.NewTextHandler(&logs, nil))}
+	hub := live.NewHub(5*time.Millisecond, func(context.Context) int { return 1 })
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Millisecond)
+	defer cancel()
+	req := httptest.NewRequest(http.MethodGet, "/events/x", nil).WithContext(ctx)
+
+	streamLive(s, httptest.NewRecorder(), req, hub, "x", func(int) templ.Component {
+		return templ.Raw("<p>lectura</p>")
+	}, nil)
+
+	got := logs.String()
+	if !strings.Contains(got, `msg="live subscribers" stream=x count=1`) ||
+		!strings.Contains(got, `msg="live subscribers" stream=x count=0`) {
+		t.Errorf("logs = %q, want count=1 on arrival and count=0 on leaving", got)
+	}
+}
