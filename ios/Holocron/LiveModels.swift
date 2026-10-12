@@ -278,6 +278,17 @@ struct HomeTile: Decodable, Sendable, Identifiable {
     var sub: String
     var warn: Bool
     var off: Bool
+    /// Several things side by side, as the Disk tile's library disks.
+    var rows: [HomeTileRow]?
     var id: String { href }
+}
+
+struct HomeTileRow: Decodable, Sendable, Identifiable {
+    var label: String
+    var value: String
+    var sub: String
+    var percent: Int
+    var hot: Bool
+    var id: String { label }
 }
 

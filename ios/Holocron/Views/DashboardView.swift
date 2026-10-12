@@ -129,17 +129,34 @@ struct DashboardView: View {
                 .background(Self.tone(tile.tone), in: RoundedRectangle(cornerRadius: 10))
                 .padding(.bottom, 6)
             Text(tile.title).font(.subheadline.weight(.semibold))
-            Text(tile.value)
-                .font(.title3.weight(.bold))
-                .monospacedDigit()
-                .foregroundStyle(tile.warn ? Palette.accent300 : Palette.text)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(tile.sub)
-                .font(.caption2)
-                .foregroundStyle(Palette.muted)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, minHeight: 28, alignment: .topLeading)
+            if let rows = tile.rows, !rows.isEmpty {
+                ForEach(rows) { r in
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(r.label).font(.caption2)
+                            Spacer()
+                            Text(r.value).font(.caption.weight(.bold)).monospacedDigit()
+                        }
+                        ProgressBar(value: Double(r.percent) / 100, hot: r.hot)
+                        Text(r.sub).font(.caption2).foregroundStyle(Palette.muted)
+                    }
+                }
+                if tile.warn {
+                    Text(tile.sub).font(.caption2).foregroundStyle(Palette.accent300).lineLimit(2)
+                }
+            } else {
+                Text(tile.value)
+                    .font(.title3.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(tile.warn ? Palette.accent300 : Palette.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(tile.sub)
+                    .font(.caption2)
+                    .foregroundStyle(Palette.muted)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, minHeight: 28, alignment: .topLeading)
+            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)

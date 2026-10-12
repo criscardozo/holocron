@@ -46,6 +46,7 @@ func (w DiskWidget) Tile(ctx context.Context) templates.Tile {
 	if best < 0 {
 		t.Value, t.Sub, t.Warn = "—", "No se pudo leer", true
 	}
+	t.Rows = libraryRows(rep)
 	if best >= 90 {
 		t.Warn = true
 	}
@@ -70,4 +71,35 @@ func Alerts(rep disks.Report) []string {
 		out = append(out, m.Library+" pasó de "+m.From+" a "+m.To)
 	}
 	return out
+}
+
+// libraryRows are the disks the library lives on, each with its use: on
+// Ginebra, Disco4 and Disco3 side by side. Without roles in the config, every
+// disk. One disk alone keeps the plain value.
+func libraryRows(rep disks.Report) []templates.TileRow {
+	var lib, all []disks.Disk
+	for _, d := range rep.Disks {
+		if !d.StatOK || d.Total == 0 || !d.Mounted {
+			continue
+		}
+		all = append(all, d)
+		if d.Role == "biblioteca" {
+			lib = append(lib, d)
+		}
+	}
+	if len(lib) == 0 {
+		lib = all
+	}
+	if len(lib) < 2 {
+		return nil
+	}
+	rows := make([]templates.TileRow, 0, len(lib))
+	for _, d := range lib {
+		pct := int(float64(d.Used) / float64(d.Total) * 100)
+		rows = append(rows, templates.TileRow{
+			Label: d.Name, Value: strconv.Itoa(pct) + " %", Percent: pct, Hot: pct >= 90,
+			Sub: system.HumanBytes(d.Free) + " libres",
+		})
+	}
+	return rows
 }

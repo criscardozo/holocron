@@ -35,4 +35,16 @@ type Tile struct {
 	// Warn marks something worth a look, Off an area with nothing configured.
 	Warn bool `json:"warn"`
 	Off  bool `json:"off"`
+	// Rows replace the single value when an area is several things side by
+	// side: the Disk tile shows each library disk.
+	Rows []TileRow `json:"rows,omitempty"`
+}
+
+// TileRow is one line of a tile that shows several things.
+type TileRow struct {
+	Label   string `json:"label"`
+	Value   string `json:"value"`   // "71 %"
+	Sub     string `json:"sub"`     // "1,2 TiB libres"
+	Percent int    `json:"percent"` // 0..100, for the bar
+	Hot     bool   `json:"hot"`
 }

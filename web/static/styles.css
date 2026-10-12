@@ -525,6 +525,13 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .tile-title { font-size: 14px; font-weight: 640; }
 .tile-value { font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .tile-sub { font-size: 12px; line-height: 1.4; color: var(--text-muted); }
+.tile-rows { display: grid; gap: 8px; margin-top: 2px; }
+.tile-row { display: grid; gap: 3px; }
+.tile-row-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; }
+.tile-row-value { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tile-row-sub { font-size: 11px; color: var(--text-muted); }
+.tile-row .bar { display: block; height: 5px; }
+.tile-row .bar-fill { display: block; }
 .tile-warn { border-color: color-mix(in srgb, var(--color-accent-300) 45%, transparent); }
 .tile-warn .tile-value { color: var(--color-accent-300); }
 /* An area with nothing configured recedes by its icon and number; the line

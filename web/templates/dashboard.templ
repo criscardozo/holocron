@@ -50,8 +50,28 @@ templ tile(t Tile) {
 			@Icon(t.Icon)
 		</span>
 		<span class="tile-title">{ t.Title }</span>
-		<span class="tile-value">{ t.Value }</span>
-		<span class="tile-sub">{ t.Sub }</span>
+		if len(t.Rows) > 0 {
+			<span class="tile-rows">
+				for _, r := range t.Rows {
+					<span class="tile-row">
+						<span class="tile-row-head">
+							<span>{ r.Label }</span>
+							<span class="tile-row-value">{ r.Value }</span>
+						</span>
+						<span class={ "bar", "mini", templ.KV("hot", r.Hot) }><span class={ "bar-fill", pwClass(r.Percent) }></span></span>
+						<span class="tile-row-sub">{ r.Sub }</span>
+					</span>
+				}
+			</span>
+			// With rows the free space is on each one; the line below is
+			// only for what needs a look.
+			if t.Warn {
+				<span class="tile-sub">{ t.Sub }</span>
+			}
+		} else {
+			<span class="tile-value">{ t.Value }</span>
+			<span class="tile-sub">{ t.Sub }</span>
+		}
 	</a>
 }
 
