@@ -30,6 +30,7 @@ struct DiskFolder: Codable, Identifiable, Hashable {
     var checked: Bool?
     var mounted: Bool?
     var asleep: Bool?
+    var asleepAge: String?
     var temp: String?
     var tempAge: String?
     var health: String?

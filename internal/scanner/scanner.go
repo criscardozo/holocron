@@ -57,6 +57,9 @@ type Result struct {
 	TopFolders     []FolderUsage `json:"topFolders"`
 	Errors         []ScanError   `json:"errors"`
 	DurationMillis int64         `json:"durationMillis"`
+	// OneFileSystem records that the scan stayed on one disk. Results stored
+	// before it existed may have counted a disk mounted inside as this one's.
+	OneFileSystem bool `json:"oneFileSystem,omitempty"`
 }
 
 // FolderUsage is the size of one top-level folder.
@@ -119,11 +122,12 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 	hostname, _ := os.Hostname()
 
 	result := Result{
-		GeneratedAt: startedAt.UTC(),
-		ScanPaths:   append([]string(nil), s.options.Paths...),
-		Hostname:    hostname,
-		TopFolders:  []FolderUsage{},
-		Errors:      []ScanError{},
+		GeneratedAt:   startedAt.UTC(),
+		ScanPaths:     append([]string(nil), s.options.Paths...),
+		Hostname:      hostname,
+		TopFolders:    []FolderUsage{},
+		Errors:        []ScanError{},
+		OneFileSystem: s.options.OneFileSystem,
 	}
 	scanErrors := errorCollector{limit: s.options.MaxReportedErrors, items: []ScanError{}}
 

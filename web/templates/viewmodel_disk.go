@@ -23,6 +23,9 @@ type DiskCard struct {
 	// Checked says the mount was verified; Mounted is only meaningful then.
 	Checked, Mounted bool
 	Asleep           bool
+	// AsleepAge is when the disk was seen asleep: the SMART file is written
+	// every few hours, and a disk woken since still reads as asleep.
+	AsleepAge string
 	// Temp is the temperature; TempAge says when it was read, when that was
 	// not just now (the disk sleeps and keeps its last reading).
 	Temp, TempAge string
@@ -64,6 +67,9 @@ type DiskDetail struct {
 	// NoAccess are folders the scan could not read (lost+found is root's),
 	// listed apart because they are not a failure.
 	NoAccess []string
+	// Stale marks a scan stored before scans stayed on one disk: it may have
+	// counted another disk's folder as this one's, and Hidden is not computed.
+	Stale bool
 	// Hidden is space in use that no visible folder accounts for, when it is
 	// too large to be the filesystem's own bookkeeping: on Disco4, the old
 	// copy of Películas under the bind mount.
@@ -71,11 +77,16 @@ type DiskDetail struct {
 }
 
 // DiskTopRow is one of the largest folders in a scan. BrowseHref drills in.
+// A Foreign row is another disk mounted here, listed so its absence from the
+// sizes is explained, with a link to that disk.
 type DiskTopRow struct {
-	Name       string
-	BrowseHref string
-	BytesHuman string
-	Percent    int
+	Name        string
+	BrowseHref  string
+	BytesHuman  string
+	Percent     int
+	Foreign     bool
+	ForeignName string
+	ForeignHref string
 }
 
 // ScanStatusView drives the scan progress fragment (HTMX polling target).

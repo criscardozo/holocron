@@ -103,6 +103,9 @@ templ diskCard(c DiskCard) {
 			}
 			if c.Asleep {
 				<span class="badge badge-neutral">durmiendo</span>
+				if c.AsleepAge != "" {
+					<span class="muted">{ c.AsleepAge }</span>
+				}
 			}
 			if c.Temp != "" {
 				<span class={ "mono", templ.KV("muted", c.TempAge != "") }>
@@ -164,6 +167,12 @@ templ DiskDetailSection(d DiskDetail) {
 		if d.HasResult {
 			<div class="card elev-sm sec mb-6">
 				<h2 class="section-title">Carpetas más grandes</h2>
+				if d.Stale {
+					<p class="notice mb-6">
+						Escaneo anterior al cambio de discos: puede contar como de este disco una carpeta
+						que es de otro. Volvé a escanear.
+					</p>
+				}
 				<ul class="largest">
 					for _, t := range d.Top {
 						@diskTopRow(t)
@@ -203,6 +212,29 @@ templ DiskDetailSection(d DiskDetail) {
 }
 
 templ diskTopRow(t DiskTopRow) {
+	if t.Foreign {
+		<li class="disk-top-foreign">
+			<div class="row-head">
+				<span class="name">
+					@IconSm("drive")
+					{ t.Name }
+				</span>
+				<span class="muted">
+					es el
+					if t.ForeignHref != "" {
+						<a href={ templ.SafeURL(t.ForeignHref) }>{ t.ForeignName }</a>
+					} else {
+						{ t.ForeignName }
+					}
+				</span>
+			</div>
+		</li>
+	} else {
+		@diskTopRowSized(t)
+	}
+}
+
+templ diskTopRowSized(t DiskTopRow) {
 	<li>
 		<button type="button" hx-get={ t.BrowseHref } hx-target="#browse" hx-swap="innerHTML" aria-label={ "Explorar " + t.Name }>
 			<div class="row-head">

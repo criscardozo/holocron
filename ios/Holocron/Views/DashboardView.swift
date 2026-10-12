@@ -276,7 +276,12 @@ struct DiskFoldersView: View {
                 if disk.checked == true {
                     Pill(text: disk.mounted == true ? "montado" : "no montado", kind: disk.mounted == true ? .yes : .no)
                 }
-                if disk.asleep == true { Pill(text: "durmiendo", kind: .neutral) }
+                if disk.asleep == true {
+                    Pill(text: "durmiendo", kind: .neutral)
+                    if let age = disk.asleepAge {
+                        Text(age).font(.caption2).foregroundStyle(Palette.muted)
+                    }
+                }
                 if let temp = disk.temp {
                     Text(disk.tempAge.map { "\(temp) · \($0)" } ?? temp)
                         .font(.caption2.monospacedDigit())

@@ -69,3 +69,30 @@ func TestTheDiskPageShowsACardPerDisk(t *testing.T) {
 		t.Error("a watched folder was reported as not mounted")
 	}
 }
+
+// TestAScanFromBeforeOneDiskScansSaysSo. A result stored by an older version
+// may count another disk's folder as this one's; it is shown as such, without
+// the hidden-space row that would rest on it.
+func TestAScanFromBeforeOneDiskScansSaysSo(t *testing.T) {
+	t.Parallel()
+	ts := newTestServer(t)
+	res, err := ts.db.Exec(`INSERT INTO watched_folders (label, path, purpose) VALUES ('Disco4', ?, 'disk')`, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := `{"generatedAt":"2026-10-07T10:00:00Z","topFolders":[{"path":"/mnt/disco4/Peliculas","name":"Peliculas","bytes":1300000000000}],"errors":[]}`
+	if _, err := ts.db.Exec(`INSERT INTO scan_results (folder_id, result, scanned_at) VALUES (?, ?, datetime('now'))`, id, old); err != nil {
+		t.Fatal(err)
+	}
+	body := ts.get(t, "/disk", nil).Body
+	if !strings.Contains(body, "Escaneo anterior al cambio de discos") {
+		t.Error("an old scan is shown as if it were current")
+	}
+	if strings.Contains(body, "Ocupado y no visible") {
+		t.Error("hidden space computed from an old scan")
+	}
+}

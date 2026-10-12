@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/scanner"
@@ -56,8 +57,14 @@ type Disk struct {
 	// Total, Used and Free come from statfs, which does not wake a disk.
 	Total, Used, Free uint64
 	StatOK            bool
-	// Smart is the last SMART reading, nil when there is none.
-	Smart *services.SmartDisk
+	// Smart is the last SMART reading, nil when there is none. SmartAt is
+	// when the server last looked, which is when "asleep" was true: a disk
+	// woken since still reads as asleep until the next look.
+	Smart   *services.SmartDisk
+	SmartAt time.Time
+	// Nested are other disks mounted directly inside the folder this one is
+	// scanned from: on Ginebra, Disco3's Películas inside Disco4.
+	Nested []Nested
 	// Baseline is the reallocated-sector count first seen for this disk.
 	Baseline *int64
 	// Libraries are the media folders on this disk, by label.
@@ -67,6 +74,13 @@ type Disk struct {
 // ReallocUp says the disk has more reallocated sectors than when first seen.
 func (d Disk) ReallocUp() bool {
 	return d.Smart != nil && d.Smart.Reallocated != nil && d.Baseline != nil && *d.Smart.Reallocated > *d.Baseline
+}
+
+// Nested is a folder that is another disk's mount.
+type Nested struct {
+	Name, Path string
+	// Disk is the configured disk it belongs to, "" when it is none of them.
+	Disk string
 }
 
 // Move is a library found on another disk than the last time.
@@ -137,7 +151,6 @@ func (w *Watcher) Read(ctx context.Context) Report {
 		d.Mounted = ok || !checked
 		if ok {
 			d.Device = blockDevice(m.majMin)
-			d.Model = readTrim(filepath.Join(sysRoot, "block", d.Device, "device", "model"))
 		}
 		if total, used, free, _, err := scanner.FilesystemStat(sp.Mount); err == nil {
 			d.Total, d.Used, d.Free, d.StatOK = total, used, free, true
@@ -146,12 +159,16 @@ func (w *Watcher) Read(ctx context.Context) Report {
 			for i := range smart.Disks {
 				if filepath.Base(smart.Disks[i].Disk) == d.Device {
 					sd := smart.Disks[i]
-					d.Smart = &sd
-					if d.Model == "" {
-						d.Model = sd.Model
-					}
+					d.Smart, d.SmartAt = &sd, smart.Generated
+					d.Model = sd.Model
 				}
 			}
+		}
+		// SMART's model is whole; sysfs's is what the USB bridge reports, cut
+		// to 16 characters ("EZRX-00D8PB0"). Sysfs only when SMART has none,
+		// as for a bridge that passes no SMART at all.
+		if d.Model == "" && d.Device != "" {
+			d.Model = readTrim(filepath.Join(sysRoot, "block", d.Device, "device", "model"))
 		}
 		w.baseline(ctx, &d)
 		if d.Mounted {
@@ -160,6 +177,26 @@ func (w *Watcher) Read(ctx context.Context) Report {
 			}
 		}
 		rep.Disks = append(rep.Disks, d)
+	}
+
+	// Other disks mounted right inside each one, from the mount table alone:
+	// listing the folder would wake a sleeping disk.
+	diskByMajMin := map[string]string{}
+	for _, d := range rep.Disks {
+		if m, ok := mounts[d.Mount]; ok {
+			diskByMajMin[m.majMin] = d.Name
+		}
+	}
+	for i := range rep.Disks {
+		d := &rep.Disks[i]
+		own := mounts[d.Mount].majMin
+		for point, m := range mounts {
+			if filepath.Dir(point) != filepath.Clean(d.Scan) || point == d.Scan || m.majMin == own {
+				continue
+			}
+			d.Nested = append(d.Nested, Nested{Name: filepath.Base(point), Path: point, Disk: diskByMajMin[m.majMin]})
+		}
+		sort.Slice(d.Nested, func(a, b int) bool { return d.Nested[a].Name < d.Nested[b].Name })
 	}
 
 	// Which disk holds each library: the one whose filesystem the folder sits

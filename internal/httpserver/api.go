@@ -168,6 +168,7 @@ type apiDiskFolder struct {
 	Checked    bool     `json:"checked"`
 	Mounted    bool     `json:"mounted"`
 	Asleep     bool     `json:"asleep"`
+	AsleepAge  string   `json:"asleepAge,omitempty"`
 	Temp       string   `json:"temp,omitempty"`
 	TempAge    string   `json:"tempAge,omitempty"`
 	Health     string   `json:"health,omitempty"`
@@ -193,7 +194,7 @@ func (s *Server) apiDiskList(w http.ResponseWriter, r *http.Request) {
 		item := diskFolderPayload(f)
 		c := diskCard(d, false, now)
 		item.Model, item.Role = c.Model, c.Role
-		item.Checked, item.Mounted, item.Asleep = c.Checked, c.Mounted, c.Asleep
+		item.Checked, item.Mounted, item.Asleep, item.AsleepAge = c.Checked, c.Mounted, c.Asleep, c.AsleepAge
 		item.Temp, item.TempAge = c.Temp, c.TempAge
 		item.Health, item.HealthTone = c.Health, c.HealthTone
 		item.Realloc, item.ReallocUp = c.Realloc, c.ReallocUp

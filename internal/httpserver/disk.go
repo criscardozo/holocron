@@ -50,7 +50,7 @@ func (s *Server) handleDiskPage(w http.ResponseWriter, r *http.Request) {
 
 	if selected != nil {
 		if f, err := s.deps.Folders.Get(ctx, selected.FolderID); err == nil {
-			detail := s.buildDiskDetail(ctx, f, *selected)
+			detail := s.buildDiskDetail(ctx, f, *selected, rep)
 			view.Selected = &detail
 		}
 	}
@@ -85,6 +85,9 @@ func diskCard(d disks.Disk, active bool, now time.Time) templates.DiskCard {
 		return c
 	}
 	c.Asleep = sd.Asleep
+	if sd.Asleep && !d.SmartAt.IsZero() {
+		c.AsleepAge = "visto " + ago(now.Sub(d.SmartAt))
+	}
 	age := ""
 	if sd.Asleep && sd.ReadAt != nil {
 		age = "leído " + ago(now.Sub(*sd.ReadAt))
@@ -200,7 +203,7 @@ func hiddenFloor(total uint64) uint64 {
 	return twentyGB
 }
 
-func (s *Server) buildDiskDetail(ctx context.Context, f folders.Folder, disk disks.Disk) templates.DiskDetail {
+func (s *Server) buildDiskDetail(ctx context.Context, f folders.Folder, disk disks.Disk, rep disks.Report) templates.DiskDetail {
 	d := templates.DiskDetail{
 		FolderID: strconv.FormatInt(f.ID, 10),
 		Label:    f.Label,
@@ -242,6 +245,21 @@ func (s *Server) buildDiskDetail(ctx context.Context, f folders.Folder, disk dis
 		for _, t := range res.TopFolders {
 			visible += t.Bytes
 		}
+		d.Stale = !res.OneFileSystem
+		// Another disk mounted inside this one is not measured; listing it
+		// says why it is missing from the sizes.
+		for _, n := range disk.Nested {
+			row := templates.DiskTopRow{Name: n.Name, Foreign: true, ForeignName: n.Disk}
+			if row.ForeignName == "" {
+				row.ForeignName = "otro disco"
+			}
+			for _, other := range rep.Disks {
+				if other.Name == n.Disk && other.FolderID != 0 {
+					row.ForeignHref = "/disk?folder=" + strconv.FormatInt(other.FolderID, 10)
+				}
+			}
+			d.Top = append(d.Top, row)
+		}
 		for _, e := range res.Errors {
 			// lost+found is root's; not reading it is expected, not a failure.
 			if strings.Contains(strings.ToLower(e.Message), "permission denied") {
@@ -253,7 +271,7 @@ func (s *Server) buildDiskDetail(ctx context.Context, f folders.Folder, disk dis
 		// Use the folders do not account for. Only when the scan covers the
 		// whole disk: on the system disk only the downloads are scanned, and
 		// the rest of the system is not "hidden".
-		if disk.Scan == disk.Mount && disk.StatOK && disk.Used > visible && disk.Used-visible > hiddenFloor(disk.Total) {
+		if !d.Stale && disk.Scan == disk.Mount && disk.StatOK && disk.Used > visible && disk.Used-visible > hiddenFloor(disk.Total) {
 			d.Hidden = system.HumanBytes(disk.Used - visible)
 		}
 	}

@@ -152,3 +152,32 @@ func mustRead(t *testing.T, path string) string {
 	}
 	return string(b)
 }
+
+// TestSmartsModelWinsAndNestedDisksAreFound. The USB bridge cuts sysfs's model
+// to 16 characters; SMART has it whole. And a disk bound inside another is
+// found from the mount table, without listing a folder that would wake it.
+func TestSmartsModelWinsAndNestedDisksAreFound(t *testing.T) {
+	h := newHost(t, "217", false)
+	write(t, h.smart, strings.Replace(mustRead(t, h.smart), `"serie":"WD-123"`, `"serie":"WD-123","modelo":"WDC WD30EZRX-00D8PB0"`, 1))
+	write(t, filepath.Join(sysRoot, "block", "sdc", "device", "model"), "EZRX-00D8PB0\n")
+	disco4 := filepath.Join(filepath.Dir(h.mount), "disco4")
+	write(t, filepath.Join(disco4, "Series", "x"), "x")
+	write(t, filepath.Join(procRoot, "self", "mountinfo"), mustRead(t, filepath.Join(procRoot, "self", "mountinfo"))+
+		"41 29 8:17 / "+disco4+" rw shared:3 - ext4 /dev/sdb1 rw\n"+
+		"42 41 8:33 /Peliculas "+filepath.Join(disco4, "Peliculas")+" rw shared:2 - ext4 /dev/sdc1 rw\n")
+
+	w := NewWatcher([]Spec{
+		{Name: "Disco4", Mount: disco4, Scan: disco4},
+		{Name: "Disco3", Mount: h.mount, Scan: h.mount},
+	}, h.fs, h.st, h.smart, slog.New(slog.DiscardHandler))
+	rep := w.Read(t.Context())
+	if rep.Disks[1].Model != "WDC WD30EZRX-00D8PB0" {
+		t.Errorf("model = %q, want SMART's whole one", rep.Disks[1].Model)
+	}
+	if n := rep.Disks[0].Nested; len(n) != 1 || n[0].Name != "Peliculas" || n[0].Disk != "Disco3" {
+		t.Errorf("nested in Disco4 = %+v", n)
+	}
+	if len(rep.Disks[1].Nested) != 0 {
+		t.Errorf("Disco3 has nothing inside: %+v", rep.Disks[1].Nested)
+	}
+}
