@@ -24,12 +24,30 @@ struct DiskFolder: Codable, Identifiable, Hashable {
     var usedPercent: Int
     var available: Bool
 
+    // The disk itself (servers from 0.23). Optional, so older servers decode.
+    var model: String?
+    var role: String?
+    var checked: Bool?
+    var mounted: Bool?
+    var asleep: Bool?
+    var temp: String?
+    var tempAge: String?
+    var health: String?
+    var healthTone: String?
+    var realloc: String?
+    var reallocUp: Bool?
+    var libraries: [String]?
+
     /// Near-full folders are highlighted, matching the web UI's "hot" bar.
     var isHot: Bool { usedPercent >= 90 }
+    /// A configured disk whose mount is missing.
+    var isUnmounted: Bool { checked == true && mounted == false }
 }
 
 struct DiskFolders: Codable {
     var folders: [DiskFolder]
+    /// What needs attention about the disks, in the server's words.
+    var alerts: [String]?
 }
 
 struct DiskEntry: Codable, Identifiable, Hashable {
@@ -37,6 +55,8 @@ struct DiskEntry: Codable, Identifiable, Hashable {
     var path: String
     var bytes: UInt64
     var isDir: Bool
+    /// Another disk mounted here: listed, not measured as this one.
+    var foreign: Bool?
 
     var id: String { path }
 }

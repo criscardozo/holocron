@@ -40,3 +40,7 @@ reproduciéndose ni bajándose.
 `jellyfinLinkPayload` en `internal/httpserver/api.go`: es lo que responde un
 servidor que trae la clave de Jellyfin por credenciales, como Ginebra, y
 capturarlo pide ese servidor.
+
+`disk_disks.json` está escrito a mano a partir de `apiDiskFolder` en
+`internal/httpserver/api.go`, con la forma que tiene en Ginebra: dos discos USB,
+uno sin SMART y otro dormido con los reasignados en suba.

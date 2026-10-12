@@ -17,6 +17,7 @@ import (
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/artwork"
 	"github.com/cristian/holocron/internal/db"
+	"github.com/cristian/holocron/internal/disks"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/hardware"
@@ -67,8 +68,11 @@ func newTestServer(t *testing.T) *testServer {
 	settingsStore := settings.NewStore(database)
 
 	deps := Deps{
-		Log:      logger,
-		Folders:  folderStore,
+		Log:     logger,
+		Folders: folderStore,
+		// No disk config in tests: the watcher falls back to the watched
+		// folders, as a server without HOLOCRON_DISKS does.
+		Disks:    disks.NewWatcher(nil, folderStore, settingsStore, "", logger),
 		Disk:     diskusage.NewService(database, folderStore, jobManager),
 		Hardware: hardware.NewHub(20 * time.Millisecond),
 		Services: live.NewHub(20*time.Millisecond, services.NewReader(services.Config{}).Read),
@@ -97,7 +101,7 @@ func newTestServer(t *testing.T) *testServer {
 	deps.Art = art
 	deps.Widgets = widgets.NewRegistry(
 		widgets.SystemWidget{},
-		widgets.NewDiskWidget(folderStore),
+		widgets.NewDiskWidget(deps.Disks),
 		widgets.NewNamingWidget(deps.Naming),
 		widgets.NewMediaWidget(deps.Library),
 		widgets.NewQualityWidget(deps.Quality),

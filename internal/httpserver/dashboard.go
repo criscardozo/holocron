@@ -9,13 +9,12 @@ import (
 	"time"
 
 	"github.com/cristian/holocron/internal/activity"
-	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/hardware"
 	"github.com/cristian/holocron/internal/power"
-	"github.com/cristian/holocron/internal/scanner"
 	"github.com/cristian/holocron/internal/services"
 	"github.com/cristian/holocron/internal/stack"
 	"github.com/cristian/holocron/internal/system"
+	"github.com/cristian/holocron/internal/widgets"
 	"github.com/cristian/holocron/web/templates"
 )
 
@@ -188,19 +187,22 @@ func (s *Server) attentionChips(ctx context.Context, b hardware.Battery) []templ
 		})
 	}
 
-	if list, err := s.deps.Folders.List(ctx, folders.PurposeDisk); err == nil {
-		for _, f := range list {
-			total, used, _, _, err := scanner.FilesystemStat(f.Path)
-			if err != nil || total == 0 {
+	if s.deps.Disks != nil {
+		rep := s.deps.Disks.Read(ctx)
+		for _, d := range rep.Disks {
+			if !d.StatOK || d.Total == 0 || !d.Mounted {
 				continue
 			}
-			if pct := int(float64(used) / float64(total) * 100); pct >= 90 {
+			if pct := int(float64(d.Used) / float64(d.Total) * 100); pct >= 90 {
 				chips = append(chips, templates.AttnChip{
-					Label: fmt.Sprintf("%s %d%%", f.Label, pct),
+					Label: fmt.Sprintf("%s %d%%", d.Name, pct),
 					Href:  "/disk",
 					Icon:  "drive",
 				})
 			}
+		}
+		for _, a := range widgets.Alerts(rep) {
+			chips = append(chips, templates.AttnChip{Label: a, Href: "/disk", Icon: "alert"})
 		}
 	}
 

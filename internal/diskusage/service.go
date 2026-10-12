@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/jobs"
@@ -65,7 +66,11 @@ func (s *Service) StartScan(ctx context.Context, folderID int64) (jobs.Job, erro
 		// The scan walks the children, but the filesystem figures belong to the
 		// watched folder itself: reporting a child made diskPath point at a
 		// hidden directory rather than the drive being measured.
-		DiskPath:          folder.Path,
+		DiskPath: folder.Path,
+		// One disk only, like du -x. On Ginebra Disco4's tree has Disco3's
+		// Películas bound into it: without this the scan counted 1.3 TB of
+		// one disk as the other's, and never saw what the bind hides.
+		OneFileSystem:     true,
 		TopLimit:          topLimit,
 		MaxReportedErrors: maxScanError,
 		Concurrency:       concurrency,
@@ -142,6 +147,7 @@ func childDirs(root string) []string {
 	if err != nil {
 		return nil
 	}
+	rootDev, hasRootDev := deviceOf(root)
 	var dirs []string
 	for _, e := range entries {
 		if e.Type()&os.ModeSymlink != 0 || !e.IsDir() {
@@ -150,7 +156,13 @@ func childDirs(root string) []string {
 		if strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
-		dirs = append(dirs, filepath.Join(root, e.Name()))
+		path := filepath.Join(root, e.Name())
+		// A child on another filesystem is another disk mounted here; the
+		// scan of this one does not measure it.
+		if dev, ok := deviceOf(path); hasRootDev && ok && dev != rootDev {
+			continue
+		}
+		dirs = append(dirs, path)
 	}
 	return dirs
 }
@@ -166,7 +178,17 @@ func (s *Service) Browse(ctx context.Context, folderID int64, path string) (scan
 	}
 	sc := scanner.New(scanner.Options{
 		Paths:             []string{folder.Path},
+		OneFileSystem:     true,
 		MaxReportedErrors: maxScanError,
 	})
 	return sc.Browse(ctx, path, browseLimit)
+}
+
+// deviceOf is the filesystem a path is on.
+func deviceOf(path string) (uint64, bool) {
+	var st syscall.Stat_t
+	if err := syscall.Stat(path, &st); err != nil {
+		return 0, false
+	}
+	return uint64(st.Dev), true //nolint:unconvert // Dev is int32 on darwin, uint64 on linux
 }

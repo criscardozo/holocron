@@ -73,6 +73,10 @@ type FolderEntry struct {
 	Name  string `json:"name"`
 	Bytes uint64 `json:"bytes"`
 	IsDir bool   `json:"isDir"`
+	// Foreign marks a directory on another filesystem — a mount inside the
+	// one being browsed. With OneFileSystem it is listed but not measured:
+	// its bytes belong to another disk.
+	Foreign bool `json:"foreign,omitempty"`
 }
 
 // BrowseResult is one level of the drill-down.
@@ -260,6 +264,14 @@ func (s *Scanner) Browse(ctx context.Context, path string, limit int) (BrowseRes
 		}
 
 		var bytes uint64
+		if entry.IsDir() && s.options.OneFileSystem && hasRootDevice {
+			if fi, err := entry.Info(); err == nil {
+				if dev, ok := deviceID(fi); ok && dev != rootDevice {
+					entries = append(entries, FolderEntry{Path: entryPath, Name: entry.Name(), IsDir: true, Foreign: true})
+					continue
+				}
+			}
+		}
 		if entry.IsDir() {
 			size, walkErr := s.directorySizeFS(ctx, rootFS, entryRel, rootAbs, rootDevice, hasRootDevice, &scanErrors)
 			if walkErr != nil {

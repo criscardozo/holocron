@@ -52,8 +52,8 @@ struct APIClient: Sendable {
 
     // MARK: - Disk
 
-    func diskFolders() async throws -> [DiskFolder] {
-        try await get("disk", as: DiskFolders.self).folders
+    func diskFolders() async throws -> DiskFolders {
+        try await get("disk", as: DiskFolders.self)
     }
 
     func diskDetail(id: Int64) async throws -> DiskDetail {

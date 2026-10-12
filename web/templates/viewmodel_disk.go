@@ -1,17 +1,50 @@
 package templates
 
-// DiskPageView is the disk detail page: a nav of folders and the selected one.
+// DiskPageView is the disk page: a card per disk, what needs attention, and
+// the selected disk's scan and drill-down.
 type DiskPageView struct {
-	Nav      []DiskNavItem
+	Cards    []DiskCard
+	Alerts   []DiskAlert
 	Selected *DiskDetail
 	Empty    bool
 }
 
-// DiskNavItem is a folder tab on the disk page.
-type DiskNavItem struct {
-	Label  string
-	Href   string
-	Active bool
+// DiskCard is one disk at a glance. Everything on it is read without waking
+// the disk: statfs, the mount table, and the SMART file the server writes.
+type DiskCard struct {
+	Name, Href  string
+	Active      bool
+	Model, Role string
+	StatOK      bool
+	UsedPercent int
+	UsedHuman   string
+	TotalHuman  string
+	FreeHuman   string
+	// Checked says the mount was verified; Mounted is only meaningful then.
+	Checked, Mounted bool
+	Asleep           bool
+	// Temp is the temperature; TempAge says when it was read, when that was
+	// not just now (the disk sleeps and keeps its last reading).
+	Temp, TempAge string
+	// Health is a word ("sano", "falla", "sin datos de salud"); HealthTone
+	// "ok", "bad" or "none".
+	Health, HealthTone string
+	// Realloc is "217 reasignados" with its age when old; ReallocUp marks a
+	// rise over the first count seen.
+	Realloc   string
+	ReallocUp bool
+	Libraries string // "Películas", "Series · Museum · Anime"
+}
+
+// DiskAlert is something about the disks worth acting on, with the one
+// action that settles it when there is one.
+type DiskAlert struct {
+	Text   string
+	Detail string
+	// Bad is red (a disk gone); otherwise the lilac of something to look at.
+	Bad bool
+	// Action posts Field=Value to settle the alert, with Button as label.
+	Action, Field, Value, Button string
 }
 
 // DiskDetail is the selected folder's scan detail.
@@ -28,6 +61,13 @@ type DiskDetail struct {
 	FreeHuman   string
 	Top         []DiskTopRow
 	Errors      []string
+	// NoAccess are folders the scan could not read (lost+found is root's),
+	// listed apart because they are not a failure.
+	NoAccess []string
+	// Hidden is space in use that no visible folder accounts for, when it is
+	// too large to be the filesystem's own bookkeeping: on Disco4, the old
+	// copy of Películas under the bind mount.
+	Hidden string
 }
 
 // DiskTopRow is one of the largest folders in a scan. BrowseHref drills in.
@@ -64,4 +104,9 @@ type BrowseRow struct {
 	BytesHuman string
 	Percent    int
 	IsDir      bool
+	// Foreign is a folder that is another disk mounted here; ForeignName and
+	// ForeignHref lead to that disk instead of measuring it as this one.
+	Foreign     bool
+	ForeignName string
+	ForeignHref string
 }

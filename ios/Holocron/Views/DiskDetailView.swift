@@ -154,7 +154,15 @@ struct BrowseView: View {
 
                 Section {
                     ForEach(listing.entries) { entry in
-                        if entry.isDir {
+                        if entry.foreign == true {
+                            // Another disk mounted inside this one.
+                            HStack {
+                                Image(systemName: "externaldrive").font(.caption).foregroundStyle(Palette.muted)
+                                Text(entry.name).font(.system(.footnote, design: .monospaced)).lineLimit(1)
+                                Spacer()
+                                Text("otro disco").font(.caption).foregroundStyle(Palette.muted)
+                            }
+                        } else if entry.isDir {
                             NavigationLink {
                                 BrowseView(folderID: folderID, path: entry.path, title: entry.name)
                             } label: {

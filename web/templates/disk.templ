@@ -1,6 +1,9 @@
 package templates
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // bar renders a proportion bar filled to pct percent. hot switches the fill to
 // the accent gradient (near-full disks). The width comes from a .pw-N class
@@ -21,25 +24,107 @@ templ diskContent(v DiskPageView) {
 	<div class="page-head">
 		<div>
 			<h1>Disco</h1>
-			<p class="sub">Uso por carpeta vigilada · explorá el árbol para ver qué ocupa lugar</p>
+			<p class="sub">Cada disco, qué guarda y cómo está · escaneá uno para ver qué ocupa lugar</p>
 		</div>
 	</div>
 	if v.Empty {
-		<p class="muted">No hay carpetas de disco configuradas. Agregá una en <a href="/settings">Ajustes</a>.</p>
+		<p class="muted">No hay discos configurados. En el servidor se configuran con <span class="mono">HOLOCRON_DISKS</span>.</p>
 	} else {
-		<nav class="tabs" aria-label="Carpetas vigiladas">
-			for _, item := range v.Nav {
-				if item.Active {
-					<a class="tab active" href={ templ.SafeURL(item.Href) } aria-current="page">{ item.Label }</a>
-				} else {
-					<a class="tab" href={ templ.SafeURL(item.Href) }>{ item.Label }</a>
-				}
+		for _, a := range v.Alerts {
+			@diskAlert(a)
+		}
+		<ul class="disk-cards">
+			for _, c := range v.Cards {
+				<li>
+					@diskCard(c)
+				</li>
 			}
-		</nav>
+		</ul>
 		if v.Selected != nil {
 			@DiskDetailSection(*v.Selected)
 		}
 	}
+}
+
+templ diskAlert(a DiskAlert) {
+	<div class={ "notice", "disk-alert", "mb-6", templ.KV("error", a.Bad) } role="status">
+		@IconSm("alert")
+		<div class="disk-alert-text">
+			<strong>{ a.Text }</strong>
+			if a.Detail != "" {
+				<span>{ a.Detail }</span>
+			}
+		</div>
+		if a.Action != "" {
+			<form method="post" action={ templ.SafeURL(a.Action) }>
+				if a.Field != "" {
+					<input type="hidden" name={ a.Field } value={ a.Value }/>
+				}
+				<button type="submit" class="btn btn-secondary">{ a.Button }</button>
+			</form>
+		}
+	</div>
+}
+
+// diskCard is one disk at a glance, and the way into its scan.
+templ diskCard(c DiskCard) {
+	<article class={ "card", "disk-card", templ.KV("disk-card-active", c.Active), templ.KV("disk-card-off", c.Checked && !c.Mounted) }>
+		<header class="disk-card-head">
+			<div class="disk-card-name">
+				<h2>
+					if c.Href != "" {
+						<a href={ templ.SafeURL(c.Href) }>{ c.Name }</a>
+					} else {
+						{ c.Name }
+					}
+				</h2>
+				if c.Model != "" {
+					<span class="muted">{ c.Model }</span>
+				}
+			</div>
+			if c.Role != "" {
+				<span class="badge badge-neutral">{ c.Role }</span>
+			}
+		</header>
+		if c.StatOK && (c.Mounted || !c.Checked) {
+			<div class="disk-card-use">
+				<span class="disk-card-pct">{ fmt.Sprintf("%d %%", c.UsedPercent) }</span>
+				<span class="muted">{ c.FreeHuman } libres de { c.TotalHuman }</span>
+			</div>
+			@bar(c.UsedPercent, c.UsedPercent >= 90)
+		}
+		<div class="disk-card-state">
+			if c.Checked {
+				if c.Mounted {
+					<span class="badge badge-yes">montado</span>
+				} else {
+					<span class="badge badge-no">no montado</span>
+				}
+			}
+			if c.Asleep {
+				<span class="badge badge-neutral">durmiendo</span>
+			}
+			if c.Temp != "" {
+				<span class={ "mono", templ.KV("muted", c.TempAge != "") }>
+					{ c.Temp }
+					if c.TempAge != "" {
+						· { c.TempAge }
+					}
+				</span>
+			}
+		</div>
+		if c.Health != "" {
+			<p class={ "disk-card-health", "disk-health-" + c.HealthTone }>
+				{ c.Health }
+				if c.Realloc != "" {
+					<span class={ templ.KV("disk-realloc-up", c.ReallocUp), templ.KV("muted", !c.ReallocUp) }>· { c.Realloc }</span>
+				}
+			</p>
+		}
+		if c.Libraries != "" {
+			<p class="disk-card-holds"><span class="muted">Guarda</span> { c.Libraries }</p>
+		}
+	</article>
 }
 
 // DiskDetailSection is the per-folder detail; it is re-fetched via hx-select
@@ -47,10 +132,9 @@ templ diskContent(v DiskPageView) {
 templ DiskDetailSection(d DiskDetail) {
 	<section id="disk-detail">
 		<div class="disk-hero">
-			<div class="disk-gauge">
-				<div class="top"><span class="big-num">{ fmt.Sprintf("%d%%", d.UsedPercent) }</span></div>
-				@bar(d.UsedPercent, d.UsedPercent >= 90)
-				<div class="free">{ d.UsedHuman } usados · { d.FreeHuman } libres de { d.TotalHuman }</div>
+			<div class="disk-detail-title">
+				<h2>{ d.Label }</h2>
+				<span class="mono muted">{ d.Path }</span>
 			</div>
 			<div class="hero-actions">
 				if d.HasResult && !d.Scanning {
@@ -66,7 +150,7 @@ templ DiskDetailSection(d DiskDetail) {
 						if d.Scanning {
 							Escaneando…
 						} else {
-							Escanear
+							Escanear (despierta el disco)
 						}
 					</button>
 				</form>
@@ -85,6 +169,27 @@ templ DiskDetailSection(d DiskDetail) {
 						@diskTopRow(t)
 					}
 				</ul>
+				if d.Hidden != "" {
+					// What statfs counts and no folder explains: on Ginebra's
+					// Disco4, the old copy of Películas under the bind mount.
+					<div class="disk-hidden">
+						<div class="row-head">
+							<span class="name">
+								@IconSm("info")
+								Ocupado y no visible
+							</span>
+							<span class="sz">{ d.Hidden }</span>
+						</div>
+						<p class="muted">
+							Espacio que el disco cuenta como usado y que ninguna carpeta visible explica.
+							Suele ser lo que quedó debajo de un montaje, como una copia vieja tapada por
+							otro disco montado encima.
+						</p>
+					</div>
+				}
+				if len(d.NoAccess) > 0 {
+					<p class="muted disk-noaccess">Sin acceso: { strings.Join(d.NoAccess, ", ") }</p>
+				}
 				@errorList(d.Errors)
 			</div>
 			<div class="card elev-sm sec">
@@ -163,7 +268,22 @@ templ BrowseFragment(v BrowseView) {
 }
 
 templ browseRow(e BrowseRow) {
-	if e.IsDir {
+	if e.Foreign {
+		// Another disk mounted inside this one: not measured as this disk.
+		<div class="fs-row fs-foreign">
+			@IconSm("drive")
+			<span class="nm">{ e.Name }</span>
+			<span class="muted">
+				es el
+				if e.ForeignHref != "" {
+					<a href={ templ.SafeURL(e.ForeignHref) }>{ e.ForeignName }</a>
+				} else {
+					{ e.ForeignName }
+				}
+			</span>
+			<span></span>
+		</div>
+	} else if e.IsDir {
 		<button type="button" class="fs-row dir" hx-get={ e.BrowseHref } hx-target="#browse" hx-swap="innerHTML" aria-label={ "Abrir " + e.Name }>
 			@IconSm("folder")
 			<span class="nm">{ e.Name }</span>

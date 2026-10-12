@@ -230,6 +230,18 @@ struct ContractTests {
         #expect(act.playing.first?.art?.hasPrefix("/art/") == true)
     }
 
+    @Test func disksWithTheirState() throws {
+        let list = try decode(DiskFolders.self, "disk_disks")
+        #expect(list.alerts?.count == 1)
+        let disco3 = try #require(list.folders.first { $0.label == "Disco3" })
+        #expect(disco3.reallocUp == true)
+        #expect(disco3.asleep == true)
+        #expect(disco3.libraries == ["Películas"])
+        #expect(!disco3.isUnmounted)
+        let disco4 = try #require(list.folders.first { $0.label == "Disco4" })
+        #expect(disco4.healthTone == "none")
+    }
+
     @Test func lenientDecodesNullAndMissing() throws {
         struct Box: Decodable { @Lenient var items: [String] }
         let null = try JSONDecoder().decode(Box.self, from: Data(#"{"items":null}"#.utf8))

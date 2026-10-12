@@ -1,0 +1,12 @@
+{
+ "alerts": ["Disco3: los sectores reasignados subieron de 217 a 221."],
+ "folders": [
+  {"id": 3, "label": "Disco4", "path": "/mnt/disco4", "totalBytes": 4000000000000, "usedBytes": 2820000000000, "freeBytes": 1180000000000, "usedPercent": 70, "available": true,
+   "model": "Seagate Expansion HDD", "role": "biblioteca", "checked": true, "mounted": true, "asleep": false,
+   "health": "sin datos de salud", "healthTone": "none", "reallocUp": false, "libraries": ["Anime", "Museum", "Series"]},
+  {"id": 4, "label": "Disco3", "path": "/mnt/disco3", "totalBytes": 3000000000000, "usedBytes": 1330000000000, "freeBytes": 1670000000000, "usedPercent": 44, "available": true,
+   "model": "WDC WD30EZRX-00D8PB0", "role": "biblioteca", "checked": true, "mounted": true, "asleep": true,
+   "temp": "28 °C", "tempAge": "leído hace 2 días", "health": "sano", "healthTone": "ok",
+   "realloc": "221 reasignados · leído hace 2 días", "reallocUp": true, "libraries": ["Películas"]}
+ ]
+}

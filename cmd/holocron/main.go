@@ -22,6 +22,7 @@ import (
 	"github.com/cristian/holocron/internal/bazarr"
 	"github.com/cristian/holocron/internal/config"
 	"github.com/cristian/holocron/internal/db"
+	"github.com/cristian/holocron/internal/disks"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/hardware"
@@ -68,10 +69,23 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	if len(cfg.BadFolders) > 0 {
 		logger.Warn("ignored malformed HOLOCRON_MEDIA_FOLDERS entries", "entries", strings.Join(cfg.BadFolders, ";"))
 	}
-	if len(cfg.MediaFolders) > 0 {
-		specs := make([]folders.Spec, 0, len(cfg.MediaFolders))
+	if len(cfg.BadDisks) > 0 {
+		logger.Warn("ignored malformed HOLOCRON_DISKS entries", "entries", strings.Join(cfg.BadDisks, ";"))
+	}
+	if len(cfg.MediaFolders) > 0 || len(cfg.Disks) > 0 {
+		specs := make([]folders.Spec, 0, len(cfg.MediaFolders)+len(cfg.Disks))
 		for _, f := range cfg.MediaFolders {
+			// With HOLOCRON_DISKS the disks come from there; a "disk" entry
+			// among the media folders would be a second, stale copy.
+			if len(cfg.Disks) > 0 && f.Purpose == folders.PurposeDisk {
+				continue
+			}
 			specs = append(specs, folders.Spec{Label: f.Label, Purpose: f.Purpose, Path: f.Path})
+		}
+		// Each disk scans through a watched folder of its own, at the folder
+		// it is scanned from: the whole disk, or the downloads on the system.
+		for _, d := range cfg.Disks {
+			specs = append(specs, folders.Spec{Label: d.Name, Purpose: folders.PurposeDisk, Path: d.Scan})
 		}
 		if err := folderStore.Manage(ctx, specs); err != nil {
 			return fmt.Errorf("managed folders: %w", err)
@@ -95,6 +109,11 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		logger.Info("credentials provided by the server", "names", strings.Join(names, ","))
 	}
 	diskService := diskusage.NewService(database, folderStore, jobManager)
+	diskSpecs := make([]disks.Spec, 0, len(cfg.Disks))
+	for _, d := range cfg.Disks {
+		diskSpecs = append(diskSpecs, disks.Spec{Name: d.Name, Mount: d.Mount, Role: d.Role, Scan: d.Scan})
+	}
+	diskWatcher := disks.NewWatcher(diskSpecs, folderStore, settingsStore, cfg.SmartFile, logger)
 	namingService := naming.NewService(database, folderStore)
 	libraryService := library.NewService(database, settingsStore, jobManager)
 	qualityService := quality.NewService(database, settingsStore, jobManager)
@@ -117,7 +136,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 
 	registry := widgets.NewRegistry(
 		widgets.SystemWidget{},
-		widgets.NewDiskWidget(folderStore),
+		widgets.NewDiskWidget(diskWatcher),
 		widgets.NewNamingWidget(namingService),
 		widgets.NewMediaWidget(libraryService),
 		widgets.NewQualityWidget(qualityService),
@@ -129,6 +148,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Widgets:            registry,
 		Folders:            folderStore,
 		Disk:               diskService,
+		Disks:              diskWatcher,
 		Hardware:           hardware.NewHub(2 * time.Second),
 		Activity:           activityHub,
 		Services:           servicesHub,

@@ -13,6 +13,7 @@ import (
 	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/artwork"
+	"github.com/cristian/holocron/internal/disks"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
 	"github.com/cristian/holocron/internal/hardware"
@@ -34,10 +35,12 @@ import (
 // Deps are the dependencies shared by the HTTP handlers. Later phases add their
 // own services here.
 type Deps struct {
-	Log      *slog.Logger
-	Widgets  *widgets.Registry
-	Folders  *folders.Store
-	Disk     *diskusage.Service
+	Log     *slog.Logger
+	Widgets *widgets.Registry
+	Folders *folders.Store
+	Disk    *diskusage.Service
+	// Disks reads the disks themselves: mounts, health, what each holds.
+	Disks    *disks.Watcher
 	Hardware *live.Hub[hardware.Snapshot]
 	Activity *live.Hub[activity.Snapshot]
 	Services *live.Hub[services.Snapshot]
@@ -92,6 +95,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /disk/scan", s.handleDiskScan)
 	mux.HandleFunc("GET /disk/status", s.handleDiskStatus)
 	mux.HandleFunc("GET /disk/browse", s.handleDiskBrowse)
+	mux.HandleFunc("POST /disk/accept-layout", s.handleDiskAcceptLayout)
+	mux.HandleFunc("POST /disk/accept-realloc", s.handleDiskAcceptRealloc)
 
 	// Phase 2: naming validator.
 	// Live hardware: the page, and the event stream it listens to.

@@ -217,16 +217,23 @@ struct DashboardView: View {
 /// disk card was, now one tap behind the Disco tile.
 struct DiskFoldersView: View {
     @Environment(AppSettings.self) private var settings
-    @State private var state: Loadable<[DiskFolder]> = .idle
+    @State private var state: Loadable<DiskFolders> = .idle
 
     var body: some View {
         ScrollView {
-            LoadableView(state: state, reload: load) { disks in
+            LoadableView(state: state, reload: load) { list in
                 VStack(spacing: 12) {
-                    if disks.isEmpty {
-                        AllGoodState(message: "No hay carpetas de disco configuradas")
+                    ForEach(list.alerts ?? [], id: \.self) { alert in
+                        Label(alert, systemImage: "exclamationmark.triangle.fill")
+                            .font(.callout)
+                            .foregroundStyle(Palette.accent200)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .card(accented: true)
                     }
-                    ForEach(disks) { disk in
+                    if list.folders.isEmpty {
+                        AllGoodState(message: "No hay discos configurados")
+                    }
+                    ForEach(list.folders) { disk in
                         NavigationLink { DiskDetailView(folder: disk) } label: { row(disk) }
                             .buttonStyle(.plain)
                     }
@@ -240,26 +247,62 @@ struct DiskFoldersView: View {
         .task { if case .idle = state { await load() } }
     }
 
+    /// One disk at a glance, as on the web's cards: use, state, health and
+    /// what it holds. Values of a sleeping disk carry when they were read.
     private func row(_ disk: DiskFolder) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(disk.label).font(.callout.weight(.semibold))
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(disk.label).font(.callout.weight(.semibold))
+                    if let model = disk.model, !model.isEmpty {
+                        Text(model).font(.caption2).foregroundStyle(Palette.muted).lineLimit(1)
+                    }
+                }
                 Spacer()
-                if disk.available {
+                if disk.available && !disk.isUnmounted {
                     Text("\(disk.usedPercent) %")
-                        .font(.callout.weight(.bold)).monospacedDigit()
+                        .font(.title3.weight(.bold)).monospacedDigit()
                         .foregroundStyle(disk.isHot ? Palette.accent300 : Palette.text)
-                } else {
+                } else if !disk.available {
                     Text("sin leer").font(.caption).foregroundStyle(Palette.danger)
                 }
             }
-            if disk.available {
+            if disk.available && !disk.isUnmounted {
                 ProgressBar(value: Double(disk.usedPercent) / 100, hot: disk.isHot)
-                Text("\(Format.bytes(disk.usedBytes)) de \(Format.bytes(disk.totalBytes))")
+                Text("\(Format.bytes(disk.freeBytes)) libres de \(Format.bytes(disk.totalBytes))")
                     .font(.caption2).foregroundStyle(Palette.muted)
             }
+            HStack(spacing: 6) {
+                if disk.checked == true {
+                    Pill(text: disk.mounted == true ? "montado" : "no montado", kind: disk.mounted == true ? .yes : .no)
+                }
+                if disk.asleep == true { Pill(text: "durmiendo", kind: .neutral) }
+                if let temp = disk.temp {
+                    Text(disk.tempAge.map { "\(temp) · \($0)" } ?? temp)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(disk.tempAge == nil ? Palette.text : Palette.muted)
+                }
+            }
+            if let health = disk.health {
+                (Text(health).foregroundStyle(healthColor(disk.healthTone))
+                 + Text(disk.realloc.map { " · \($0)" } ?? "")
+                    .foregroundStyle(disk.reallocUp == true ? Palette.accent300 : Palette.muted))
+                    .font(.caption)
+            }
+            if let libs = disk.libraries, !libs.isEmpty {
+                Text("Guarda: \(libs.joined(separator: " · "))")
+                    .font(.caption).foregroundStyle(Palette.muted)
+            }
         }
-        .card()
+        .card(accented: disk.isUnmounted || disk.reallocUp == true)
+    }
+
+    private func healthColor(_ tone: String?) -> Color {
+        switch tone {
+        case "ok": Palette.ok
+        case "bad": Palette.danger
+        default: Palette.muted
+        }
     }
 
     @MainActor private func load() async {

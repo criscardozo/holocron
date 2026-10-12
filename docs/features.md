@@ -37,6 +37,37 @@ lo agregado hace poco, en pósters.
 
 ## Feature 2 — Uso de disco de una carpeta
 
+> **Desde octubre de 2026 (v0.23): un disco por tarjeta.** Ginebra tiene dos
+> discos USB (Disco4 y Disco3) más el NVMe del sistema, unidos por bind mounts:
+> Películas vive en el Disco3 y está montada dentro del árbol del Disco4. La
+> pantalla se rehízo para eso:
+>
+> - **`HOLOCRON_DISKS=nombre:montaje:rol[:carpeta a escanear]`**, separados por
+>   `;`. El cuarto campo limita el escaneo: en el sistema, sólo las descargas.
+>   Sin esta variable, los discos son las carpetas `disk` de
+>   `HOLOCRON_MEDIA_FOLDERS`, como antes, y no se verifica el montaje.
+> - **Una tarjeta por disco** con uso (statfs), si está montado (de
+>   `/proc/self/mountinfo`), si duerme, temperatura y salud (del `smart.json` del
+>   servidor, emparejado por dispositivo: mountinfo → major:minor →
+>   `/sys/dev/block` → el disco padre, porque la letra cambia al reenchufar) y
+>   **qué guarda**, derivado comparando el `st_dev` de cada biblioteca con el de
+>   cada disco. Nada de eso despierta un disco dormido. Un dato de un disco
+>   dormido lleva la hora en que se leyó.
+> - **Avisos**, en la pantalla y como chips del Inicio: un disco que no está
+>   montado; **sectores reasignados que suben** sobre la primera cuenta vista
+>   (guardada por número de serie, sólo con un dato nuevo; «tomar como nuevo
+>   normal» la actualiza); y **una biblioteca que cambió de disco** contra el
+>   reparto recordado, que es lo que se ve cuando falta un bind y aparece la
+>   copia vieja en su lugar («es correcto» lo actualiza). Si en ese momento hay
+>   apps caídas, el aviso las nombra.
+> - **El escaneo no cruza de disco** (como `du -x`): las subcarpetas montadas de
+>   otro disco no se miden, y en el explorador aparecen como «es el Disco3».
+> - **«Ocupado y no visible»**: lo que statfs cuenta y ninguna carpeta explica,
+>   si pasa del 1 % del disco o de 20 GB (ext4 ocupa algo por su cuenta). En el
+>   Disco4 es la copia vieja de Películas, tapada por el bind.
+> - **`lost+found`** y lo que no se puede leer se lista como «sin acceso», no
+>   como error.
+
 **Widget**: espacio libre/ocupado de una carpeta que el usuario configura. Click →
 página de detalle.
 

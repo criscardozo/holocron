@@ -32,6 +32,11 @@ type Config struct {
 	WatchUnits  []string // HOLOCRON_WATCH_UNITS, space-separated, e.g. "jellyfin caddy mnt-biblioteca.mount"
 	WatchTimers string   // HOLOCRON_WATCH_TIMERS, a name prefix, e.g. "ginebra-"
 	SmartFile   string   // HOLOCRON_SMART_FILE, the JSON a root timer writes
+	// Disks is HOLOCRON_DISKS: the server's disks, "name:mount:role[:scan]"
+	// separated by ";". Scan narrows the size scan to one folder of the disk
+	// (on the system disk, the downloads, not the whole system).
+	Disks    []DiskSpec
+	BadDisks []string
 	// DirectHost is HOLOCRON_DIRECT_HOST, the server's address on the home
 	// network for the Stack page's direct links. Found on its own when unset.
 	DirectHost string
@@ -89,6 +94,7 @@ func Load() Config {
 		MachineName: envOr("HOLOCRON_MACHINE_NAME", hostTitle()),
 	}
 	c.MediaFolders, c.BadFolders = parseFolders(os.Getenv("HOLOCRON_MEDIA_FOLDERS"))
+	c.Disks, c.BadDisks = parseDisks(os.Getenv("HOLOCRON_DISKS"))
 
 	flag.StringVar(&c.Addr, "addr", c.Addr, "listen address (host:port)")
 	flag.StringVar(&c.DBPath, "db", c.DBPath, "path to the SQLite database file")
@@ -139,4 +145,36 @@ func hostTitle() string {
 	}
 	h, _, _ = strings.Cut(h, ".")
 	return strings.ToUpper(h[:1]) + h[1:]
+}
+
+// DiskSpec is one disk from HOLOCRON_DISKS.
+type DiskSpec struct {
+	Name, Mount, Role, Scan string
+}
+
+// parseDisks reads "name:mount:role[:scan]" entries separated by ";". Scan
+// defaults to the mount. Malformed entries are returned apart, to be logged.
+func parseDisks(raw string) (specs []DiskSpec, bad []string) {
+	for _, e := range strings.Split(raw, ";") {
+		e = strings.TrimSpace(e)
+		if e == "" {
+			continue
+		}
+		parts := strings.SplitN(e, ":", 4)
+		if len(parts) < 3 || parts[0] == "" || !strings.HasPrefix(parts[1], "/") {
+			bad = append(bad, e)
+			continue
+		}
+		d := DiskSpec{
+			Name:  strings.TrimSpace(parts[0]),
+			Mount: strings.TrimSpace(parts[1]),
+			Role:  strings.TrimSpace(parts[2]),
+			Scan:  strings.TrimSpace(parts[1]),
+		}
+		if len(parts) == 4 && strings.HasPrefix(strings.TrimSpace(parts[3]), "/") {
+			d.Scan = strings.TrimSpace(parts[3])
+		}
+		specs = append(specs, d)
+	}
+	return specs, bad
 }

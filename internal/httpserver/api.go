@@ -160,19 +160,51 @@ type apiDiskFolder struct {
 	FreeBytes   uint64 `json:"freeBytes"`
 	UsedPercent int    `json:"usedPercent"`
 	Available   bool   `json:"available"`
+
+	// The disk itself, from the same reading the web's cards use. All
+	// optional for older clients; empty when the server has no disk config.
+	Model      string   `json:"model,omitempty"`
+	Role       string   `json:"role,omitempty"`
+	Checked    bool     `json:"checked"`
+	Mounted    bool     `json:"mounted"`
+	Asleep     bool     `json:"asleep"`
+	Temp       string   `json:"temp,omitempty"`
+	TempAge    string   `json:"tempAge,omitempty"`
+	Health     string   `json:"health,omitempty"`
+	HealthTone string   `json:"healthTone,omitempty"`
+	Realloc    string   `json:"realloc,omitempty"`
+	ReallocUp  bool     `json:"reallocUp"`
+	Libraries  []string `json:"libraries,omitempty"`
 }
 
 func (s *Server) apiDiskList(w http.ResponseWriter, r *http.Request) {
-	list, err := s.deps.Folders.List(r.Context(), folders.PurposeDisk)
-	if err != nil {
-		s.apiFailure(w, r, err)
-		return
+	ctx := r.Context()
+	rep := s.deps.Disks.Read(ctx)
+	now := time.Now()
+	out := make([]apiDiskFolder, 0, len(rep.Disks))
+	for _, d := range rep.Disks {
+		if d.FolderID == 0 {
+			continue
+		}
+		f, err := s.deps.Folders.Get(ctx, d.FolderID)
+		if err != nil {
+			continue
+		}
+		item := diskFolderPayload(f)
+		c := diskCard(d, false, now)
+		item.Model, item.Role = c.Model, c.Role
+		item.Checked, item.Mounted, item.Asleep = c.Checked, c.Mounted, c.Asleep
+		item.Temp, item.TempAge = c.Temp, c.TempAge
+		item.Health, item.HealthTone = c.Health, c.HealthTone
+		item.Realloc, item.ReallocUp = c.Realloc, c.ReallocUp
+		item.Libraries = d.Libraries
+		out = append(out, item)
 	}
-	out := make([]apiDiskFolder, 0, len(list))
-	for _, f := range list {
-		out = append(out, diskFolderPayload(f))
+	alerts := []string{}
+	for _, a := range s.diskAlerts(ctx, rep) {
+		alerts = append(alerts, a.Text)
 	}
-	s.writeJSON(w, http.StatusOK, map[string]any{"folders": out})
+	s.writeJSON(w, http.StatusOK, map[string]any{"folders": out, "alerts": alerts})
 }
 
 func diskFolderPayload(f folders.Folder) apiDiskFolder {
@@ -194,6 +226,8 @@ type apiDiskEntry struct {
 	Path  string `json:"path"`
 	Bytes uint64 `json:"bytes"`
 	IsDir bool   `json:"isDir"`
+	// Foreign is another disk mounted inside this one, not measured here.
+	Foreign bool `json:"foreign,omitempty"`
 }
 
 func (s *Server) apiDiskDetail(w http.ResponseWriter, r *http.Request) {
@@ -240,7 +274,7 @@ func (s *Server) apiDiskBrowse(w http.ResponseWriter, r *http.Request) {
 	}
 	entries := make([]apiDiskEntry, 0, len(res.Entries))
 	for _, e := range res.Entries {
-		entries = append(entries, apiDiskEntry{Name: e.Name, Path: e.Path, Bytes: e.Bytes, IsDir: e.IsDir})
+		entries = append(entries, apiDiskEntry{Name: e.Name, Path: e.Path, Bytes: e.Bytes, IsDir: e.IsDir, Foreign: e.Foreign})
 	}
 	s.writeJSON(w, http.StatusOK, map[string]any{
 		"path":       res.Path,
