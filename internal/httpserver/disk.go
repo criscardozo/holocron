@@ -394,19 +394,28 @@ func humanScannedAt(stored string) string {
 	if err != nil {
 		return stored
 	}
-	switch d := time.Since(t.UTC()); {
+	if phrase, ok := agoPhrase(time.Since(t.UTC())); ok {
+		return phrase
+	}
+	return t.UTC().Local().Format("2006-01-02 15:04")
+}
+
+// agoPhrase says how long ago something happened, for anything under a week.
+// ok is false beyond that, where a date says more than a count of days.
+func agoPhrase(d time.Duration) (phrase string, ok bool) {
+	switch {
 	case d < 0:
-		return "recién"
+		return "recién", true
 	case d < time.Minute:
-		return "hace instantes"
+		return "hace instantes", true
 	case d < time.Hour:
-		return fmt.Sprintf("hace %d min", int(d.Minutes()))
+		return fmt.Sprintf("hace %d min", int(d.Minutes())), true
 	case d < 24*time.Hour:
-		return fmt.Sprintf("hace %d h", int(d.Hours()))
+		return fmt.Sprintf("hace %d h", int(d.Hours())), true
 	case d < 7*24*time.Hour:
-		return fmt.Sprintf("hace %d días", int(d.Hours()/24))
+		return fmt.Sprintf("hace %d días", int(d.Hours()/24)), true
 	default:
-		return t.UTC().Local().Format("2006-01-02 15:04")
+		return "", false
 	}
 }
 
