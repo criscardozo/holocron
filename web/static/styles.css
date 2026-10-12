@@ -416,6 +416,10 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 /* "es el Disco3" is one phrase: it does not break, and the folder name gives
    way first when the row is narrow. */
 .disk-top-foreign .muted, .fs-foreign .muted { white-space: nowrap; flex: none; }
+/* .largest turns its links into blocks for the clickable rows; this one is a
+   word inside a phrase and has to stay inline. */
+.disk-top-foreign .muted a, .fs-foreign .muted a { display: inline; }
+.fs-foreign .muted { grid-column: 3 / -1; justify-self: end; }
 .disk-top-foreign .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .disk-detail-title { display: grid; gap: 2px; }
 .disk-detail-title h2 { font-size: 20px; font-weight: 650; }

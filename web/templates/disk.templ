@@ -313,7 +313,6 @@ templ browseRow(e BrowseRow) {
 					{ e.ForeignName }
 				}
 			</span>
-			<span></span>
 		</div>
 	} else if e.IsDir {
 		<button type="button" class="fs-row dir" hx-get={ e.BrowseHref } hx-target="#browse" hx-swap="innerHTML" aria-label={ "Abrir " + e.Name }>
