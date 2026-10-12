@@ -413,6 +413,10 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .fs-foreign .muted a, .disk-top-foreign .muted a { color: var(--color-accent-300); }
 .disk-top-foreign .row-head { display: flex; justify-content: space-between; align-items: center; padding: var(--space-2) 0; font-size: 14px; }
 .disk-top-foreign .name { display: inline-flex; align-items: center; gap: 6px; color: var(--text-soft); }
+/* "es el Disco3" is one phrase: it does not break, and the folder name gives
+   way first when the row is narrow. */
+.disk-top-foreign .muted, .fs-foreign .muted { white-space: nowrap; flex: none; }
+.disk-top-foreign .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .disk-detail-title { display: grid; gap: 2px; }
 .disk-detail-title h2 { font-size: 20px; font-weight: 650; }
 
