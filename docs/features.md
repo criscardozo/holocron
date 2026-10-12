@@ -212,6 +212,8 @@ Agregar descargas por magnet-link desde la UI.
 
 **Pantalla** con el estado de la Pi y los botones que actúan sobre ella:
 reiniciar Jellyfin, qBittorrent, el túnel o Holocron; reiniciar la Pi; apagarla.
+Desde la v0.24 suma al pie la tarjeta de actualizaciones del servidor: ver la
+[Feature 14](#feature-14--actualizaciones-del-servidor-en-gestión).
 
 ### Por qué no puede hacerlo Holocron solo
 
@@ -994,3 +996,59 @@ proxy sirve la misma app en `merli.store` y en `holocron.merli.store`.
   a 48).
 - La ruta `/jellyfin/` de `merli.store` la sirve el proxy (el fondo del login de
   Jellyfin) y nunca llega a Holocron: no usarla.
+
+---
+
+## Feature 14 — Actualizaciones del servidor (en Gestión)
+
+Desde octubre de 2026 (v0.24) Ginebra se actualiza sola cada 15 días
+(`ginebra-actualizar`, a las 04:30), sin cruzar nunca una versión mayor y
+volviendo atrás la app que no arranca. Holocron muestra lo que el servidor sabe
+de eso, en una tarjeta **Actualizaciones** al pie de Gestión.
+
+- **De dónde sale**: del JSON que escribe el script de root
+  (`HOLOCRON_UPDATES_FILE`, en Ginebra `/var/lib/ginebra/estado/actualizaciones.json`,
+  `root:ginebra-estado 0640`), igual que el de SMART. Holocron no consulta
+  versiones por su cuenta: el script sabe cómo está instalada cada app y de
+  dónde salen sus versiones. Sin la variable, o sin el archivo, la tarjeta no
+  aparece.
+- **Qué muestra**: cada app (Debian, Jellyfin, las *arr, Caddy, Holocron…) con
+  la versión instalada, la última y una insignia: **al día** (tranquila, en
+  gris), **versión nueva** (se instala sola en la próxima vuelta), **versión
+  mayor: a mano** (en amarillo: la vuelta automática no la toca) y **no se pudo
+  revisar** (en rojo). La nota del servidor va debajo del nombre (para Debian,
+  qué paquetes esperan). Un estado que Holocron no conoce se muestra como «no se
+  pudo revisar»: no puede dar fe de algo que no entiende.
+- **El resumen**: «Última actualización», «Próxima» («en 16 días (29 de
+  octubre)», contados por calendario: mañana a las 04:30 es «mañana» aunque
+  falten seis horas) y «Revisado hace…», de la fecha en que el servidor miró.
+- **Avisos**: mientras instala (`corriendo`), «Instalando actualizaciones…» y la
+  tarjeta se recarga cada 2 s hasta que termina. Con un kernel nuevo sin
+  arrancar (`reinicio_pendiente`), que falta reiniciar y que el reinicio se hace
+  solo a la noche, cuando nadie usa el equipo.
+- **La última vuelta**: los cambios plegados en un `<details>`; las líneas con
+  «FALLO» en rojo, y si hubo fallas, la vuelta se abre sola.
+- **El archivo se lee con tolerancia**: una fecha que falta o no se entiende se
+  pierde ella sola, no la tarjeta; los `null` valen como vacíos.
+
+### «Buscar actualizaciones»
+
+El botón deja `.check-updates-requested` en `/var/lib/holocron` y
+`holocron-check-updates.path` (de root, instalado por Ginebra) corre
+`ginebra-actualizar --estado`, que sólo mira y reescribe el JSON. Es la misma
+convención que las acciones de Gestión —un trigger vacío por acción, y la
+acción existe sólo si existe su unit—, pero vive aparte de ellas
+(`internal/serverupdates`, no `internal/power`): no interrumpe nada, no pide
+confirmación ni token, y no tiene lugar entre los botones que reinician o
+apagan, ni en la lista que ve la app de iOS. Sin la unit, no hay botón.
+
+Después del pedido la tarjeta dice «Revisando…» y se recarga cada 2 s hasta que
+cambia el `generado` del archivo. La fecha de antes viaja en la URL del polling,
+así que Holocron no guarda estado. Si a los 3 minutos no cambió (el servidor
+estaba instalando y no miró, o la unit no corrió), deja de preguntar y lo dice.
+Un pedido todavía sin tomar (el trigger tiene menos de 90 s) se ve igual al
+recargar la página.
+
+- **Endpoints**: `GET /manage/updates` (la tarjeta sola; `since` y `started`
+  mientras revisa) y `POST /manage/updates/check` (con la misma protección de
+  origen que el resto de los `POST`).

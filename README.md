@@ -127,6 +127,13 @@ Dos niveles:
 - **Arranque** (flags o variables de entorno del servicio): `--addr` (default `:8090`),
   `--db` (default `/var/lib/holocron/holocron.db` bajo systemd), `--log-level`. Los
   flags pisan a las variables `HOLOCRON_ADDR` / `HOLOCRON_DB` / `HOLOCRON_LOG_LEVEL`.
+- **Lo que da el servidor** (variables de entorno de la unit, todas opcionales; sin
+  ellas, la pantalla correspondiente no aparece o se arma desde la UI):
+  `HOLOCRON_WATCH_UNITS` y `HOLOCRON_WATCH_TIMERS` (Servicios),
+  `HOLOCRON_SMART_FILE` (SMART), `HOLOCRON_UPDATES_FILE` (la tarjeta de
+  actualizaciones de Gestión), `HOLOCRON_DISKS` (Disco), `HOLOCRON_MEDIA_FOLDERS`,
+  `HOLOCRON_DIRECT_HOST` (Stack) y `HOLOCRON_MACHINE_NAME`. El detalle de cada una
+  está en [`docs/features.md`](docs/features.md).
 - **Aplicación** (desde la UI, persistido en SQLite): carpetas de medios, dirección de
   Jellyfin (el token se obtiene por Quick Connect), API key y usuario de OpenSubtitles,
   URL y credenciales de qBittorrent. Las credenciales viven en la base con permisos
