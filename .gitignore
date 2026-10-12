@@ -28,3 +28,6 @@ CLAUDE.md
 
 # Impeccable: la configuración local de cada máquina no va al repo
 /.impeccable/config.local.json
+
+# Claude Code local: permisos de esta máquina y skills instaladas (Impeccable)
+/.claude/
