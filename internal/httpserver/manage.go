@@ -18,7 +18,9 @@ import (
 // action. See internal/power for why the signal carries no content.
 
 func (s *Server) handleManagePage(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, templates.ManagePage(s.manageView(r, templates.ManagePageView{})))
+	v := s.manageView(r, templates.ManagePageView{})
+	v.Updates = s.serverUpdatesView(time.Now(), nil)
+	s.render(w, r, templates.ManagePage(v))
 }
 
 // handleManageAction runs one action. The whole exchange is deliberately

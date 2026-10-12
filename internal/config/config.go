@@ -32,6 +32,9 @@ type Config struct {
 	WatchUnits  []string // HOLOCRON_WATCH_UNITS, space-separated, e.g. "jellyfin caddy mnt-biblioteca.mount"
 	WatchTimers string   // HOLOCRON_WATCH_TIMERS, a name prefix, e.g. "ginebra-"
 	SmartFile   string   // HOLOCRON_SMART_FILE, the JSON a root timer writes
+	// UpdatesFile is HOLOCRON_UPDATES_FILE, the JSON the server's update
+	// script writes for the Gestión page. Empty hides the panel.
+	UpdatesFile string
 	// Disks is HOLOCRON_DISKS: the server's disks, "name:mount:role[:scan]"
 	// separated by ";". Scan narrows the size scan to one folder of the disk
 	// (on the system disk, the downloads, not the whole system).
@@ -90,6 +93,7 @@ func Load() Config {
 		WatchUnits:  strings.Fields(os.Getenv("HOLOCRON_WATCH_UNITS")),
 		WatchTimers: os.Getenv("HOLOCRON_WATCH_TIMERS"),
 		SmartFile:   os.Getenv("HOLOCRON_SMART_FILE"),
+		UpdatesFile: os.Getenv("HOLOCRON_UPDATES_FILE"),
 		DirectHost:  os.Getenv("HOLOCRON_DIRECT_HOST"),
 		MachineName: envOr("HOLOCRON_MACHINE_NAME", hostTitle()),
 	}

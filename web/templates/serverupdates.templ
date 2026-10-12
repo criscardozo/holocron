@@ -1,0 +1,137 @@
+package templates
+
+// ServerUpdates is the Actualizaciones panel on the Gestión page: each app's
+// installed and latest version, as the server last saw them, and the button
+// that asks it to look again. Its own fragment, so polling while the server
+// looks or installs re-reads one file and not the whole page, whose probes
+// talk to Jellyfin and qBittorrent.
+templ ServerUpdates(v ServerUpdatesView) {
+	if v.Show {
+		<section id="server-updates" class="card elev-sm upd mb-6" aria-labelledby="upd-title">
+			<header class="hw-head upd-head">
+				<h2 id="upd-title">Actualizaciones</h2>
+				<span class="upd-badges">
+					if v.AllCurrent() {
+						<span class="badge badge-yes">todo al día</span>
+					}
+					if v.New > 0 {
+						<span class="badge badge-warn">{ Plural(v.New, "versión nueva", "versiones nuevas") }</span>
+					}
+					if v.Major > 0 {
+						<span class="badge badge-aviso">{ Plural(v.Major, "a mano", "a mano") }</span>
+					}
+					if v.Failed > 0 {
+						<span class="badge badge-no">{ Plural(v.Failed, "sin revisar", "sin revisar") }</span>
+					}
+				</span>
+			</header>
+			if v.LastUpdate != "" || v.Next != "" || v.Checked != "" {
+				<p class="upd-summary">
+					if v.LastUpdate != "" {
+						<span>Última actualización: <strong>{ v.LastUpdate }</strong></span>
+					}
+					if v.Next != "" {
+						<span>Próxima: <strong>{ v.Next }</strong></span>
+					}
+					if v.Checked != "" {
+						<span class="muted">Revisado { v.Checked }</span>
+					}
+				</p>
+			}
+			if v.Notice != "" {
+				<div class={ "notice", templ.KV("error", v.NoticeErr) }>
+					@IconSm(noticeIcon(v.NoticeErr))
+					<span>{ v.Notice }</span>
+				</div>
+			}
+			if v.Error != "" {
+				<div class="notice error">
+					@IconSm("alert")
+					<span>{ v.Error }</span>
+				</div>
+			}
+			if v.Running {
+				// Polls only while the install runs; the fragment that comes back
+				// without it stops.
+				<div class="job running" hx-get={ v.PollURL } hx-trigger="every 2s" hx-target="#server-updates" hx-swap="outerHTML">
+					<span class="spinner"></span>
+					<span>Instalando actualizaciones… las apps se reinician de a una.</span>
+				</div>
+			}
+			if v.RebootPending {
+				<div class="notice">
+					@IconSm("info")
+					<span>
+						Se instaló un kernel nuevo y falta reiniciar para usarlo. El reinicio se hace
+						solo a la noche, cuando nadie está usando { v.Machine }.
+					</span>
+				</div>
+			}
+			if len(v.Apps) > 0 {
+				<ul class="upd-list">
+					for _, a := range v.Apps {
+						<li class={ "upd-row", templ.KV("upd-attn", a.Attention) }>
+							<span class="upd-name">{ a.Name }</span>
+							<span class="upd-ver">
+								{ dashIfEmpty(a.Installed) }
+								if a.Latest != "" {
+									<span class="upd-arrow" aria-label="pasa a">→</span>
+									<span class="upd-latest">{ a.Latest }</span>
+								}
+							</span>
+							<span class={ "badge", a.BadgeClass }>{ a.Badge }</span>
+							if a.Note != "" {
+								<span class="upd-note">{ a.Note }</span>
+							}
+						</li>
+					}
+				</ul>
+			}
+			if v.LastRun != nil {
+				@serverUpdatesRun(*v.LastRun)
+			}
+			if v.Checking {
+				<div class="job running" hx-get={ v.PollURL } hx-trigger="every 2s" hx-target="#server-updates" hx-swap="outerHTML">
+					<span class="spinner"></span>
+					<span>Revisando… tarda entre unos segundos y un minuto.</span>
+				</div>
+			} else if v.CheckSlow {
+				<p class="muted upd-slow">
+					La revisión está tardando más de lo normal. Cuando termine aparece acá;
+					recargá en un rato.
+				</p>
+			}
+			if v.CanCheck {
+				<form class="upd-actions" hx-post="/manage/updates/check" hx-target="#server-updates" hx-swap="outerHTML">
+					<button type="submit" class="btn btn-secondary">
+						@IconSm("search")
+						Buscar actualizaciones
+					</button>
+					<span class="muted">Sólo mira: lo nuevo se instala solo en la próxima vuelta.</span>
+				</form>
+			}
+		</section>
+	}
+}
+
+// serverUpdatesRun is what the last run did, folded: on a quiet day it is
+// history, and a failure is the one thing in it worth opening for.
+templ serverUpdatesRun(r ServerUpdateRun) {
+	if len(r.Changes) > 0 || r.Failures > 0 {
+		<details class="upd-run" open?={ r.Failures > 0 }>
+			<summary>
+				{ r.Title }
+				if r.Failures > 0 {
+					<span class="badge badge-no">{ Plural(r.Failures, "falla", "fallas") }</span>
+				}
+			</summary>
+			if len(r.Changes) > 0 {
+				<ul class="upd-changes">
+					for _, c := range r.Changes {
+						<li class={ templ.KV("upd-fail", c.Failed) }>{ c.Text }</li>
+					}
+				</ul>
+			}
+		</details>
+	}
+}

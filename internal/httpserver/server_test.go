@@ -28,6 +28,7 @@ import (
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
+	"github.com/cristian/holocron/internal/serverupdates"
 	"github.com/cristian/holocron/internal/services"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/torrents"
@@ -43,6 +44,9 @@ type testServer struct {
 	deps Deps
 	logs *strings.Builder
 	db   *sql.DB
+	// updatesFile is where the Actualizaciones panel reads from. Nothing is
+	// there until a test writes it, which is the panel hidden.
+	updatesFile string
 }
 
 // testPosterID is the one poster the test server's fake Jellyfin has.
@@ -89,6 +93,8 @@ func newTestServer(t *testing.T) *testServer {
 		Updates:      updates.NewService(t.TempDir()),
 		Power:        power.NewService(t.TempDir()),
 	}
+	updatesFile := filepath.Join(t.TempDir(), "actualizaciones.json")
+	deps.ServerUpdates = serverupdates.NewService(updatesFile, t.TempDir())
 	art, err := artwork.New(t.TempDir(), func(_ context.Context, id string, _ int) ([]byte, string, error) {
 		if id == testPosterID {
 			return []byte("jpeg"), "image/jpeg", nil
@@ -110,7 +116,7 @@ func newTestServer(t *testing.T) *testServer {
 
 	srv := httptest.NewServer(New(deps).Handler())
 	t.Cleanup(srv.Close)
-	return &testServer{Server: srv, deps: deps, logs: logs, db: database}
+	return &testServer{Server: srv, deps: deps, logs: logs, db: database, updatesFile: updatesFile}
 }
 
 // response is the whole answer, already read and closed. Returning this rather

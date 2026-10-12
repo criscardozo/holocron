@@ -55,6 +55,9 @@ type ManagePageView struct {
 
 	LastAction       string
 	LastActionFailed bool
+
+	// Updates is the Actualizaciones panel, a fragment of its own.
+	Updates ServerUpdatesView
 }
 
 // ManageServiceRow is what can honestly be said about a neighbouring service:

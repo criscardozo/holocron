@@ -35,6 +35,7 @@ import (
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
 	"github.com/cristian/holocron/internal/seerr"
+	"github.com/cristian/holocron/internal/serverupdates"
 	"github.com/cristian/holocron/internal/services"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/stack"
@@ -122,6 +123,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	jellyfinLink := jellyfin.NewLinkService(settingsStore)
 	updatesService := updates.NewService(filepath.Dir(cfg.DBPath))
 	powerService := power.NewService(filepath.Dir(cfg.DBPath))
+	serverUpdates := serverupdates.NewService(cfg.UpdatesFile, filepath.Dir(cfg.DBPath))
 	artStore, err := artwork.New(filepath.Join(filepath.Dir(cfg.DBPath), "artwork"), libraryService.Poster, logger)
 	if err != nil {
 		return fmt.Errorf("artwork cache: %w", err)
@@ -162,6 +164,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		JellyfinLink:       jellyfinLink,
 		Updates:            updatesService,
 		Power:              powerService,
+		ServerUpdates:      serverUpdates,
 		Art:                artStore,
 		Versions:           newVersions(libraryService, torrentsService, settingsStore),
 		DirectHost:         directHost(cfg.DirectHost),

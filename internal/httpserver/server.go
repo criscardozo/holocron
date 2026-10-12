@@ -23,6 +23,7 @@ import (
 	"github.com/cristian/holocron/internal/naming"
 	"github.com/cristian/holocron/internal/power"
 	"github.com/cristian/holocron/internal/quality"
+	"github.com/cristian/holocron/internal/serverupdates"
 	"github.com/cristian/holocron/internal/services"
 	"github.com/cristian/holocron/internal/settings"
 	"github.com/cristian/holocron/internal/stack"
@@ -55,6 +56,9 @@ type Deps struct {
 	JellyfinLink       *jellyfin.LinkService
 	Updates            *updates.Service
 	Power              *power.Service
+	// ServerUpdates reads what the server says about its own updates, for
+	// the Gestión page. Nil or unconfigured hides the panel.
+	ServerUpdates *serverupdates.Service
 	// Art serves posters from its cache. Nil in tests that do not need it.
 	Art *artwork.Store
 	// Versions reads the stack's versions for the Stack page; DirectHost is
@@ -126,6 +130,8 @@ func (s *Server) Handler() http.Handler {
 	// Machine management: restart services, reboot, power off.
 	mux.HandleFunc("GET /manage", s.handleManagePage)
 	mux.HandleFunc("POST /manage/action", s.handleManageAction)
+	mux.HandleFunc("GET /manage/updates", s.handleServerUpdates)
+	mux.HandleFunc("POST /manage/updates/check", s.handleServerUpdatesCheck)
 
 	// Phase 5: qBittorrent.
 	mux.HandleFunc("GET /torrents", s.handleTorrentsPage)

@@ -240,6 +240,8 @@ select.input { cursor: pointer; }
 .badge-no { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger-text); }
 .badge-warn { background: var(--color-accent-900); color: var(--color-accent-200); }
 .badge-neutral { background: color-mix(in srgb, var(--color-text) 9%, transparent); color: var(--text-soft); }
+/* the warning light: worth a look, nothing broken (a new major version to do by hand) */
+.badge-aviso { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
 
 /* ── status pills (torrents) ───────────────────────────────────────── */
 .st { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
@@ -337,6 +339,36 @@ select.input { cursor: pointer; }
 .manage-action-text .muted { font-size: 12.5px; }
 .warn-list { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; }
 .warn-list li { font-size: 13px; }
+/* Actualizaciones: a row per app, in two columns of rows when there is room.
+   Up to date reads quiet; what the server would install, or wants done by
+   hand, lights up. */
+.upd { margin-top: var(--space-6); gap: var(--space-3); }
+.upd-head { flex-wrap: wrap; }
+.upd-badges { display: inline-flex; gap: var(--space-2); flex-wrap: wrap; }
+.upd-summary { margin: 0; display: flex; flex-wrap: wrap; gap: 2px var(--space-4); font-size: 13px; color: var(--text-soft); }
+.upd-summary strong { color: var(--color-text); font-weight: 600; }
+.upd-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); column-gap: var(--space-8); }
+.upd-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: baseline; gap: 2px var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent); }
+.upd-name { font-size: 14px; min-width: 0; }
+.upd-ver { font-family: var(--mono); font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; text-align: right; }
+.upd-arrow { margin: 0 4px; }
+.upd-note { grid-column: 1 / -1; font-size: 12px; color: var(--text-muted); }
+.upd-attn .upd-name { color: var(--color-accent-300); font-weight: 600; }
+.upd-attn .upd-latest { color: var(--color-text); }
+.upd-run { font-size: 13px; color: var(--text-soft); }
+.upd-run summary { cursor: pointer; }
+.upd-run summary .badge { margin-left: 6px; }
+.upd-changes { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 2px; font-family: var(--mono); font-size: 12.5px; }
+.upd-fail { color: var(--danger-text); }
+.upd-slow { margin: 0; font-size: 13px; }
+.upd-actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
+.upd-actions .muted { font-size: 12.5px; }
+/* On a phone, a row with two versions drops them under the name so the badge
+   keeps its line; one version and «al día» still fit side by side. */
+@media (max-width: 520px) {
+	.upd-attn { grid-template-columns: minmax(0, 1fr) auto; }
+	.upd-attn .upd-ver { grid-column: 1 / -1; grid-row: 2; text-align: left; }
+}
 
 .actions { display: flex; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap; align-items: center; }
 

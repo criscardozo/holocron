@@ -7,10 +7,11 @@ templ ManagePage(v ManagePageView) {
 		<div class="page-head">
 			<div>
 				<h1>Gestión de { v.Machine }</h1>
-				<p class="sub">Estado del equipo y control de sus servicios: reiniciar, apagar</p>
+				<p class="sub">Estado del equipo, sus actualizaciones y el control de sus servicios: reiniciar, apagar</p>
 			</div>
 		</div>
 		@ManageSection(v)
+		@ServerUpdates(v.Updates)
 	}
 }
 
