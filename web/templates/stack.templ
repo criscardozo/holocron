@@ -44,7 +44,7 @@ templ stackFeature(a StackApp) {
 		</header>
 		<p class="stack-purpose">{ a.Purpose }</p>
 		<div class="stack-actions">
-			<a class="btn btn-primary" href={ templ.SafeURL(a.URL) } hx-boost="false">
+			<a class="btn btn-primary stack-open" href={ templ.SafeURL(a.URL) } hx-boost="false">
 				Abrir { a.Name }
 				@IconSm("external")
 			</a>
@@ -53,6 +53,8 @@ templ stackFeature(a StackApp) {
 	</article>
 }
 
+// The whole card opens the app: its main link stretches over it (.stack-open),
+// so there is a big target without nesting the direct link inside another.
 templ stackCard(a StackApp) {
 	<article class="card stack-card">
 		<header class="stack-head">
@@ -64,7 +66,7 @@ templ stackCard(a StackApp) {
 		</header>
 		<p class="stack-purpose">{ a.Purpose }</p>
 		<div class="stack-links">
-			<a href={ templ.SafeURL(a.URL) } hx-boost="false">{ a.Host }</a>
+			<a class="stack-open" href={ templ.SafeURL(a.URL) } hx-boost="false">{ a.Host }</a>
 			@stackDirect(a)
 		</div>
 	</article>

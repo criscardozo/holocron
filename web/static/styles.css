@@ -630,6 +630,14 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .stack-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
 .stack-grid > li { display: flex; }
 .stack-card { flex: 1; gap: var(--space-3); }
+/* The whole card is the way in: the main link's ::after covers it, and the
+   direct link sits above that layer so it stays its own target. */
+.stack-feature, .stack-card { position: relative; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.stack-open::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.stack-direct { position: relative; z-index: 1; }
+.stack-feature:hover, .stack-card:hover, .stack-feature:has(.stack-open:focus-visible), .stack-card:has(.stack-open:focus-visible) {
+	transform: translateY(-3px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
 .stack-note { margin: var(--space-6) 0 0; font-size: 13px; max-width: 70ch; }
 
 /* ── posters ───────────────────────────────────────────────────────── */
@@ -857,7 +865,9 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 	.live .dot { animation: none; }
 	.tile, .tile:hover, .tile:focus-visible,
 	.app-card, .app-card:hover, .app-card:focus-visible,
-	.app-chip, .app-chip:hover, .app-chip:focus-visible { transform: none; transition: background .15s ease, border-color .15s ease; }
+	.app-chip, .app-chip:hover, .app-chip:focus-visible,
+	.stack-feature, .stack-card, .stack-feature:hover, .stack-card:hover,
+	.stack-feature:has(.stack-open:focus-visible), .stack-card:has(.stack-open:focus-visible) { transform: none; transition: background .15s ease, border-color .15s ease; }
 	.job .spinner { animation: breathe 1.6s ease-in-out infinite; border-top-color: color-mix(in srgb, var(--color-accent) 30%, transparent); background: color-mix(in srgb, var(--color-accent) 35%, transparent); }
 	.poster-row { scroll-behavior: auto; }
 }
