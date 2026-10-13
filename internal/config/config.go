@@ -40,6 +40,11 @@ type Config struct {
 	// (on the system disk, the downloads, not the whole system).
 	Disks    []DiskSpec
 	BadDisks []string
+	// QualitySkipSubs is HOLOCRON_QUALITY_SKIP_SUBS: Jellyfin library names,
+	// separated by ";", left out of the quality panel's subtitle categories.
+	// On Ginebra, Anime;Museum, whose titles get their subtitles on the way
+	// through Películas or Series.
+	QualitySkipSubs []string
 	// DirectHost is HOLOCRON_DIRECT_HOST, the server's address on the home
 	// network for the Stack page's direct links. Found on its own when unset.
 	DirectHost string
@@ -82,6 +87,17 @@ func parseFolders(v string) (specs []FolderSpec, bad []string) {
 	return specs, bad
 }
 
+// splitList reads a ";"-separated list, dropping blanks.
+func splitList(v string) []string {
+	var out []string
+	for _, e := range strings.Split(v, ";") {
+		if e = strings.TrimSpace(e); e != "" {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 // Load parses flags and environment variables into a Config. It is meant to be
 // called once at startup.
 func Load() Config {
@@ -99,6 +115,7 @@ func Load() Config {
 	}
 	c.MediaFolders, c.BadFolders = parseFolders(os.Getenv("HOLOCRON_MEDIA_FOLDERS"))
 	c.Disks, c.BadDisks = parseDisks(os.Getenv("HOLOCRON_DISKS"))
+	c.QualitySkipSubs = splitList(os.Getenv("HOLOCRON_QUALITY_SKIP_SUBS"))
 
 	flag.StringVar(&c.Addr, "addr", c.Addr, "listen address (host:port)")
 	flag.StringVar(&c.DBPath, "db", c.DBPath, "path to the SQLite database file")

@@ -98,6 +98,22 @@ templ qualityGroup(g QualityGroupView, admin bool) {
 	if g.Hint != "" {
 		<p class="muted mb-6">{ g.Hint }</p>
 	}
+	if g.Skipped != "" {
+		<p class="muted mb-6">No se revisan acá: { g.Skipped }.</p>
+	}
+	if g.Unknown != "" {
+		<div class="notice mb-6">
+			@IconSm("alert")
+			<span>
+				if g.UnknownMany {
+					Jellyfin no tiene bibliotecas con estos nombres: { g.Unknown }. Revisá
+				} else {
+					Jellyfin no tiene ninguna biblioteca con este nombre: { g.Unknown }. Revisá
+				}
+				<span class="mono">HOLOCRON_QUALITY_SKIP_SUBS</span> en el servidor.
+			</span>
+		</div>
+	}
 	if len(g.Rows) == 0 {
 		<p class="muted">Nada por acá. { g.Label } no tiene hallazgos.</p>
 	} else {

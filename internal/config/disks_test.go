@@ -15,3 +15,13 @@ func TestParseDisks(t *testing.T) {
 		t.Errorf("sistema = %+v", got[2])
 	}
 }
+
+func TestSplitList(t *testing.T) {
+	got := splitList(" Anime ; ;Museum;")
+	if len(got) != 2 || got[0] != "Anime" || got[1] != "Museum" {
+		t.Errorf("splitList = %q, want [Anime Museum]", got)
+	}
+	if got := splitList(""); got != nil {
+		t.Errorf("splitList(\"\") = %q, want nil", got)
+	}
+}

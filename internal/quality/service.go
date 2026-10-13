@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -33,11 +34,15 @@ type Service struct {
 	db       *sql.DB
 	settings *settings.Store
 	jobs     *jobs.Manager
+	// skipSubs names the Jellyfin libraries left out of the subtitle
+	// categories (HOLOCRON_QUALITY_SKIP_SUBS).
+	skipSubs []string
 }
 
-// NewService creates a Service.
-func NewService(db *sql.DB, st *settings.Store, jm *jobs.Manager) *Service {
-	return &Service{db: db, settings: st, jobs: jm}
+// NewService creates a Service. skipSubs are Jellyfin library names whose
+// items are not asked about subtitles.
+func NewService(db *sql.DB, st *settings.Store, jm *jobs.Manager, skipSubs []string) *Service {
+	return &Service{db: db, settings: st, jobs: jm, skipSubs: skipSubs}
 }
 
 // Configured reports whether there is a Jellyfin to audit.
@@ -82,7 +87,16 @@ func (s *Service) scan(ctx context.Context, c *jellyfin.Client, p *jobs.Progress
 		return "", fmt.Errorf("audit items: %w", jellyfin.Rejected(err))
 	}
 
-	report := Analyse(items, time.Now())
+	skip, unknown, err := s.skippedLibraries(ctx, c)
+	if err != nil {
+		return "", err
+	}
+
+	report := Analyse(items, time.Now(), skip)
+	for _, l := range skip {
+		report.SkippedSubs = append(report.SkippedSubs, l.Name)
+	}
+	report.UnknownLibraries = unknown
 	report.GeneratedAt = time.Now()
 	report.Version = version.Current()
 	p.Set(95)
@@ -91,6 +105,30 @@ func (s *Service) scan(ctx context.Context, c *jellyfin.Client, p *jobs.Progress
 		return "", err
 	}
 	return fmt.Sprintf("%d ítems revisados, %d hallazgos", report.Scanned, report.Total()), nil
+}
+
+// skippedLibraries resolves the configured names to Jellyfin's libraries.
+// Asked for only when something is configured: without it the audit makes the
+// same calls it always did.
+func (s *Service) skippedLibraries(ctx context.Context, c *jellyfin.Client) (skip []jellyfin.Library, unknown []string, err error) {
+	if len(s.skipSubs) == 0 {
+		return nil, nil, nil
+	}
+	libs, err := c.Libraries(ctx)
+	if err != nil {
+		// Failing the audit rather than skipping nothing: the counts would
+		// come back inflated with no sign of why.
+		return nil, nil, fmt.Errorf("list libraries: %w", jellyfin.Rejected(err))
+	}
+	for _, name := range s.skipSubs {
+		i := slices.IndexFunc(libs, func(l jellyfin.Library) bool { return strings.EqualFold(l.Name, name) })
+		if i < 0 {
+			unknown = append(unknown, name)
+			continue
+		}
+		skip = append(skip, libs[i])
+	}
+	return skip, unknown, nil
 }
 
 func (s *Service) save(ctx context.Context, report Report) error {

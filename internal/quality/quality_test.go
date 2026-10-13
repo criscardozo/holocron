@@ -51,7 +51,7 @@ func TestSubtitleFindingsSkipSeries(t *testing.T) {
 		episode("e3", "The Bear", "Brigade", 1, 3, audio("eng"), subs("")),
 		episode("e4", "The Bear", "Sheridan", 1, 4, audio("spa")),
 	}
-	r := Analyse(items, testNow)
+	r := Analyse(items, testNow, nil)
 
 	if got := countOf(t, r, CatSubsMissing); got != 2 {
 		t.Fatalf("subs-missing = %d, want 2 (the series must not be counted)", got)
@@ -86,7 +86,7 @@ func TestGhostsAreReportedOnce(t *testing.T) {
 	r := Analyse([]jellyfin.Item{
 		{ID: "g1", Type: jellyfin.TypeEpisode, Name: "", Path: "",
 			SeriesName: "Lost", Season: num(2), Episode: num(5)},
-	}, testNow)
+	}, testNow, nil)
 
 	if got := r.Count(CatGhost); got != 1 {
 		t.Fatalf("ghosts = %d, want 1", got)
@@ -111,7 +111,7 @@ func TestNumberingCollision(t *testing.T) {
 		// Same number but a different series: not a collision.
 		episode("d", "Fargo", "The Crocodile's Dilemma", 1, 1, audio("spa")),
 	}
-	r := Analyse(items, testNow)
+	r := Analyse(items, testNow, nil)
 
 	if got := r.Count(CatCollision); got != 2 {
 		t.Fatalf("collisions = %d, want 2 (both sides of the clash)", got)
@@ -132,7 +132,7 @@ func TestUnnumberedEpisodeIsNotACollision(t *testing.T) {
 	a.Season, a.Episode = nil, nil
 	b.Season, b.Episode = nil, nil
 
-	if got := Analyse([]jellyfin.Item{a, b}, testNow).Count(CatCollision); got != 0 {
+	if got := Analyse([]jellyfin.Item{a, b}, testNow, nil).Count(CatCollision); got != 0 {
 		t.Errorf("collisions = %d, want 0", got)
 	}
 }
@@ -160,7 +160,7 @@ func TestGenericTitles(t *testing.T) {
 	for _, tc := range cases {
 		it := jellyfin.Item{ID: "x", Type: jellyfin.TypeMovie, Name: tc.name,
 			Path: "/media/peliculas/x.mkv", Overview: "algo", Streams: []jellyfin.MediaStream{audio("spa")}}
-		got := Analyse([]jellyfin.Item{it}, testNow).Count(CatGenericTitle)
+		got := Analyse([]jellyfin.Item{it}, testNow, nil).Count(CatGenericTitle)
 		if (got == 1) != tc.generic {
 			t.Errorf("%q: generic = %v, want %v", tc.name, got == 1, tc.generic)
 		}
@@ -173,7 +173,7 @@ func TestMissingSynopsis(t *testing.T) {
 	blank.Overview = "   \n"
 	ok := episode("b", "Show", "Dos", 1, 2, audio("spa"))
 
-	r := Analyse([]jellyfin.Item{blank, ok}, testNow)
+	r := Analyse([]jellyfin.Item{blank, ok}, testNow, nil)
 	if got := r.Count(CatNoSynopsis); got != 1 {
 		t.Fatalf("no-synopsis = %d, want 1 (whitespace is not a synopsis)", got)
 	}
@@ -189,7 +189,7 @@ func TestTruncationKeepsTheRealCount(t *testing.T) {
 		it.ID = "id-" + episodeCode(1, i)
 		items = append(items, it)
 	}
-	r := Analyse(items, testNow)
+	r := Analyse(items, testNow, nil)
 
 	if got := r.Count(CatSubsMissing); got != maxPerCategory+37 {
 		t.Errorf("count = %d, want %d", got, maxPerCategory+37)
@@ -213,9 +213,9 @@ func TestReportIsDeterministic(t *testing.T) {
 		episode("c", "Alfa", "Tres", 2, 2, audio("eng")),
 		{ID: "g", Type: jellyfin.TypeMovie, Name: "Fantasma", Path: ""},
 	}
-	first := Analyse(items, testNow)
+	first := Analyse(items, testNow, nil)
 	for range 20 {
-		got := Analyse(items, testNow)
+		got := Analyse(items, testNow, nil)
 		if len(got.Findings) != len(first.Findings) {
 			t.Fatalf("finding count moved: %d vs %d", len(got.Findings), len(first.Findings))
 		}
@@ -243,7 +243,7 @@ func TestMentionsGuardsTheRefreshTarget(t *testing.T) {
 	r := Analyse([]jellyfin.Item{
 		{ID: "real", Type: jellyfin.TypeMovie, Name: "Sin sinopsis",
 			Path: "/media/peliculas/x.mkv", Streams: []jellyfin.MediaStream{audio("spa")}},
-	}, testNow)
+	}, testNow, nil)
 	if !r.Mentions("real") {
 		t.Error("an item that produced a finding must be refreshable")
 	}
@@ -271,7 +271,7 @@ func TestAnUnairedEpisodeIsNotAGhost(t *testing.T) {
 		SeriesName: "En el barro", Premiere: testNow.Add(-365 * 24 * time.Hour),
 	}
 
-	r := Analyse([]jellyfin.Item{future, deleted}, testNow)
+	r := Analyse([]jellyfin.Item{future, deleted}, testNow, nil)
 
 	if got := r.Count(CatGhost); got != 1 {
 		t.Errorf("ghosts = %d, want only the one that actually aired", got)
@@ -297,7 +297,7 @@ func TestAnUnknownAirDateIsTreatedAsAired(t *testing.T) {
 		ID: "c", Type: jellyfin.TypeEpisode, Name: "Sin fecha",
 		SeriesName: "Algo habrán hecho",
 	}
-	r := Analyse([]jellyfin.Item{noDate}, testNow)
+	r := Analyse([]jellyfin.Item{noDate}, testNow, nil)
 	if got := r.Count(CatGhost); got != 1 {
 		t.Errorf("ghosts = %d, want the undated one counted as missing", got)
 	}
@@ -315,5 +315,77 @@ func TestTheGhostAdviceDoesNotTellYouToDeleteASeasonInProgress(t *testing.T) {
 	}
 	if hint := CatGhost.Hint(); !strings.Contains(hint, "Ya salieron") {
 		t.Errorf("the ghost hint should say it only covers what has aired, got %q", hint)
+	}
+}
+
+// TestCollectionsAreNotItems: Jellyfin lists collections (BoxSet) alongside
+// the titles. A collection has no streams, so on Ginebra every one of them
+// showed up as "Sin subtítulos ES", with a path inside Jellyfin's own data.
+func TestCollectionsAreNotItems(t *testing.T) {
+	t.Parallel()
+	r := Analyse([]jellyfin.Item{
+		{ID: "b1", Type: "BoxSet", Name: "Antes de... - Colección",
+			Path: "/var/lib/jellyfin/data/collections/Antes de... - Colección [boxset]"},
+		{ID: "m1", Type: jellyfin.TypeMovie, Name: "Antes del amanecer", Overview: "Viena.",
+			Path: "/media/peliculas/antes.mkv", Streams: []jellyfin.MediaStream{audio("eng")}},
+	}, testNow, nil)
+
+	if r.Scanned != 1 {
+		t.Errorf("scanned = %d, want 1: a collection is not an item", r.Scanned)
+	}
+	if r.Mentions("b1") {
+		t.Errorf("the collection produced findings: %+v", r.Findings)
+	}
+	if got := r.Count(CatSubsMissing); got != 1 {
+		t.Errorf("subs missing = %d, want 1 (the film)", got)
+	}
+}
+
+// TestSkippedLibrariesOnlyLeaveTheSubtitleCategories: Anime and Museum on
+// Ginebra hold titles that already went through Películas or Series, so their
+// subtitles are not this panel's business — but a missing synopsis still is.
+func TestSkippedLibrariesOnlyLeaveTheSubtitleCategories(t *testing.T) {
+	t.Parallel()
+	anime := jellyfin.Library{Name: "Anime", Locations: []string{"/mnt/biblioteca/Anime/"}}
+	items := []jellyfin.Item{
+		{ID: "a1", Type: jellyfin.TypeMovie, Name: "Akira",
+			Path: "/mnt/biblioteca/Anime/Akira/Akira.mkv", Streams: []jellyfin.MediaStream{audio("jpn")}},
+		{ID: "a2", Type: jellyfin.TypeMovie, Name: "Und", Overview: "x",
+			Path: "/mnt/biblioteca/Anime/Und.mkv", Streams: []jellyfin.MediaStream{audio("und")}},
+		// Same prefix, different directory: not in the library.
+		{ID: "p1", Type: jellyfin.TypeMovie, Name: "Animales", Overview: "x",
+			Path: "/mnt/biblioteca/Animales/a.mkv", Streams: []jellyfin.MediaStream{audio("eng")}},
+	}
+	r := Analyse(items, testNow, []jellyfin.Library{anime})
+
+	if got := r.Count(CatSubsMissing); got != 1 || r.For(CatSubsMissing)[0].ItemID != "p1" {
+		t.Errorf("subs missing = %+v, want only p1", r.For(CatSubsMissing))
+	}
+	if got := r.Count(CatAudioUnknown); got != 0 {
+		t.Errorf("audio unknown = %d, want 0: a2 is in a skipped library", got)
+	}
+	if got := r.Count(CatNoSynopsis); got != 1 || r.For(CatNoSynopsis)[0].ItemID != "a1" {
+		t.Errorf("no synopsis = %+v, want a1: skipping is for subtitles only", r.For(CatNoSynopsis))
+	}
+}
+
+// TestUnlabelledAudioIsItsOwnCategory: an episode whose audio says nothing
+// about its language may not need subtitles at all. On Ginebra, 243 of them
+// were Spanish all along.
+func TestUnlabelledAudioIsItsOwnCategory(t *testing.T) {
+	t.Parallel()
+	r := Analyse([]jellyfin.Item{
+		episode("u1", "Los Simpson", "Bart", 1, 1, audio("und")),
+		episode("u2", "Los Simpson", "Lisa", 1, 2, audio("")),
+		episode("u3", "Los Simpson", "Homer", 1, 3, audio(""), audio("eng")),
+		episode("u4", "Los Simpson", "Marge", 1, 4, audio("und"), subs("spa")),
+	}, testNow, nil)
+
+	if got := r.Count(CatAudioUnknown); got != 2 {
+		t.Errorf("audio unknown = %d, want 2 (u1, u2)", got)
+	}
+	// u3 has an English track, so it is a plain missing subtitle; u4 is covered.
+	if got := r.For(CatSubsMissing); len(got) != 1 || got[0].ItemID != "u3" {
+		t.Errorf("subs missing = %+v, want only u3", got)
 	}
 }

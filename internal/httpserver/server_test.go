@@ -86,7 +86,7 @@ func newTestServer(t *testing.T) *testServer {
 		Naming:       naming.NewService(database, folderStore),
 		Settings:     settingsStore,
 		Library:      library.NewService(database, settingsStore, jobManager),
-		Quality:      quality.NewService(database, settingsStore, jobManager),
+		Quality:      quality.NewService(database, settingsStore, jobManager, nil),
 		Torrents:     torrents.NewService(settingsStore),
 		APIToken:     apitoken.NewStore(settingsStore),
 		JellyfinLink: jellyfin.NewLinkService(settingsStore),

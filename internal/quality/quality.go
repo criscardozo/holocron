@@ -36,6 +36,11 @@ const (
 	// CatSubsMissing is an item with no Spanish subtitle track and no Spanish
 	// audio. By far the largest category on a real library.
 	CatSubsMissing Category = "subs-missing"
+	// CatAudioUnknown is an item with no Spanish subtitles whose audio does
+	// not say what language it is in. Apart from CatSubsMissing because
+	// nobody can tell whether it needs them: on Ginebra, 243 such episodes
+	// were Spanish all along and only lacked the tag.
+	CatAudioUnknown Category = "audio-unknown"
 	// CatNoSynopsis is an item Jellyfin has no description for.
 	CatNoSynopsis Category = "no-synopsis"
 	// CatGenericTitle is a title that is filler or a release string rather than
@@ -61,7 +66,7 @@ const (
 
 // Categories in display order.
 var Categories = []Category{
-	CatSubsMissing, CatNoSynopsis, CatGenericTitle, CatUnaired, CatGhost, CatCollision,
+	CatSubsMissing, CatAudioUnknown, CatNoSynopsis, CatGenericTitle, CatUnaired, CatGhost, CatCollision,
 }
 
 // Label is the heading shown for the category.
@@ -69,6 +74,8 @@ func (c Category) Label() string {
 	switch c {
 	case CatSubsMissing:
 		return "Sin subtítulos ES"
+	case CatAudioUnknown:
+		return "Audio sin idioma"
 	case CatNoSynopsis:
 		return "Sin sinopsis"
 	case CatGenericTitle:
@@ -90,6 +97,8 @@ func (c Category) Hint() string {
 	switch c {
 	case CatSubsMissing:
 		return "Buscalos en la pantalla de Subtítulos, o dejá el .srt junto al archivo."
+	case CatAudioUnknown:
+		return "El audio no dice en qué idioma está, así que no se sabe si hacen falta subtítulos. Etiquetalo en el archivo (por ejemplo con mkvpropedit) y volvé a analizar."
 	case CatNoSynopsis:
 		return "Casi siempre alcanza con pedirle a Jellyfin que vuelva a leer la metadata."
 	case CatGenericTitle:
@@ -132,10 +141,16 @@ type Report struct {
 	// episodes that had not aired yet, the stored report went on showing the
 	// old count with the old meaning under the new label, and the number it
 	// showed was one somebody might delete things over.
-	Version  string           `json:"version"`
-	Scanned  int              `json:"scanned"`
-	Counts   map[Category]int `json:"counts"`
-	Findings []Finding        `json:"findings"`
+	Version string `json:"version"`
+	Scanned int    `json:"scanned"`
+	// SkippedSubs are the libraries left out of the subtitle categories, by
+	// the name Jellyfin gives them; UnknownLibraries are names asked for that
+	// no library has, so a typo shows on the page instead of silently
+	// skipping nothing.
+	SkippedSubs      []string         `json:"skippedSubs,omitempty"`
+	UnknownLibraries []string         `json:"unknownLibraries,omitempty"`
+	Counts           map[Category]int `json:"counts"`
+	Findings         []Finding        `json:"findings"`
 }
 
 // Count is how many items fall in the category, before any display cap.
@@ -181,13 +196,26 @@ func (r Report) Mentions(itemID string) bool {
 // yet" against, and returns the report. now is a parameter rather than a call
 // to time.Now inside, so the boundary that decides between "delete this" and
 // "leave this alone" can be tested at a fixed instant.
-func Analyse(items []jellyfin.Item, now time.Time) Report {
-	r := Report{Scanned: len(items), Counts: map[Category]int{}}
+//
+// skipSubs are libraries whose items are not asked about subtitles: on
+// Ginebra, Anime and Museum, whose titles went through Películas or Series
+// first and got their subtitles there.
+func Analyse(items []jellyfin.Item, now time.Time, skipSubs []jellyfin.Library) Report {
+	r := Report{Counts: map[Category]int{}}
 
 	type slot struct{ season, episode int }
 	numbered := map[string]map[slot][]jellyfin.Item{}
 
 	for _, it := range items {
+		// Only things that play. Jellyfin also lists collections (BoxSet),
+		// whose path is a folder of its own data: no streams, so every one
+		// of them came out "without Spanish subtitles".
+		switch it.Type {
+		case jellyfin.TypeMovie, jellyfin.TypeSeries, jellyfin.TypeEpisode:
+		default:
+			continue
+		}
+		r.Scanned++
 		// No file. Which of the two things that means depends entirely on the
 		// air date, and they take opposite advice: a ghost should be cleaned
 		// up, an unaired episode must be left alone. Reported once either way,
@@ -208,10 +236,14 @@ func Analyse(items []jellyfin.Item, now time.Time) Report {
 		}
 		// A series is a directory: it carries no streams of its own, so asking
 		// it about subtitles would report every single show as missing them.
-		if it.Type != jellyfin.TypeSeries {
+		if it.Type != jellyfin.TypeSeries && !inAny(skipSubs, it.Path) {
 			switch it.SpanishSubtitleState() {
 			case jellyfin.SubsMissing:
-				r.add(CatSubsMissing, it, "Ninguna pista de subtítulos en español")
+				if it.AudioLanguageUnknown() {
+					r.add(CatAudioUnknown, it, "Ningún audio dice su idioma")
+				} else {
+					r.add(CatSubsMissing, it, "Ninguna pista de subtítulos en español")
+				}
 			case jellyfin.SubsUnknownLanguage:
 				r.add(CatSubsMissing, it, "Hay un subtítulo sin idioma declarado")
 			case jellyfin.SubsPresent, jellyfin.SubsNotNeeded:
@@ -242,6 +274,15 @@ func Analyse(items []jellyfin.Item, now time.Time) Report {
 
 	r.finalise()
 	return r
+}
+
+func inAny(libs []jellyfin.Library, path string) bool {
+	for _, l := range libs {
+		if l.Holds(path) {
+			return true
+		}
+	}
+	return false
 }
 
 // add records a finding and counts it. Truncation happens later, in finalise,

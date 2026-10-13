@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -59,6 +60,13 @@ func (f *fakeJellyfin) start(t *testing.T, total int) *httptest.Server {
 		})
 	})
 
+	mux.HandleFunc("GET /Library/VirtualFolders", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode([]map[string]any{
+			{"Name": "Series", "Locations": []string{"/media/series"}},
+			{"Name": "Collections", "Locations": []string{"/var/lib/jellyfin/data/collections"}},
+		})
+	})
+
 	mux.HandleFunc("POST /Items/{id}/Refresh", func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("metadataRefreshMode"); got != "FullRefresh" {
 			t.Errorf("refresh mode = %q, want FullRefresh (Default was measured not to write)", got)
@@ -92,7 +100,7 @@ func newService(t *testing.T, url string, admin bool) (*Service, context.Context
 			t.Fatal(err)
 		}
 	}
-	return NewService(database, store, jobs.NewManager()), ctx
+	return NewService(database, store, jobs.NewManager(), nil), ctx
 }
 
 func waitForJob(t *testing.T, svc *Service, id string) {
@@ -229,11 +237,45 @@ func TestScanNeedsALinkedServer(t *testing.T) {
 	}
 	defer func() { _ = database.Close() }()
 
-	svc := NewService(database, settings.NewStore(database), jobs.NewManager())
+	svc := NewService(database, settings.NewStore(database), jobs.NewManager(), nil)
 	if svc.Configured(ctx) {
 		t.Error("nothing is linked yet")
 	}
 	if _, err := svc.StartScan(ctx); !errors.Is(err, ErrNotConfigured) {
 		t.Errorf("StartScan = %v, want ErrNotConfigured", err)
+	}
+}
+
+// TestScanSkipsConfiguredLibraries: the names come from the server's config,
+// so one that matches no library is reported rather than quietly skipping
+// nothing.
+func TestScanSkipsConfiguredLibraries(t *testing.T) {
+	t.Parallel()
+	fake := &fakeJellyfin{}
+	srv := fake.start(t, 10)
+	svc, ctx := newService(t, srv.URL, true)
+	svc.skipSubs = []string{"series", "Nope"}
+
+	job, err := svc.StartScan(ctx)
+	if err != nil {
+		t.Fatalf("StartScan: %v", err)
+	}
+	waitForJob(t, svc, job.ID)
+
+	report, ok, err := svc.Latest(ctx)
+	if err != nil || !ok {
+		t.Fatalf("Latest = %v, %v", ok, err)
+	}
+	if got := report.Count(CatSubsMissing); got != 0 {
+		t.Errorf("subs-missing = %d, want 0: every episode is in a skipped library", got)
+	}
+	if got := report.Count(CatGenericTitle); got != 10 {
+		t.Errorf("generic-title = %d, want 10: skipping is for subtitles only", got)
+	}
+	if !slices.Equal(report.SkippedSubs, []string{"Series"}) {
+		t.Errorf("skipped = %v, want [Series] as Jellyfin names it", report.SkippedSubs)
+	}
+	if !slices.Equal(report.UnknownLibraries, []string{"Nope"}) {
+		t.Errorf("unknown = %v, want [Nope]", report.UnknownLibraries)
 	}
 }

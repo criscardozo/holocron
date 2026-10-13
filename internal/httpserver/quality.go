@@ -143,6 +143,11 @@ func (s *Server) qualityView(ctx context.Context, selected string) templates.Qua
 		Count:       report.Count(active),
 		Refreshable: active.Refreshable(),
 	}
+	if active == quality.CatSubsMissing || active == quality.CatAudioUnknown {
+		group.Skipped = strings.Join(report.SkippedSubs, ", ")
+		group.Unknown = strings.Join(report.UnknownLibraries, ", ")
+		group.UnknownMany = len(report.UnknownLibraries) > 1
+	}
 	rows := report.For(active)
 	group.Truncated = len(rows) < group.Count
 	for _, f := range rows {

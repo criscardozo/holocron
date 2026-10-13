@@ -43,6 +43,11 @@ type QualityGroupView struct {
 	// Truncated reports that the list shows fewer rows than Count.
 	Truncated   bool
 	Refreshable bool
+	// Skipped names the libraries this category does not look at, and
+	// Unknown the configured names no library has.
+	Skipped     string
+	Unknown     string
+	UnknownMany bool
 	Rows        []QualityRow
 }
 

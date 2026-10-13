@@ -117,7 +117,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	diskWatcher := disks.NewWatcher(diskSpecs, folderStore, settingsStore, cfg.SmartFile, logger)
 	namingService := naming.NewService(database, folderStore)
 	libraryService := library.NewService(database, settingsStore, jobManager)
-	qualityService := quality.NewService(database, settingsStore, jobManager)
+	qualityService := quality.NewService(database, settingsStore, jobManager, cfg.QualitySkipSubs)
 	torrentsService := torrents.NewService(settingsStore)
 	apiTokenStore := apitoken.NewStore(settingsStore)
 	jellyfinLink := jellyfin.NewLinkService(settingsStore)
