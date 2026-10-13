@@ -132,6 +132,7 @@ Dos niveles:
   `HOLOCRON_WATCH_UNITS` y `HOLOCRON_WATCH_TIMERS` (Servicios),
   `HOLOCRON_SMART_FILE` (SMART), `HOLOCRON_UPDATES_FILE` (la tarjeta de
   actualizaciones de Gestión), `HOLOCRON_DISKS` (Disco), `HOLOCRON_MEDIA_FOLDERS`,
+  `HOLOCRON_QUALITY_SKIP_SUBS` (bibliotecas que Calidad no revisa por subtítulos),
   `HOLOCRON_DIRECT_HOST` (Stack) y `HOLOCRON_MACHINE_NAME`. El detalle de cada una
   está en [`docs/features.md`](docs/features.md).
 - **Aplicación** (desde la UI, persistido en SQLite): carpetas de medios, dirección de

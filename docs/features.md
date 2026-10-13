@@ -133,12 +133,13 @@ recorre el disco para averiguarlo.
 
 ## Feature 4c — Panel de calidad de biblioteca
 
-**Pantalla** con cinco contadores, cada uno con su lista. Responde «qué le falta
+**Pantalla** con un contador por categoría, cada uno con su lista. Responde «qué le falta
 a la biblioteca», que es distinto de «cuánto hay»:
 
 | Categoría | Qué es |
 |---|---|
 | Sin subtítulos ES | Ni pista en español ni audio en español |
+| Audio sin idioma | Sin subtítulos en español y ningún audio dice su idioma (`und` o vacío): no se sabe si los necesita |
 | Sin sinopsis | Jellyfin no tiene descripción del ítem |
 | Título genérico | `Episode 4`, o el nombre del archivo: no lo identificó |
 | Fantasmas | Jellyfin lo lista y el archivo ya no está |
@@ -156,7 +157,15 @@ a la biblioteca», que es distinto de «cuánto hay»:
 - **Reglas que importan**: una serie es un directorio y no tiene pistas propias,
   así que **no** se le pregunta por subtítulos (sería un falso hallazgo por cada
   serie). Un fantasma se reporta una sola vez, como fantasma. Dos episodios «sin
-  número» no colisionan entre sí.
+  número» no colisionan entre sí. Las **colecciones** (`BoxSet`) no son ítems:
+  Jellyfin las lista igual, sin pistas, y cada una salía «sin subtítulos».
+- **Bibliotecas sin subtítulos**: `HOLOCRON_QUALITY_SKIP_SUBS=Anime;Museum`
+  (nombres de biblioteca de Jellyfin, separados por `;`, sin distinguir
+  mayúsculas) las saca de «Sin subtítulos ES» y «Audio sin idioma», y de nada
+  más. En Ginebra lo que entra a Anime y Museum pasa antes por Películas o
+  Series, y ahí Bazarr ya le pone el subtítulo. El ítem se ubica en su
+  biblioteca por la ruta, con `/Library/VirtualFolders`; un nombre que no existe
+  se avisa en la página en vez de no excluir nada en silencio.
 - **Acción**: donde el problema es metadata (sin sinopsis, título genérico) hay
   un botón que le pide a Jellyfin un `FullRefresh` del ítem. Requiere cuenta
   administradora —se avisa antes, no después del 403— y el id se valida contra
