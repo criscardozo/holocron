@@ -365,3 +365,19 @@ func TestRunningTasksOnlyReportsRunningOnes(t *testing.T) {
 		t.Fatalf("got %d running, want 2: %+v", len(tasks), tasks)
 	}
 }
+
+func TestLibraryHoldsWholeComponents(t *testing.T) {
+	t.Parallel()
+	l := Library{Name: "Anime", Locations: []string{"/mnt/biblioteca/Anime/"}}
+	for path, want := range map[string]bool{
+		"/mnt/biblioteca/Anime":               true,
+		"/mnt/biblioteca/Anime/Akira/a.mkv":   true,
+		"/mnt/biblioteca/Animales/a.mkv":      false,
+		"/mnt/biblioteca/Peliculas/Anime.mkv": false,
+		"":                                    false,
+	} {
+		if got := l.Holds(path); got != want {
+			t.Errorf("Holds(%q) = %v, want %v", path, got, want)
+		}
+	}
+}
