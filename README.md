@@ -38,6 +38,15 @@ HTMX) va embebida en el ejecutable. Corre como servicio de systemd en la Pi.
 Los escaneos y trabajos pesados son **bajo demanda**: el usuario los dispara y los
 resultados se cachean; nada corre en loop consumiendo la Pi de fondo.
 
+## En el teléfono, como app
+
+La web se instala en el iPhone como una app: en Safari, abrir
+`https://holocron.merli.store`, **Compartir → Agregar a inicio**. Abre a pantalla
+completa, con una barra de secciones abajo, «tirar para actualizar» y una página
+propia cuando Ginebra no responde (fuera de casa con Tailscale apagado, o la
+máquina apagada). Se actualiza sola con cada versión de Holocron. Detalle en
+[`docs/features.md`](docs/features.md#feature-15--la-web-como-app-en-el-teléfono-pwa).
+
 ## App iOS
 
 Además de la web hay una **app nativa en SwiftUI** ([`ios/`](ios/)) que cubre las

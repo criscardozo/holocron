@@ -1061,3 +1061,42 @@ recargar la página.
 - **Endpoints**: `GET /manage/updates` (la tarjeta sola; `since` y `started`
   mientras revisa) y `POST /manage/updates/check` (con la misma protección de
   origen que el resto de los `POST`).
+
+---
+
+## Feature 15 — La web como app en el teléfono (PWA)
+
+La misma web, instalable desde Safari con **Compartir → Agregar a inicio**. La
+idea es reemplazar a la app iOS: cada pantalla existía dos veces (templ y
+SwiftUI) y la app iba siempre atrasada; la web llega sola con cada versión.
+
+- **Por qué funciona en Ginebra sin exponer nada**: `holocron.merli.store`
+  resuelve a `192.168.0.2` con un certificado de Let's Encrypt sacado por desafío
+  DNS, y Ginebra anuncia esa IP a Tailscale (`AdvertiseRoutes 192.168.0.2/32`).
+  La misma dirección, con HTTPS válido, sirve en casa y afuera. Conviene
+  instalarla desde `holocron.merli.store` y no desde `merli.store`: una PWA queda
+  atada al origen donde se instaló.
+- **Manifest** en `/manifest.webmanifest` (`display: standalone`, íconos de 192
+  y 512, uno *maskable*), sacados del ícono de la app iOS. `viewport-fit=cover` y
+  los márgenes `env(safe-area-inset-*)` mantienen el contenido fuera del notch y
+  de la barra de inicio.
+- **Service worker** en `/sw.js`, en la raíz porque sólo controla lo que está
+  debajo de su ruta. **No cachea datos**: todo lo que muestra Holocron es en vivo
+  y un número viejo es peor que ninguno. Sólo guarda `/offline` y lo que esa
+  página necesita, y lo muestra cuando una navegación no llega al servidor. El
+  servidor le antepone la versión y las URLs versionadas de los estáticos, así
+  cada release es un worker nuevo que reemplaza el caché anterior.
+- **Navegación con htmx**: un link con `hx-boost` que no llega al servidor no
+  avisa nada (htmx deja la página anterior). `app.js` convierte ese
+  `htmx:sendError` en una navegación de verdad, que cae en la página offline.
+- **Barra inferior** hasta 680 px: Inicio, Actividad, Medios, Stack y «Más», que
+  abre todas las secciones en una hoja. La hoja es un `popover` del navegador,
+  sin JS. En pantallas más anchas sigue la barra lateral.
+- **Tirar para actualizar**, sólo instalada (`navigator.standalone` o
+  `display-mode: standalone`): instalada no hay barra del navegador ni gesto para
+  recargar. Arranca sólo desde el tope de la página y no dentro de la hoja ni de
+  lo que scrollea por su cuenta.
+- **Lo que no cambia**: la web sigue sin sesión ni token; la confirmación para
+  apagar desde afuera es la de Gestión. La API `/api/v1` y su token siguen
+  existiendo mientras exista la app iOS.
+
