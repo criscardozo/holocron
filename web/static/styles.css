@@ -95,7 +95,10 @@ body {
 
 h1, h2, h3, h4 { font-family: var(--font-heading); line-height: 1.15; margin: 0; }
 a { color: var(--color-accent-300); text-decoration: none; text-underline-offset: 3px; }
-a:hover { color: var(--color-accent-200); }
+/* Every :hover lives inside (hover: hover). On a phone a tap leaves the
+   element under the finger "hovered" until the next tap elsewhere: opening
+   «Más» left the section that lands under the button lit up as if chosen. */
+@media (hover: hover) { a:hover { color: var(--color-accent-200); } }
 
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 3px; }
@@ -154,7 +157,7 @@ body:has(.shell.is-home) .mural { opacity: .34; }
 .side-label { font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--text-muted); padding: 0 10px 4px; }
 .side-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-md); color: var(--text-soft); font-size: 14px; }
 .side-link .ic { width: 17px; height: 17px; }
-.side-link:hover { color: var(--color-text); background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+@media (hover: hover) { .side-link:hover { color: var(--color-text); background: color-mix(in srgb, var(--color-text) 6%, transparent); } }
 .side-link[aria-current="page"] { color: var(--color-text); background: color-mix(in srgb, var(--color-accent) 14%, transparent); }
 .side-link[aria-current="page"] .ic { color: var(--color-accent); }
 
@@ -186,12 +189,12 @@ body:has(.shell.is-home) .mural { opacity: .34; }
 }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn-primary { color: var(--color-accent); border-color: var(--color-accent); }
-.btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+@media (hover: hover) { .btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--color-accent) 12%, transparent); } }
 .btn-primary:active { background: color-mix(in srgb, var(--color-accent) 22%, transparent); }
 .btn-secondary { border-color: var(--color-divider); }
-.btn-secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+@media (hover: hover) { .btn-secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--color-text) 7%, transparent); } }
 .btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
-.btn-ghost:hover:not(:disabled) { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+@media (hover: hover) { .btn-ghost:hover:not(:disabled) { background: color-mix(in srgb, var(--color-accent) 10%, transparent); } }
 .btn-icon { width: 36px; height: 36px; padding: 0; }
 /* Bordered like the other variants, and it matters more here than anywhere
    else: the only irreversible controls in the app wear this class, and without
@@ -199,7 +202,7 @@ body:has(.shell.is-home) .mural { opacity: .34; }
    rather than the full colour so a list of icon-only delete buttons does not
    turn into a row of red boxes; hover brings it up to full. */
 .btn-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
-.btn-danger:hover:not(:disabled) { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+@media (hover: hover) { .btn-danger:hover:not(:disabled) { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); } }
 
 /* ── forms ─────────────────────────────────────────────────────────── */
 .field { display: grid; gap: 6px; margin-bottom: var(--space-4); }
@@ -210,7 +213,7 @@ body:has(.shell.is-home) .mural { opacity: .34; }
 	color: var(--color-text); caret-color: var(--color-accent);
 	background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md);
 }
-.input:hover { border-color: var(--text-muted); }
+@media (hover: hover) { .input:hover { border-color: var(--text-muted); } }
 .input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
 select.input { cursor: pointer; }
 
@@ -220,7 +223,7 @@ select.input { cursor: pointer; }
 .table td { padding: var(--space-2); }
 .table thead tr { border-bottom: 1px solid var(--color-divider); }
 .table tbody tr { border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); }
-.table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+@media (hover: hover) { .table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); } }
 /* Wide tables scroll inside their own box instead of widening the page. */
 .table-scroll { overflow-x: auto; }
 .table-scroll .table { min-width: 720px; }
@@ -264,7 +267,7 @@ select.input { cursor: pointer; }
 /* ── tabs ──────────────────────────────────────────────────────────── */
 .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--color-divider); margin-bottom: var(--space-6); flex-wrap: wrap; }
 .tab { padding: 8px 16px; font-size: 13.5px; font-family: inherit; color: var(--text-soft); background: transparent; border: 0; border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px; }
-.tab:hover { color: var(--color-text); }
+@media (hover: hover) { .tab:hover { color: var(--color-text); } }
 .tab.active { color: var(--color-text); border-bottom-color: var(--color-accent); }
 
 /* ── shared utilities ──────────────────────────────────────────────── */
@@ -305,18 +308,18 @@ select.input { cursor: pointer; }
 .attn { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 5px 11px; border-radius: 999px; background: var(--color-accent-900); color: var(--color-accent-200); border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent); }
 .chip .ic { color: var(--color-accent-300); }
-.chip:hover { background: var(--color-accent-800); color: var(--color-accent-200); }
+@media (hover: hover) { .chip:hover { background: var(--color-accent-800); color: var(--color-accent-200); } }
 
 .span-2 { grid-column: span 2; }
 
 .refresh { color: var(--text-muted); }
-.refresh:hover { color: var(--color-accent); }
+@media (hover: hover) { .refresh:hover { color: var(--color-accent); } }
 
 .w-ok { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
 .w-ok .ic { color: var(--ok); }
 
 .w-link { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; color: var(--color-accent-300); }
-.w-link:hover { color: var(--color-accent-200); }
+@media (hover: hover) { .w-link:hover { color: var(--color-accent-200); } }
 
 .disk-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
 .disk-row { display: block; color: inherit; }
@@ -403,7 +406,7 @@ select.input { cursor: pointer; }
 .crumbs .mono { color: var(--text-soft); }
 .fs-row { display: grid; grid-template-columns: 24px 1fr 120px 100px; align-items: center; gap: var(--space-3); padding: 10px var(--space-3); border-radius: var(--radius-md); color: inherit; }
 .fs-row + .fs-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
-.fs-row:hover { background: var(--color-surface-2); }
+@media (hover: hover) { .fs-row:hover { background: var(--color-surface-2); } }
 .fs-row.dir { cursor: pointer; }
 /* Drill-down rows are real buttons so the explorer is keyboard-navigable. */
 button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; color: inherit; text-align: left; }
@@ -423,7 +426,7 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .disk-card-name { display: grid; gap: 2px; min-width: 0; }
 .disk-card-name h2 { font-size: 17px; font-weight: 650; }
 .disk-card-name h2 a { color: inherit; }
-.disk-card-name h2 a:hover { color: var(--color-accent-200); }
+@media (hover: hover) { .disk-card-name h2 a:hover { color: var(--color-accent-200); } }
 .disk-card-name .muted { font-size: 12px; }
 .disk-card-use { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
 .disk-card-pct { font-size: 24px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
@@ -492,7 +495,7 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .block .desc { margin: 0 0 var(--space-4); font-size: 12.5px; color: var(--text-muted); }
 .folder-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-3); padding: 10px var(--space-3); border-radius: var(--radius-md); }
 .folder-row + .folder-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
-.folder-row:hover { background: var(--color-surface-2); }
+@media (hover: hover) { .folder-row:hover { background: var(--color-surface-2); } }
 .add-row { display: flex; gap: var(--space-2); margin-top: var(--space-4); flex-wrap: wrap; align-items: center; }
 .add-row .input { flex: 1; min-width: 200px; }
 .add-row select.input { flex: 0 0 auto; width: auto; }
@@ -522,7 +525,7 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 }
 .server-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 10px var(--space-3); border-radius: var(--radius-md); }
 .server-row + .server-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
-.server-row:hover { background: var(--color-surface-2); }
+@media (hover: hover) { .server-row:hover { background: var(--color-surface-2); } }
 /* flex-direction row for the same reason as .stat-band; the input needs
    width:auto so .input's width:100% does not fight the flex sizing. */
 .magnet-form { display: flex; flex-direction: row; gap: var(--space-3); padding: var(--space-4) var(--space-6); margin-bottom: var(--space-6); align-items: center; flex-wrap: wrap; }
@@ -553,7 +556,8 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 	background: var(--glass); backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border);
 	transition: transform .18s ease, border-color .18s ease, background .18s ease;
 }
-.tile:hover, .tile:focus-visible { color: inherit; transform: translateY(-4px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); }
+.tile:focus-visible { color: inherit; transform: translateY(-4px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); }
+@media (hover: hover) { .tile:hover { color: inherit; transform: translateY(-4px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); } }
 .tile-icon { width: 34px; height: 34px; border-radius: var(--radius-md); display: grid; place-items: center; color: #fff; margin-bottom: 6px; }
 .tile-icon .ic { width: 22px; height: 22px; stroke-width: 2; }
 .tile-icon-sm { width: 28px; height: 28px; border-radius: 8px; margin: 0; }
@@ -590,7 +594,7 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .section-head h2 { font-size: 17px; font-weight: 650; }
 .section-head a { font-size: 13px; }
 .more-link { display: inline-flex; align-items: center; gap: 2px; color: var(--text-muted); }
-.more-link:hover { color: var(--color-text); }
+@media (hover: hover) { .more-link:hover { color: var(--color-text); } }
 
 /* ── apps (start page) ─────────────────────────────────────────────── */
 .home-apps { max-width: 980px; margin: var(--space-6) auto 0; }
@@ -608,7 +612,8 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .apps-chips { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-chip { display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; font-size: 13px; font-weight: 600; }
 .app-chip img { width: 22px; height: 22px; object-fit: contain; }
-.app-card:hover, .app-card:focus-visible, .app-chip:hover, .app-chip:focus-visible { color: inherit; transform: translateY(-3px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); }
+.app-card:focus-visible, .app-chip:focus-visible { color: inherit; transform: translateY(-3px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); }
+@media (hover: hover) { .app-card:hover, .app-chip:hover { color: inherit; transform: translateY(-3px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); } }
 
 /* ── stack page ────────────────────────────────────────────────────── */
 .stack-featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-4); }
@@ -625,7 +630,7 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .stack-actions, .stack-links { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin-top: auto; }
 .stack-links { font-size: 13px; }
 .stack-direct { color: var(--text-muted); font-size: 12.5px; word-break: normal; }
-.stack-direct:hover { color: var(--color-text); }
+@media (hover: hover) { .stack-direct:hover { color: var(--color-text); } }
 .stack-heading { font-size: 17px; font-weight: 650; margin: var(--space-8) 0 var(--space-3); }
 .stack-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
 .stack-grid > li { display: flex; }
@@ -635,9 +640,8 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .stack-feature, .stack-card { position: relative; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
 .stack-open::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
 .stack-direct { position: relative; z-index: 1; }
-.stack-feature:hover, .stack-card:hover, .stack-feature:has(.stack-open:focus-visible), .stack-card:has(.stack-open:focus-visible) {
-	transform: translateY(-3px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
-}
+.stack-feature:has(.stack-open:focus-visible), .stack-card:has(.stack-open:focus-visible) { transform: translateY(-3px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); }
+@media (hover: hover) { .stack-feature:hover, .stack-card:hover { transform: translateY(-3px); background: var(--glass-hover); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); } }
 .stack-note { margin: var(--space-6) 0 0; font-size: 13px; max-width: 70ch; }
 
 /* ── posters ───────────────────────────────────────────────────────── */
@@ -780,7 +784,7 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 	cursor: pointer; color: var(--color-accent); list-style: none;
 }
 .hint > summary::-webkit-details-marker { display: none; }
-.hint > summary:hover { text-decoration: underline; }
+@media (hover: hover) { .hint > summary:hover { text-decoration: underline; } }
 .hint-body {
 	margin-top: var(--space-2); padding: var(--space-3);
 	border-left: 2px solid var(--color-divider); display: grid; gap: var(--space-2);
@@ -845,9 +849,9 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 
 /* Hover as on Ginebra's portal: the accent border lights up. Without the lift,
    which suits a launcher tile but would make an admin panel jumpy. */
-.btn-secondary:hover:not(:disabled) { border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); }
+@media (hover: hover) { .btn-secondary:hover:not(:disabled) { border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); } }
 .btn-primary { color: var(--color-bg); background: var(--color-accent); border-color: var(--color-accent); }
-.btn-primary:hover:not(:disabled) { background: var(--color-accent-200); border-color: var(--color-accent-200); }
+@media (hover: hover) { .btn-primary:hover:not(:disabled) { background: var(--color-accent-200); border-color: var(--color-accent-200); } }
 
 /* Labels and states that must stay on one line: an interface name with its
    speed, a unit name, a badge. The free text beside them is what gives way. */
@@ -880,6 +884,8 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 	}
 	.tab-link .ic { width: 22px; height: 22px; }
 	.tab-link.tab-active { color: var(--color-text); }
+	/* What a finger gets instead of hover: the press itself shows. */
+	.tab-link:active, .sheet .side-link:active { background: color-mix(in srgb, var(--color-text) 8%, transparent); }
 	.tab-link.tab-active .ic { color: var(--color-accent); }
 	.sheet:popover-open {
 		display: grid; gap: var(--space-4); align-content: start;
