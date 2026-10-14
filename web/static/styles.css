@@ -856,6 +856,65 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .svc-state { display: inline-flex; align-items: center; gap: var(--space-2); }
 .svc-since { font-size: 12px; font-weight: 400; color: var(--text-muted); }
 
+/* ── installed on the phone ───────────────────────────────────────── */
+/* The bottom bar and its «Más» sheet only exist on a phone; on anything wider
+   the sidebar does the job. */
+.tabbar, .sheet { display: none; }
+@media (max-width: 680px) {
+	.side { display: none; }
+	.shell { grid-template-rows: 1fr; }
+	/* The page clears the bar, and in the installed app the status bar and
+	   notch above it (black-translucent draws the page under them). */
+	.page { padding-top: max(var(--space-4), env(safe-area-inset-top)); padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+	.tabbar {
+		position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+		display: grid; grid-template-columns: repeat(5, 1fr);
+		padding: 6px max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+		background: color-mix(in srgb, var(--color-bg) 82%, transparent); backdrop-filter: var(--glass-blur);
+		border-top: 1px solid var(--glass-border);
+	}
+	.tab-link {
+		display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+		min-height: 52px; border: 0; border-radius: var(--radius-md); background: none; font: inherit;
+		font-size: 11px; font-weight: 600; color: var(--text-muted); cursor: pointer;
+	}
+	.tab-link .ic { width: 22px; height: 22px; }
+	.tab-link.tab-active { color: var(--color-text); }
+	.tab-link.tab-active .ic { color: var(--color-accent); }
+	.sheet:popover-open {
+		display: grid; gap: var(--space-4); align-content: start;
+		position: fixed; inset: auto 0 0 0; margin: 0; width: 100%; max-width: none; max-height: 85vh; overflow-y: auto;
+		padding: var(--space-4) max(var(--space-4), env(safe-area-inset-right)) calc(var(--space-6) + env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
+		background: var(--color-surface); color: var(--color-text);
+		border: 0; border-top: 1px solid var(--glass-border); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+	}
+	.sheet::backdrop { background: rgba(0, 0, 0, .55); }
+	.sheet-head { display: flex; align-items: center; justify-content: space-between; }
+	.sheet-title { font-size: 17px; font-weight: 650; }
+	.sheet-group { display: grid; gap: 4px; }
+	.sheet-links { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+	.sheet .side-label { display: block; padding-bottom: 2px; }
+	.sheet .side-link { min-height: 44px; font-size: 15px; }
+}
+
+/* Pull to refresh, installed only (see app.js). */
+.ptr {
+	position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 8px); z-index: 30;
+	transform: translate(-50%, -60px); opacity: 0; transition: transform .2s ease, opacity .2s ease;
+	padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+	background: var(--color-surface-2); color: var(--text-soft); border: 1px solid var(--glass-border);
+}
+.ptr.ptr-on { transform: translate(-50%, 0); opacity: 1; }
+.ptr.ptr-ready { color: var(--color-text); border-color: var(--color-accent); }
+
+/* The page the service worker shows when Ginebra does not answer. */
+.offline-body { min-height: 100vh; display: grid; place-items: center; padding: max(var(--space-6), env(safe-area-inset-top)) var(--space-4) max(var(--space-6), env(safe-area-inset-bottom)); }
+.offline-card { max-width: 420px; gap: var(--space-3); padding: var(--space-6); }
+.offline-card h1 { font-size: 24px; font-weight: 650; margin: 0; }
+.offline-card p { margin: 0; }
+.offline-why { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--text-soft); font-size: 14px; }
+.offline-card .btn { align-self: flex-start; margin-top: var(--space-2); }
+
 /* ── reduced motion ────────────────────────────────────────────────── */
 /* Fewer and gentler, not none: what moves in space stops, what tells a state
    keeps telling it. The live dot holds still (its colour already says live),
@@ -870,6 +929,7 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 	.stack-feature:has(.stack-open:focus-visible), .stack-card:has(.stack-open:focus-visible) { transform: none; transition: background .15s ease, border-color .15s ease; }
 	.job .spinner { animation: breathe 1.6s ease-in-out infinite; border-top-color: color-mix(in srgb, var(--color-accent) 30%, transparent); background: color-mix(in srgb, var(--color-accent) 35%, transparent); }
 	.poster-row { scroll-behavior: auto; }
+	.ptr { transition: opacity .15s ease; }
 }
 @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 

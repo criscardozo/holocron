@@ -38,6 +38,24 @@ var navGroups = []struct {
 
 type navItem struct{ Label, Href, Icon string }
 
+// tabItems are the phone's bottom bar: see what is going on, what there is,
+// and the way into the other apps. Everything else is under «Más».
+var tabItems = []navItem{
+	{"Inicio", "/", "home"},
+	{"Actividad", "/activity", "activity"},
+	{"Medios", "/media", "film"},
+	{"Stack", "/stack", "layers"},
+}
+
+func inTabs(label string) bool {
+	for _, it := range tabItems {
+		if it.Label == label {
+			return true
+		}
+	}
+	return false
+}
+
 type muralKey struct{}
 
 // WithMural carries the poster URLs for the wall behind the page. The layout
@@ -230,6 +248,10 @@ func showWhat(n int) string {
 // asset is a static file's URL with the build's version in it, so the
 // browser can keep it for a year and a release still reaches it (see
 // cacheStatic in internal/httpserver).
-func asset(name string) string {
+func asset(name string) string { return Asset(name) }
+
+// Asset is the versioned URL of an embedded static file. Exported for the
+// service worker, which must cache the same URLs the pages link.
+func Asset(name string) string {
 	return "/static/" + name + "?v=" + url.QueryEscape(version.Current())
 }

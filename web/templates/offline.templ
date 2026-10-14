@@ -1,0 +1,35 @@
+package templates
+
+// OfflinePage is what the service worker shows when a page cannot be loaded:
+// away from home with Tailscale off, or Ginebra asleep. Kept apart from Layout
+// because it is cached once and shown later, when nothing it would link to
+// (posters, the sidebar's pages) can be reached.
+templ OfflinePage() {
+	<!DOCTYPE html>
+	<html lang="es">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+			<title>Ginebra no responde · Holocron</title>
+			<meta name="theme-color" content="#07090e"/>
+			<link rel="icon" type="image/svg+xml" href="/static/holocron.svg"/>
+			<link rel="stylesheet" href={ asset("styles.css") }/>
+			<script src={ asset("app.js") } defer></script>
+		</head>
+		<body class="offline-body">
+			<main class="card offline-card">
+				<img src="/static/holocron.svg" alt="" width="56" height="56"/>
+				<h1>Ginebra no responde</h1>
+				<p class="muted">No se pudo llegar al servidor. Suele ser una de estas:</p>
+				<ul class="offline-why">
+					<li>Estás fuera de casa y Tailscale está apagado en este teléfono.</li>
+					<li>El teléfono no tiene conexión.</li>
+					<li>Ginebra está apagada o reiniciándose.</li>
+				</ul>
+				<a class="btn btn-primary" href="/" data-reload>
+					Reintentar
+				</a>
+			</main>
+		</body>
+	</html>
+}

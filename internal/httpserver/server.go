@@ -90,6 +90,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /static/", cacheStatic(http.StripPrefix("/static/", http.FileServerFS(staticFS))))
 
 	mux.HandleFunc("GET /healthz", s.handleHealth)
+	mux.HandleFunc("GET /manifest.webmanifest", s.handleManifest)
+	mux.HandleFunc("GET /sw.js", s.handleServiceWorker)
+	mux.HandleFunc("GET /offline", s.handleOffline)
 	mux.HandleFunc("GET /art/{kind}/{id}", s.handleArt)
 	mux.HandleFunc("GET /stack", s.handleStack)
 	mux.HandleFunc("GET /{$}", s.handleDashboard)
