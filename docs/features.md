@@ -1100,3 +1100,42 @@ SwiftUI) y la app iba siempre atrasada; la web llega sola con cada versión.
   apagar desde afuera es la de Gestión. La API `/api/v1` y su token siguen
   existiendo mientras exista la app iOS.
 
+---
+
+## Feature 16 — Dispositivos (`/devices`)
+
+Lo que hay conectado en casa. Cada aparato lleva nombre de ciudad (Ginebra,
+Osaka, Tokyo…) y su card es la foto de esa ciudad, con el nombre, el modelo, la
+IP y la MAC juntos abajo a la izquierda, y una foto del aparato al costado. La
+MAC va plegada: está cuando hace falta, no es para leer de una.
+
+- **Los datos son un archivo a mano**: `dispositivos.toml`, un bloque
+  `[[dispositivo]]` por aparato con `nombre`, `grupo`, `dispositivo`, `ip`,
+  `mac` y, si se quiere, `foto_ciudad` y `foto_equipo`. Se lee en cada pedido:
+  un cambio se ve al recargar, sin reiniciar. Si tiene un error, la página dice
+  en qué línea.
+- **TOML y no YAML ni un .ini propio**: Cristian no quiere un formato con
+  indentación, y TOML tiene estándar y errores con número de línea. Es la única
+  dependencia de Go fuera de templ y sqlite (`BurntSushi/toml`, ~0,5 MB, sin
+  dependencias transitivas); la excepción está anotada en `CLAUDE.md`.
+- **Grupos**: General, Cristian y Natalia, en ese orden; otro grupo va después
+  en el orden en que aparece. **Otros** va al final como lista, sin fotos: la
+  infraestructura de la red (routers, un comedero automático) no tiene ciudad. En
+  el teléfono la lista pasa a dos líneas por aparato para que la IP no quede
+  fuera de la pantalla.
+- **Fotos**: en `fotos/`, al lado del archivo. Sin `foto_ciudad` ni
+  `foto_equipo` se buscan por el nombre, en minúscula y sin tildes:
+  `caacupe.jpg` para la ciudad y `caacupe-equipo.jpg` para el aparato (también
+  `.png` y `.webp`). Las sirve `/devices/photo/{nombre}`: el navegador nunca va
+  a internet a buscarlas. La foto del aparato va en un recuadro gris claro, así
+  las de producto y las sacadas en casa se ven parejas.
+- **Fuera del repo**: el archivo y las fotos viven en el servidor
+  (`HOLOCRON_DEVICES_DIR`); el repo es público y tienen las direcciones de todo
+  lo de la casa. En la Mac de desarrollo, `dispositivos/` está en `.gitignore`.
+  Todo se lee con `os.Root` sobre esa carpeta, así un nombre en el archivo no
+  puede salir de ella.
+- **La card**: mantiene la proporción 4:5 como mínimo y crece sólo si se abre
+  la MAC (un «sizer» y el contenido comparten la misma celda de grid). El
+  nombre ocupa todo el ancho, para no partirse a mitad de palabra al lado de la
+  foto del aparato.
+
