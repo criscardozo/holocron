@@ -7,7 +7,7 @@ package templates
 // hidden <svg> holds the icon sprite referenced by Icon/IconSm across pages.
 templ Layout(title string) {
 	<!DOCTYPE html>
-	<html lang="es">
+	<html lang="es" data-theme={ themeFrom(ctx) }>
 		<head>
 			<meta charset="utf-8"/>
 			// viewport-fit=cover lets an installed app draw under the notch and
@@ -30,10 +30,9 @@ templ Layout(title string) {
 			// Installable from Safari's «Agregar a inicio»: it opens full screen,
 			// without the browser's bars, like an app.
 			<link rel="manifest" href="/manifest.webmanifest"/>
-			<meta name="theme-color" content="#07090e"/>
+			@themeMeta(themeFrom(ctx))
 			<meta name="mobile-web-app-capable" content="yes"/>
 			<meta name="apple-mobile-web-app-title" content="Holocron"/>
-			<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 			<link rel="stylesheet" href={ asset("styles.css") }/>
 			<script src={ asset("htmx.min.js") } defer></script>
 			// htmx-ext-sse 2.2.4, vendored from npm with its sha512 integrity
@@ -78,6 +77,25 @@ templ Layout(title string) {
 			@tabBar(title)
 		</body>
 	</html>
+}
+
+// themeMeta colours the browser's own bars to match the page. Following the
+// system, it gives both and lets the browser pick. The installed app's status
+// bar has no light-dark form: its text is white over a dark page and black
+// over a light one, so «auto» takes the dark one, as the app always was.
+templ themeMeta(theme string) {
+	switch theme {
+		case ThemeLight:
+			<meta name="theme-color" content="#f4f3f8"/>
+			<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+		case ThemeDark:
+			<meta name="theme-color" content="#07090e"/>
+			<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+		default:
+			<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f3f8"/>
+			<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#07090e"/>
+			<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+	}
 }
 
 // tabBar is the phone's navigation: the sidebar's strip of twelve links does
@@ -185,6 +203,8 @@ templ iconSprite() {
 		<symbol id="layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"></path><path d="m2 17 10 5 10-5"></path><path d="m2 12 10 5 10-5"></path></symbol>
 		<symbol id="external" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></symbol>
 		<symbol id="devices" viewBox="0 0 24 24"><rect x="2" y="4" width="14" height="10" rx="1.5"></rect><path d="M6 18h6M9 14v4"></path><rect x="17" y="8" width="5" height="12" rx="1.2"></rect></symbol>
+		<symbol id="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></symbol>
+		<symbol id="moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></symbol>
 		<symbol id="menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></symbol>
 		<symbol id="close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
 		<symbol id="key" viewBox="0 0 24 24"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L21 4M2 21l6.5-6.5M7.5 16.5 5.5 14.5"></path><circle cx="11" cy="11" r="5"></circle></symbol>

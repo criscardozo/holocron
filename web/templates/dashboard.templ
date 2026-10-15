@@ -9,7 +9,10 @@ templ Home(v HomeView) {
 			// Ginebra's own mark, as on the portal this page replaced: under
 			// merli.store this is the server's front door, not only its panel.
 			<h1 class="home-marca">
-				<img src="/static/ginebra-marca.svg" alt="Ginebra, HTPC Server" width="476" height="128"/>
+				// Two marks, one shown: the wordmark is white on the dark ground
+				// and ink on the light one (styles.css picks by scheme).
+				<img class="marca-oscura" src="/static/ginebra-marca.svg" alt="Ginebra, HTPC Server" width="476" height="128"/>
+				<img class="marca-clara" src="/static/ginebra-marca-claro.svg" alt="Ginebra, HTPC Server" width="476" height="128"/>
 			</h1>
 			<div class="home-status">
 				for _, st := range v.Status {

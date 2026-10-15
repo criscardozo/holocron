@@ -21,6 +21,7 @@ templ settingsContent(v SettingsView) {
 		</div>
 	}
 	<div class="settings-grid">
+		@themePicker(themeFrom(ctx))
 
 		<div class="card elev-sm block span-2">
 			<h2>
@@ -247,3 +248,24 @@ templ APITokenIssued(token string) {
 	</div>
 }
 
+
+// themePicker is the scheme, per browser: a cookie, so the phone and the
+// computer can differ. Plain buttons in a form that is not boosted, because
+// the scheme lives on <html> and a boosted swap would leave it as it was.
+templ themePicker(current string) {
+	<div class="card elev-sm block span-2" id="apariencia">
+		<h2>
+			@Icon("sun")
+			Apariencia
+		</h2>
+		<p class="desc">Claro, oscuro, o el que use este dispositivo. Se guarda en este navegador.</p>
+		<form method="post" action="/settings/theme" hx-boost="false" class="theme-picker" role="group" aria-label="Tema">
+			for _, o := range themeOptions {
+				<button type="submit" name="theme" value={ o.Value } class={ "theme-opt", templ.KV("theme-opt-on", o.Value == current) } aria-pressed={ boolAttr(o.Value == current) }>
+					@IconSm(o.Icon)
+					{ o.Label }
+				</button>
+			}
+		</form>
+	</div>
+}

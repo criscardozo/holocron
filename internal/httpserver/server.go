@@ -150,6 +150,7 @@ func (s *Server) Handler() http.Handler {
 
 	// Phase 1: settings (watched folders) + service credentials.
 	mux.HandleFunc("GET /settings", s.handleSettings)
+	mux.HandleFunc("POST /settings/theme", s.handleTheme)
 	mux.HandleFunc("POST /settings/folders", s.handleAddFolder)
 	mux.HandleFunc("POST /settings/folders/delete", s.handleDeleteFolder)
 	mux.HandleFunc("POST /settings/jellyfin", s.handleSaveJellyfinURL)
@@ -171,7 +172,7 @@ func (s *Server) Handler() http.Handler {
 	// JSON API for the iOS app (authenticated; see api.go).
 	s.apiRoutes(mux)
 
-	return chain(mux, s.recoverer, s.logRequests, securityHeaders, s.sameOrigin, limitBody, gzipMW, s.withMural)
+	return chain(mux, s.recoverer, s.logRequests, securityHeaders, s.sameOrigin, limitBody, gzipMW, withTheme, s.withMural)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
