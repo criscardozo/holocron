@@ -13,6 +13,7 @@ import (
 	"github.com/cristian/holocron/internal/activity"
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/artwork"
+	"github.com/cristian/holocron/internal/devices"
 	"github.com/cristian/holocron/internal/disks"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
@@ -65,6 +66,9 @@ type Deps struct {
 	// the server's home-network address for direct links ("" hides them).
 	Versions   *stack.Versions
 	DirectHost string
+	// Devices reads the house's devices file. Unconfigured, the page says
+	// how to set it up.
+	Devices *devices.Store
 }
 
 // Server serves the Holocron web UI.
@@ -95,6 +99,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /offline", s.handleOffline)
 	mux.HandleFunc("GET /art/{kind}/{id}", s.handleArt)
 	mux.HandleFunc("GET /stack", s.handleStack)
+	mux.HandleFunc("GET /devices", s.handleDevices)
+	mux.HandleFunc("GET /devices/photo/{name}", s.handleDevicePhoto)
 	mux.HandleFunc("GET /{$}", s.handleDashboard)
 
 	// Phase 1: disk usage.

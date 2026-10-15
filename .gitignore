@@ -31,3 +31,6 @@ CLAUDE.md
 
 # Claude Code local: permisos de esta máquina y skills instaladas (Impeccable)
 /.claude/
+
+# The house's devices: names, addresses and photos stay off the public repo.
+/dispositivos/

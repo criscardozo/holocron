@@ -17,6 +17,7 @@ import (
 	"github.com/cristian/holocron/internal/apitoken"
 	"github.com/cristian/holocron/internal/artwork"
 	"github.com/cristian/holocron/internal/db"
+	"github.com/cristian/holocron/internal/devices"
 	"github.com/cristian/holocron/internal/disks"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
@@ -105,6 +106,7 @@ func newTestServer(t *testing.T) *testServer {
 		t.Fatalf("artwork: %v", err)
 	}
 	deps.Art = art
+	deps.Devices = devices.NewStore(testDevicesDir(t))
 	deps.Widgets = widgets.NewRegistry(
 		widgets.SystemWidget{},
 		widgets.NewDiskWidget(deps.Disks),

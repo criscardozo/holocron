@@ -45,6 +45,10 @@ type Config struct {
 	// On Ginebra, Anime;Museum, whose titles get their subtitles on the way
 	// through Películas or Series.
 	QualitySkipSubs []string
+	// DevicesDir is HOLOCRON_DEVICES_DIR: the directory holding
+	// dispositivos.toml and its photos, for the Dispositivos page. On the
+	// server, never in the repository: it lists the house's addresses.
+	DevicesDir string
 	// DirectHost is HOLOCRON_DIRECT_HOST, the server's address on the home
 	// network for the Stack page's direct links. Found on its own when unset.
 	DirectHost string
@@ -111,6 +115,7 @@ func Load() Config {
 		SmartFile:   os.Getenv("HOLOCRON_SMART_FILE"),
 		UpdatesFile: os.Getenv("HOLOCRON_UPDATES_FILE"),
 		DirectHost:  os.Getenv("HOLOCRON_DIRECT_HOST"),
+		DevicesDir:  os.Getenv("HOLOCRON_DEVICES_DIR"),
 		MachineName: envOr("HOLOCRON_MACHINE_NAME", hostTitle()),
 	}
 	c.MediaFolders, c.BadFolders = parseFolders(os.Getenv("HOLOCRON_MEDIA_FOLDERS"))

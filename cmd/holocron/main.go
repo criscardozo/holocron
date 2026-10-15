@@ -22,6 +22,7 @@ import (
 	"github.com/cristian/holocron/internal/bazarr"
 	"github.com/cristian/holocron/internal/config"
 	"github.com/cristian/holocron/internal/db"
+	"github.com/cristian/holocron/internal/devices"
 	"github.com/cristian/holocron/internal/disks"
 	"github.com/cristian/holocron/internal/diskusage"
 	"github.com/cristian/holocron/internal/folders"
@@ -151,6 +152,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Folders:            folderStore,
 		Disk:               diskService,
 		Disks:              diskWatcher,
+		Devices:            devices.NewStore(cfg.DevicesDir),
 		Hardware:           hardware.NewHub(2 * time.Second),
 		Activity:           activityHub,
 		Services:           servicesHub,

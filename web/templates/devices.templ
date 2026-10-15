@@ -1,0 +1,143 @@
+package templates
+
+import "fmt"
+
+// DevicesPage is the house's devices. Each is named after a city: its card is
+// that city's photo, with the device itself in a tile at the corner.
+templ DevicesPage(v DevicesView) {
+	@Layout("Dispositivos") {
+		<div class="page-head">
+			<div>
+				<h1>Dispositivos</h1>
+				<p class="sub">Lo que hay conectado en casa</p>
+			</div>
+		</div>
+		if !v.Configured {
+			<p class="muted">
+				No hay lista de dispositivos. En el servidor se configura con
+				<span class="mono">HOLOCRON_DEVICES_DIR</span>: la carpeta con <span class="mono">{ v.File }</span> y sus fotos.
+			</p>
+		} else if v.ErrorLine > 0 {
+			<div class="notice error" role="alert">
+				@IconSm("alert")
+				<span>
+					<span class="mono">{ v.File }</span> tiene un error en la línea { fmt.Sprintf("%d", v.ErrorLine) }.
+					Suele ser una comilla que falta o un campo sin «=».
+				</span>
+			</div>
+		} else if v.Missing {
+			<p class="muted">Todavía no está <span class="mono">{ v.File }</span> en la carpeta de dispositivos.</p>
+		} else if v.Failed {
+			<div class="notice error" role="alert">
+				@IconSm("alert")
+				<span>No se pudo leer la lista de dispositivos.</span>
+			</div>
+		} else {
+			for i, g := range v.Groups {
+				<section class="dv-group" aria-labelledby={ fmt.Sprintf("dv-g%d", i) }>
+					<h2 class="dv-group-title" id={ fmt.Sprintf("dv-g%d", i) }>
+						{ g.Name }
+						<span class="muted">{ fmt.Sprintf("%d", len(g.Devices)) }</span>
+					</h2>
+					if g.Plain {
+						@deviceTable(g.Devices)
+					} else {
+						<ul class="dv-grid">
+							for _, d := range g.Devices {
+								<li>
+									@deviceCard(d)
+								</li>
+							}
+						</ul>
+					}
+				</section>
+			}
+		}
+	}
+}
+
+// deviceCard is the city filling the card, the name and addresses as one
+// block at the bottom left, and the device in a tile beside them.
+templ deviceCard(d DeviceCard) {
+	<article class={ "dv-card", templ.KV("dv-card-nocity", d.CityURL == "") }>
+		if d.CityURL != "" {
+			<img class="dv-city" src={ d.CityURL } alt="" loading="lazy" decoding="async"/>
+		}
+		<div class="dv-body">
+			<h3>{ d.Name }</h3>
+			<div class="dv-info">
+				if d.Model != "" {
+					<span class="dv-model">{ d.Model }</span>
+				}
+				if d.IP != "" {
+					<span class="mono dv-ip">{ d.IP }</span>
+				} else {
+					<span class="dv-ip dv-noip">sin IP</span>
+				}
+				@deviceMAC(d.MAC)
+			</div>
+			if d.DeviceURL != "" {
+				<div class="dv-tile">
+					<img src={ d.DeviceURL } alt={ d.Model } loading="lazy" decoding="async"/>
+				</div>
+			} else {
+				<div class="dv-tile dv-tile-empty" aria-hidden="true">
+					@Icon("devices")
+				</div>
+			}
+		</div>
+	</article>
+}
+
+// deviceMAC is folded away: it is there when needed, not something to read
+// at a glance.
+templ deviceMAC(mac string) {
+	if mac != "" {
+		<details class="dv-mac">
+			<summary>
+				@IconSm("chev")
+				MAC
+			</summary>
+			<span class="mono">{ mac }</span>
+		</details>
+	}
+}
+
+// deviceTable is the plain list for Otros: the network's plumbing has no
+// city and needs no photo.
+templ deviceTable(ds []DeviceCard) {
+	<div class="card elev-sm table-scroll">
+		<table class="table dv-table">
+			<thead>
+				<tr>
+					<th>Nombre</th>
+					<th>Dispositivo</th>
+					<th>IP</th>
+					<th>MAC</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, d := range ds {
+					<tr>
+						<td>{ d.Name }</td>
+						<td class="muted">{ d.Model }</td>
+						<td class="mono">
+							if d.IP != "" {
+								{ d.IP }
+							} else {
+								<span class="muted">—</span>
+							}
+						</td>
+						<td>
+							if d.MAC != "" {
+								@deviceMAC(d.MAC)
+							} else {
+								<span class="muted">—</span>
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+}
