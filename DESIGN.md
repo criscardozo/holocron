@@ -221,9 +221,27 @@ facetas lila y rosa, y tres luces de estado que se encienden sólo cuando hace f
   extremo de los degradados de los íconos de las baldosas, junto a una faceta del
   G▶. Nunca texto ni acción.
 
-La página declara el esquema oscuro (`color-scheme: dark`), así que los controles
-que dibuja el navegador (listas desplegables, barras de scroll, autocompletado)
-salen oscuros, y el texto guía de los campos usa el texto tenue.
+### Tema claro
+El cuarto de máquinas con la luz prendida: los mismos tokens, cada uno como
+`light-dark(claro, oscuro)`, así no hay una segunda hoja de estilos que se
+desfase. El fondo es un papel apenas violeta (#f4f3f8), las superficies blancas
+y el texto tinta (#16141f). El violeta baja un escalón (#6d28d9, links en
+#7c3aed) para seguir pasando AA sobre blanco; los textos suave y tenue suben a
+72 % y 62 % por la misma razón, y las luces de estado se oscurecen (ok #047857,
+alarma #e11d48, aviso #a16207). El vidrio es blanco al 80 % y el borde, tinta al
+10 %. Sigue sin sombras.
+
+Por defecto la página sigue al sistema (`color-scheme: light dark`); en
+Ajustes → Apariencia se fija Claro u Oscuro por navegador (una cookie, que el
+servidor pone como `data-theme` en `<html>`: sin parpadeo ni script). Lo que va
+sobre una foto con velo oscuro (las cards de Dispositivos, el póster de lo que
+se está mirando) fija `color-scheme: dark` y vuelve a resolver `color`, para no
+dejar tinta sobre negro. El logo de Ginebra tiene su versión clara, con el texto
+en tinta.
+
+Los controles que dibuja el navegador (listas desplegables, barras de scroll,
+autocompletado) siguen el esquema de la página, y el texto guía de los campos
+usa el texto tenue.
 
 ### Named Rules
 **The One Voice Rule.** El violeta Ginebra es el único acento de interacción. El

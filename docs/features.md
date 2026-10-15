@@ -1139,3 +1139,26 @@ MAC va plegada: está cuando hace falta, no es para leer de una.
   nombre ocupa todo el ancho, para no partirse a mitad de palabra al lado de la
   foto del aparato.
 
+---
+
+## Feature 17 — Tema claro
+
+Holocron tiene tema claro además del oscuro. Por defecto sigue al sistema; en
+**Ajustes → Apariencia** se elige Automático, Claro u Oscuro.
+
+- **Por navegador, no por servidor**: la elección es una cookie
+  (`holocron-tema`), así el teléfono puede ir en claro y la compu en oscuro. El
+  servidor la pone como `data-theme` en `<html>` antes de mandar la página: no
+  hay parpadeo del otro tema ni script de por medio. El formulario no va con
+  `hx-boost`, porque una navegación con boost reemplaza el `<body>` y deja el
+  `<html>` como estaba.
+- **Un solo juego de colores**: cada token es `light-dark(claro, oscuro)` y se
+  resuelve en el elemento que lo usa, según su `color-scheme`. Por eso lo que va
+  sobre una foto con velo oscuro (cards de Dispositivos, el póster de
+  Actividad) fija `color-scheme: dark` y se ve igual en los dos temas.
+- **La app instalada en el iPhone**: la barra de estado no tiene versión
+  automática (`apple-mobile-web-app-status-bar-style` es una sola). En
+  Automático queda como siempre, con el texto blanco; si en el teléfono se usa
+  el tema claro, conviene elegir **Claro** en Ajustes, que la pone en negro.
+  Sin probar en el dispositivo.
+
