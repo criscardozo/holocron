@@ -1,5 +1,7 @@
 package templates
 
+import "github.com/cristian/holocron/internal/version"
+
 // Layout is the outer HTML shell shared by every page: the poster wall, the
 // sidebar and the page. hx-boost on the body turns plain links into partial
 // navigation without any custom JavaScript. The title also selects the active
@@ -25,13 +27,15 @@ templ Layout(title string) {
 			// the phone show the server, the page inside shows the tool.
 			<link rel="icon" type="image/svg+xml" href="/static/ginebra.svg"/>
 			<link rel="icon" type="image/png" sizes="32x32" href="/static/ginebra-32.png"/>
-			<link rel="apple-touch-icon" sizes="180x180" href="/static/icon-180.png"/>
+			// New file names, not the old ones with new contents: Safari keeps a
+			// touch icon it has fetched, and showed the cube long after it changed.
+			<link rel="apple-touch-icon" sizes="180x180" href="/static/ginebra-180.png"/>
 			// Installable from Safari's «Agregar a inicio»: it opens full screen,
 			// without the browser's bars, like an app.
-			<link rel="manifest" href="/manifest.webmanifest"/>
+			<link rel="manifest" href={ "/manifest.webmanifest?v=" + version.Current() }/>
 			@themeMeta(themeFrom(ctx))
 			<meta name="mobile-web-app-capable" content="yes"/>
-			<meta name="apple-mobile-web-app-title" content="Holocron"/>
+			<meta name="apple-mobile-web-app-title" content="Ginebra"/>
 			<link rel="stylesheet" href={ asset("styles.css") }/>
 			<script src={ asset("htmx.min.js") } defer></script>
 			// htmx-ext-sse 2.2.4, vendored from npm with its sha512 integrity

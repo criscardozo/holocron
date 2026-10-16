@@ -69,7 +69,9 @@ func TestManifestIsInstallable(t *testing.T) {
 	}
 
 	home := ts.get(t, "/", nil).Body
-	for _, want := range []string{`rel="manifest"`, `viewport-fit=cover`, templates.Asset("app.js"), `popovertarget="mas"`} {
+	for _, want := range []string{`rel="manifest"`, `viewport-fit=cover`, templates.Asset("app.js"), `popovertarget="mas"`,
+		// The installed app is the server's: its name and its icon.
+		`name="apple-mobile-web-app-title" content="Ginebra"`, `href="/static/ginebra-180.png"`} {
 		if !strings.Contains(home, want) {
 			t.Errorf("the page lacks %s", want)
 		}
