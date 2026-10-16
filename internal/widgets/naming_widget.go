@@ -26,9 +26,15 @@ func (w NamingWidget) Tile(ctx context.Context) templates.Tile {
 		return t
 	}
 	n, err := w.naming.Count(ctx)
+	_, unreadable, scanned, lerr := w.naming.LastScan(ctx)
 	switch {
-	case err != nil:
+	case err != nil || lerr != nil:
 		t.Value, t.Sub, t.Warn = "—", "No se pudo leer", true
+	case !scanned:
+		// An empty table before the first scan is not «all good».
+		t.Value, t.Sub = "Sin revisar", "Entrá para revisarlos"
+	case len(unreadable) > 0 && n == 0:
+		t.Value, t.Sub, t.Warn = "—", "Una carpeta no se pudo leer", true
 	case n == 0:
 		t.Value, t.Sub = "Todo bien", "Todo cumple «Título (Año)»"
 	default:

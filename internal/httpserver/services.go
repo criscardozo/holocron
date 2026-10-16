@@ -121,7 +121,13 @@ func inDuration(d time.Duration) string {
 func diskView(d services.SmartDisk) templates.SvcDisk {
 	out := templates.SvcDisk{Disk: strings.TrimPrefix(d.Disk, "/dev/"), Model: d.Model, Asleep: d.Asleep}
 	if d.Asleep {
-		return out
+		// Asleep this time, but the file keeps the last reading it got: show
+		// that, with its age, rather than «no reading yet» beside a Disco page
+		// that has one.
+		if d.ReadAt == nil {
+			return out
+		}
+		out.Note = "dormido · leído " + humanAge(time.Since(*d.ReadAt))
 	}
 	switch d.Health {
 	case "ok":
@@ -151,6 +157,11 @@ func diskView(d services.SmartDisk) templates.SvcDisk {
 	warn(d.Reallocated, "sectores reasignados")
 	warn(d.Pending, "sectores pendientes")
 	warn(d.Uncorrectable, "errores incorregibles")
+	if d.HealthOnly {
+		// Nothing below is zero, it is unknown: say so rather than show a
+		// healthy-looking row with no numbers.
+		out.Facts = append(out.Facts, "el gabinete sólo da el estado general")
+	}
 	if d.CRC != nil && *d.CRC > 0 {
 		// CRC errors are the cable or the USB bridge, not the platters.
 		out.Warn = append(out.Warn, fmt.Sprintf("%d errores de CRC (cable o adaptador USB)", *d.CRC))

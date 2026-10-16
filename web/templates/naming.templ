@@ -1,6 +1,9 @@
 package templates
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 // NamingPage lists the folders that break the convention, grouped by library.
 templ NamingPage(v NamingPageView) {
 	@Layout("Nombres") {
@@ -29,9 +32,18 @@ templ namingContent(v NamingPageView) {
 			<span>{ v.Notice }</span>
 		</div>
 	}
+	if len(v.Unreadable) > 0 {
+		<div class="notice error mb-6" role="alert">
+			@IconSm("alert")
+			<span>No se pudo leer { strings.Join(v.Unreadable, ", ") }: lo que haya ahí no está revisado.</span>
+		</div>
+	}
+	if v.ScannedAge != "" {
+		<p class="muted mb-6">Revisado { v.ScannedAge }.</p>
+	}
 	if !v.HasMediaFolders {
 		<p class="muted">No hay carpetas de Películas/Series configuradas. Agregá una en <a href="/settings">Ajustes</a>.</p>
-	} else if v.Count == 0 {
+	} else if v.Count == 0 && len(v.Unreadable) == 0 {
 		<div class="notice">
 			@IconSm("check")
 			<span>Todas las carpetas cumplen la convención «Título (Año)».</span>

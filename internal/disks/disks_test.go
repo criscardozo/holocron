@@ -181,3 +181,19 @@ func TestSmartsModelWinsAndNestedDisksAreFound(t *testing.T) {
 		t.Errorf("Disco3 has nothing inside: %+v", rep.Disks[1].Nested)
 	}
 }
+
+// TestUsedPercentMatchesDf: the system disk showed 7 % and 203 GiB free where
+// df said 9 % and 193 G, because root's reserved blocks counted as free. Free
+// is now what can be written, and the share is rounded up the way df does.
+func TestUsedPercentMatchesDf(t *testing.T) {
+	t.Parallel()
+	const g = uint64(1) << 30
+	// Ginebra's root on 16/10: 18 G used, 193 G available, 221 G in all.
+	d := Disk{StatOK: true, Total: 221 * g, Used: 18 * g, Free: 193 * g}
+	if got := d.UsedPercent(); got != 9 {
+		t.Errorf("UsedPercent = %d, want 9 as df", got)
+	}
+	if got := (Disk{}).UsedPercent(); got != 0 {
+		t.Errorf("no stat: %d, want 0", got)
+	}
+}

@@ -71,6 +71,17 @@ type Disk struct {
 	Libraries []string
 }
 
+// UsedPercent is how full the disk is the way df says it: used over what
+// could hold data (used plus available), rounded up, so a disk is never shown
+// emptier than df shows it.
+func (d Disk) UsedPercent() int {
+	room := d.Used + d.Free
+	if !d.StatOK || room == 0 {
+		return 0
+	}
+	return int((d.Used*100 + room - 1) / room)
+}
+
 // ReallocUp says the disk has more reallocated sectors than when first seen.
 func (d Disk) ReallocUp() bool {
 	return d.Smart != nil && d.Smart.Reallocated != nil && d.Baseline != nil && *d.Smart.Reallocated > *d.Baseline
@@ -152,8 +163,11 @@ func (w *Watcher) Read(ctx context.Context) Report {
 		if ok {
 			d.Device = blockDevice(m.majMin)
 		}
-		if total, used, free, _, err := scanner.FilesystemStat(sp.Mount); err == nil {
-			d.Total, d.Used, d.Free, d.StatOK = total, used, free, true
+		// Free is what can be written, as df's «Avail»: on the system disk
+		// the 5 % reserved for root is not free to anything Holocron serves,
+		// and counting it made the card ten gigabytes and two points off df.
+		if total, used, _, avail, err := scanner.FilesystemStat(sp.Mount); err == nil {
+			d.Total, d.Used, d.Free, d.StatOK = total, used, avail, true
 		}
 		if smart != nil && d.Device != "" {
 			for i := range smart.Disks {

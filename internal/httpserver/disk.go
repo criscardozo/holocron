@@ -71,7 +71,7 @@ func diskCard(d disks.Disk, active bool, now time.Time) templates.DiskCard {
 		c.UsedHuman = system.HumanBytes(d.Used)
 		c.TotalHuman = system.HumanBytes(d.Total)
 		c.FreeHuman = system.HumanBytes(d.Free)
-		c.UsedPercent = int(float64(d.Used) / float64(d.Total) * 100)
+		c.UsedPercent = d.UsedPercent()
 	}
 
 	sd := d.Smart
@@ -103,6 +103,9 @@ func diskCard(d disks.Disk, active bool, now time.Time) templates.DiskCard {
 		c.Health, c.HealthTone = "falla", "bad"
 	default:
 		c.Health, c.HealthTone = "sin datos de salud", "none"
+	}
+	if sd.HealthOnly && sd.Reallocated == nil {
+		c.Realloc = "el gabinete no informa los atributos"
 	}
 	if sd.Reallocated != nil {
 		c.Realloc = strconv.FormatInt(*sd.Reallocated, 10) + " reasignados"
@@ -211,12 +214,12 @@ func (s *Server) buildDiskDetail(ctx context.Context, f folders.Folder, disk dis
 		Scanning: s.deps.Disk.Scanning(f.ID),
 	}
 
-	if total, used, free, _, err := scanner.FilesystemStat(f.Path); err == nil {
+	if total, used, _, avail, err := scanner.FilesystemStat(f.Path); err == nil {
 		d.TotalHuman = system.HumanBytes(total)
 		d.UsedHuman = system.HumanBytes(used)
-		d.FreeHuman = system.HumanBytes(free)
-		if total > 0 {
-			d.UsedPercent = int(float64(used) / float64(total) * 100)
+		d.FreeHuman = system.HumanBytes(avail)
+		if room := used + avail; room > 0 {
+			d.UsedPercent = int((used*100 + room - 1) / room)
 		}
 	}
 

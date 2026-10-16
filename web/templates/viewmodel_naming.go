@@ -10,6 +10,10 @@ type NamingPageView struct {
 	// bug that looks like a feature.
 	Ignored []NamingIgnoredRow
 	Notice  string
+	// ScannedAge is how long ago the folders were checked; Unreadable the
+	// libraries that could not be read then, which «all comply» must not hide.
+	ScannedAge string
+	Unreadable []string
 }
 
 // NamingIgnoredRow is one folder being left alone.

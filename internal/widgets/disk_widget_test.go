@@ -17,7 +17,7 @@ func TestTheDiskTileShowsEveryLibraryDisk(t *testing.T) {
 		{Spec: disks.Spec{Name: "Sistema", Role: "descargas"}, Mounted: true, StatOK: true, Total: tb / 4, Used: tb / 8, Free: tb / 8},
 	}}
 	rows := libraryRows(rep)
-	if len(rows) != 2 || rows[0].Label != "Disco4" || rows[0].Value != "75 %" || rows[1].Label != "Disco3" || rows[1].Value != "33 %" {
+	if len(rows) != 2 || rows[0].Label != "Disco4" || rows[0].Value != "75 %" || rows[1].Label != "Disco3" || rows[1].Value != "34 %" { // rounded up, as df does
 		t.Fatalf("rows = %+v", rows)
 	}
 	if rows[0].Sub != "1.0 TiB libres" {

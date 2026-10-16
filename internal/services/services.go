@@ -342,6 +342,10 @@ type SmartDisk struct {
 	Hours         *int64     `json:"horas"`
 	ReadAt        *time.Time `json:"leido_en"`
 	Asleep        bool       `json:"dormido"`
+	// HealthOnly marks a disk whose USB bridge passes only the overall
+	// verdict (Disco4's Seagate enclosure, read over SCSI): the null
+	// attributes are unknown, not zero.
+	HealthOnly bool `json:"solo_salud"`
 }
 
 // ReadSmart reads the SMART status file.

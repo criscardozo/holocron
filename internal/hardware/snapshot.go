@@ -132,6 +132,7 @@ func (c *Collector) Sample(now time.Time) Snapshot {
 	}
 	sort.Slice(s.Cores, func(i, j int) bool { return coreIndex(s.Cores[i].Name) < coreIndex(s.Cores[j].Name) })
 	sort.Slice(s.Disks, func(i, j int) bool { return s.Disks[i].Name < s.Disks[j].Name })
+	markUnmounted(s.Disks, inUse())
 
 	c.mu.Lock()
 	if s.HasCPU {

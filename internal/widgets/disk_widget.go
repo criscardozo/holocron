@@ -36,7 +36,7 @@ func (w DiskWidget) Tile(ctx context.Context) templates.Tile {
 		if !d.StatOK || d.Total == 0 || !d.Mounted {
 			continue
 		}
-		pct := int(float64(d.Used) / float64(d.Total) * 100)
+		pct := d.UsedPercent()
 		if pct > best {
 			best = pct
 			t.Value = strconv.Itoa(pct) + " %"
@@ -95,7 +95,7 @@ func libraryRows(rep disks.Report) []templates.TileRow {
 	}
 	rows := make([]templates.TileRow, 0, len(lib))
 	for _, d := range lib {
-		pct := int(float64(d.Used) / float64(d.Total) * 100)
+		pct := d.UsedPercent()
 		rows = append(rows, templates.TileRow{
 			Label: d.Name, Value: strconv.Itoa(pct) + " %", Percent: pct, Hot: pct >= 90,
 			Sub: system.HumanBytes(d.Free) + " libres",

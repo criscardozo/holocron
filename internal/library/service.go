@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/cristian/holocron/internal/artwork"
 	"github.com/cristian/holocron/internal/jellyfin"
@@ -183,6 +184,24 @@ func (s *Service) sync(ctx context.Context, c *jellyfin.Client, p *jobs.Progress
 			return "", fmt.Errorf("upsert media item: %w", err)
 		}
 	}
+
+	// What Jellyfin no longer lists goes too. The sync only ever added, so a
+	// film deleted or renamed stayed in the count for good: on Ginebra the
+	// inventory said 328 films where Jellyfin had 327 folders. Not when the
+	// listing came back empty, which is a server having a bad moment far more
+	// often than a library emptied.
+	if len(pending) > 0 {
+		if err := deleteMissing(ctx, tx, pending, func(r row) string { return r.path }); err != nil {
+			return "", err
+		}
+	}
+	// When, so the page can say how old its numbers are.
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO settings (key, value) VALUES (?, ?)
+		 ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
+		keySyncedAt, time.Now().UTC().Format(time.RFC3339)); err != nil {
+		return "", fmt.Errorf("record sync: %w", err)
+	}
 	if err := tx.Commit(); err != nil {
 		return "", fmt.Errorf("commit sync: %w", err)
 	}
@@ -191,6 +210,58 @@ func (s *Service) sync(ctx context.Context, c *jellyfin.Client, p *jobs.Progress
 		return fmt.Sprintf("%d ítems (%d sin archivo)", len(pending), skipped), nil
 	}
 	return fmt.Sprintf("%d ítems", len(pending)), nil
+}
+
+// keySyncedAt records the last sync, in the table where one-row facts live.
+const keySyncedAt = "library.synced_at"
+
+// SyncedAt is when the inventory was last synced; ok is false if never.
+func (s *Service) SyncedAt(ctx context.Context) (at time.Time, ok bool, err error) {
+	var v string
+	err = s.db.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, keySyncedAt).Scan(&v)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return time.Time{}, false, nil
+	case err != nil:
+		return time.Time{}, false, fmt.Errorf("read sync time: %w", err)
+	}
+	t, err := time.Parse(time.RFC3339, v)
+	if err != nil {
+		return time.Time{}, false, fmt.Errorf("parse sync time: %w", err)
+	}
+	return t, true, nil
+}
+
+// deleteMissing removes the inventory rows whose folder is not in keep.
+func deleteMissing[T any](ctx context.Context, tx *sql.Tx, keep []T, path func(T) string) error {
+	want := make(map[string]bool, len(keep))
+	for _, k := range keep {
+		want[path(k)] = true
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT path FROM media_items`)
+	if err != nil {
+		return fmt.Errorf("list media items: %w", err)
+	}
+	var gone []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			_ = rows.Close()
+			return fmt.Errorf("scan media item: %w", err)
+		}
+		if !want[p] {
+			gone = append(gone, p)
+		}
+	}
+	if err := rows.Close(); err != nil {
+		return fmt.Errorf("close media items: %w", err)
+	}
+	for _, p := range gone {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM media_items WHERE path = ?`, p); err != nil {
+			return fmt.Errorf("delete media item: %w", err)
+		}
+	}
+	return nil
 }
 
 // mediaType maps Jellyfin's item types onto the values already stored in

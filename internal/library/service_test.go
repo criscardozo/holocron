@@ -146,6 +146,21 @@ func TestSyncFromJellyfin(t *testing.T) {
 	if !it.HasSubsES {
 		t.Error("expected the Spanish subtitle to be recorded")
 	}
+
+	// A film Jellyfin no longer lists leaves the inventory at the next sync:
+	// it used to stay, and Ginebra's count ran one ahead of Jellyfin's.
+	if _, err := database.ExecContext(ctx,
+		`INSERT INTO media_items (path, type, title) VALUES ('/gone/Old (2000)', 'movie', 'Old')`); err != nil {
+		t.Fatal(err)
+	}
+	job, err = svc.StartSync(ctx)
+	if err != nil {
+		t.Fatalf("StartSync again: %v", err)
+	}
+	waitForJob(t, svc, job.ID)
+	if stats, err := svc.Stats(ctx); err != nil || stats.Total != 1 {
+		t.Errorf("after a resync total = %d, %v; want 1, the stale row gone", stats.Total, err)
+	}
 }
 
 func waitForJob(t *testing.T, svc *Service, id string) {

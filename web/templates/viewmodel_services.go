@@ -37,4 +37,6 @@ type SvcDisk struct {
 	Bad    bool     `json:"bad"`
 	Facts  []string `json:"facts"` // "34 °C", "1351 h", "desgaste 7 %", "0 reasignados"…
 	Warn   []string `json:"warn"`  // what is worth worrying about
+	// Note qualifies an old reading: «dormido · leído hace 2 días».
+	Note string `json:"note,omitempty"`
 }

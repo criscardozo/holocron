@@ -33,6 +33,11 @@ func (s *Server) homeView(ctx context.Context, host string) templates.HomeView {
 	// time left comes from the current it draws, and reading that in the
 	// middle of this page's own burst made it look a lot shorter.
 	bat := hardware.ReadBattery()
+	// The CPU for the same reason, and it showed more: read during the burst
+	// it measured the page's own calls to Jellyfin and the *arr apps, which
+	// run on this machine, and said 7–26 % of a machine idling at 1 %. The
+	// hardware tile below reuses this reading (system.Read caches it).
+	st := system.Read()
 
 	// Everything the page needs comes from a different place; asked at once,
 	// the page waits for the slowest instead of the sum.
@@ -52,7 +57,7 @@ func (s *Server) homeView(ctx context.Context, host string) templates.HomeView {
 	av := activityView(act, now)
 	v := templates.HomeView{
 		Machine: power.MachineName(),
-		Status:  homeStatus(system.Read(), bat),
+		Status:  homeStatus(st, bat),
 		Attn:    chips,
 		Recent:  av.Recent,
 	}
@@ -193,7 +198,7 @@ func (s *Server) attentionChips(ctx context.Context, b hardware.Battery) []templ
 			if !d.StatOK || d.Total == 0 || !d.Mounted {
 				continue
 			}
-			if pct := int(float64(d.Used) / float64(d.Total) * 100); pct >= 90 {
+			if pct := d.UsedPercent(); pct >= 90 {
 				chips = append(chips, templates.AttnChip{
 					Label: fmt.Sprintf("%s %d%%", d.Name, pct),
 					Href:  "/disk",

@@ -186,13 +186,14 @@ func hardwareView(s hardware.Snapshot) templates.HardwareView {
 
 	for _, d := range s.Disks {
 		v.Disks = append(v.Disks, templates.HWDisk{
-			Name:  d.Name,
-			Model: d.Model,
-			Read:  rate(d.ReadBps),
-			Write: rate(d.WriteBps),
-			Busy:  pct(d.BusyPct),
-			Width: width(d.BusyPct),
-			Idle:  d.ReadBps == 0 && d.WriteBps == 0 && d.BusyPct < 0.5,
+			Name:      d.Name,
+			Model:     d.Model,
+			Read:      rate(d.ReadBps),
+			Write:     rate(d.WriteBps),
+			Busy:      pct(d.BusyPct),
+			Width:     width(d.BusyPct),
+			Idle:      d.ReadBps == 0 && d.WriteBps == 0 && d.BusyPct < 0.5,
+			Unmounted: d.Unmounted,
 		})
 	}
 

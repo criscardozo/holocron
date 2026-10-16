@@ -389,3 +389,24 @@ func TestUnlabelledAudioIsItsOwnCategory(t *testing.T) {
 		t.Errorf("subs missing = %+v, want only u3", got)
 	}
 }
+
+// TestMissingSpecialsAreNotGhosts: TheTVDB lists every special of a show as a
+// season 0 episode with no file. Sonarr does not fetch them and nobody misses
+// them, so they are no finding; a special that is on disk is checked as usual.
+func TestMissingSpecialsAreNotGhosts(t *testing.T) {
+	t.Parallel()
+	special := jellyfin.Item{ID: "s0", Type: jellyfin.TypeEpisode, Name: "Behind the scenes",
+		SeriesName: "Dark Matter", SeriesID: "dm", Season: num(0), Episode: num(1)}
+	onDisk := episode("s0b", "Dark Matter", "Extra", 0, 2, audio("eng"))
+	onDisk.Overview = ""
+	missing := jellyfin.Item{ID: "e1", Type: jellyfin.TypeEpisode, Name: "Pilot",
+		SeriesName: "Dark Matter", SeriesID: "dm", Season: num(1), Episode: num(1)}
+
+	r := Analyse([]jellyfin.Item{special, onDisk, missing}, testNow, nil)
+	if got := r.Count(CatGhost); got != 1 || r.For(CatGhost)[0].ItemID != "e1" {
+		t.Errorf("ghosts = %+v, want only the season 1 episode", r.For(CatGhost))
+	}
+	if got := r.Count(CatNoSynopsis); got != 1 {
+		t.Errorf("no synopsis = %d, want the special on disk", got)
+	}
+}

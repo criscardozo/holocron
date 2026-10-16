@@ -134,7 +134,9 @@ templ HardwareLive(v HardwareView) {
 							}
 						</div>
 						@hwBar(d.Width, false)
-						if d.Idle {
+						if d.Unmounted {
+							<span class="muted">sin montar</span>
+						} else if d.Idle {
 							<span class="muted">sin actividad</span>
 						} else {
 							<span class="mono num">{ d.Busy } · ↓ { d.Read } · ↑ { d.Write }</span>

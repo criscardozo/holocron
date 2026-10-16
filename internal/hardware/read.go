@@ -370,6 +370,47 @@ type Disk struct {
 	WriteBps float64
 	// BusyPct is the share of the interval the disk spent doing I/O.
 	BusyPct float64
+	// Unmounted is a disk none of whose partitions is mounted or swapped on:
+	// on Ginebra, the SSD with Cristian's own files, left alone on purpose.
+	Unmounted bool
+}
+
+// inUse lists the block devices with a mounted or swap partition, by disk
+// name: /dev/nvme0n1p2 counts for nvme0n1. Best effort: unreadable files just
+// leave every disk unmarked.
+func inUse() map[string]bool {
+	out := map[string]bool{}
+	for _, f := range []string{"/proc/mounts", "/proc/swaps"} {
+		b, err := os.ReadFile(f) //#nosec G304 -- fixed paths
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(b), "\n") {
+			src, _, _ := strings.Cut(line, " ")
+			if !strings.HasPrefix(src, "/dev/") {
+				continue
+			}
+			out[strings.TrimPrefix(src, "/dev/")] = true
+		}
+	}
+	return out
+}
+
+// markUnmounted flags the disks with no partition in use.
+func markUnmounted(disks []Disk, used map[string]bool) {
+	if len(used) == 0 {
+		return
+	}
+	for i := range disks {
+		mounted := false
+		for dev := range used {
+			if dev == disks[i].Name || strings.HasPrefix(dev, disks[i].Name) {
+				mounted = true
+				break
+			}
+		}
+		disks[i].Unmounted = !mounted
+	}
 }
 
 // diskModel is the disk's model as the kernel knows it. USB-to-SATA bridges

@@ -10,6 +10,8 @@ type MediaPageView struct {
 	WithoutSubs int
 	Truncated   bool
 	Items       []MediaItemRow
+	// SyncedAge is how old the inventory is, in words; "" if never synced.
+	SyncedAge string
 }
 
 // MediaItemRow is one inventory row.

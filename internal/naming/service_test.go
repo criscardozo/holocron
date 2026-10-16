@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/cristian/holocron/internal/db"
 	"github.com/cristian/holocron/internal/folders"
@@ -118,6 +119,36 @@ func TestScanSurvivesAnUnavailableFolder(t *testing.T) {
 	}
 	if n != 1 {
 		t.Errorf("found %d issues, want 1 from the folder that is there", n)
+	}
+}
+
+// TestLastScanTellsNeverFromClean: an empty issue table used to read as «every
+// folder complies» on Ginebra, where no scan had ever run. The scan records
+// when it ran and what it could not read, so the page can tell the two apart.
+func TestLastScanTellsNeverFromClean(t *testing.T) {
+	t.Parallel()
+	svc, store := newService(t)
+
+	if _, _, ok, err := svc.LastScan(t.Context()); err != nil || ok {
+		t.Fatalf("before any scan: ok=%v err=%v, want never", ok, err)
+	}
+
+	gone := t.TempDir()
+	if _, err := store.Add(t.Context(), "Externo", gone, folders.PurposeMovies); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(gone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Scan(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	at, unreadable, ok, err := svc.LastScan(t.Context())
+	if err != nil || !ok || time.Since(at) > time.Minute {
+		t.Fatalf("after a scan: at=%v ok=%v err=%v", at, ok, err)
+	}
+	if len(unreadable) != 1 || unreadable[0] != gone {
+		t.Errorf("unreadable = %q, want [%s]", unreadable, gone)
 	}
 }
 

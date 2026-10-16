@@ -221,6 +221,13 @@ func Analyse(items []jellyfin.Item, now time.Time, skipSubs []jellyfin.Library) 
 		// up, an unaired episode must be left alone. Reported once either way,
 		// because piling "no synopsis" on top buries the finding that matters.
 		if !it.OnDisk() {
+			// A special (season 0) with no file is not missing: Jellyfin's
+			// TheTVDB plugin lists every special there is, and nobody,
+			// Sonarr included, goes looking for them. On Ginebra they were a
+			// good part of the «ghosts».
+			if it.Type == jellyfin.TypeEpisode && it.Season != nil && *it.Season == 0 {
+				continue
+			}
 			if it.Unaired(now) {
 				r.add(CatUnaired, it, "Sale el "+it.Premiere.Local().Format("02/01/2006"))
 			} else {

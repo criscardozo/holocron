@@ -55,6 +55,9 @@ templ MediaDetailSection(v MediaPageView) {
 					@IconSm("gauge")
 					Ver calidad
 				</a>
+				if v.SyncedAge != "" {
+					<span class="muted">Sincronizado { v.SyncedAge }</span>
+				}
 			</div>
 		</div>
 		<div id="media-status"></div>

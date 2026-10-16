@@ -74,6 +74,8 @@ type HWDisk struct {
 	Busy  string `json:"busy"`
 	Width string `json:"width"`
 	Idle  bool   `json:"idle"`
+	// Unmounted: in the machine but in use by nothing, on purpose or not.
+	Unmounted bool `json:"unmounted,omitempty"`
 }
 
 // HWBattery is the battery that, on Ginebra, is the UPS.

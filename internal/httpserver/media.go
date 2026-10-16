@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/cristian/holocron/internal/artwork"
 	"net/http"
+	"time"
 
 	"github.com/cristian/holocron/internal/jobs"
 	"github.com/cristian/holocron/internal/library"
@@ -21,6 +22,9 @@ func (s *Server) mediaView(ctx context.Context) templates.MediaPageView {
 		return v
 	}
 	v.Syncing = s.deps.Library.Syncing()
+	if at, ok, err := s.deps.Library.SyncedAt(ctx); err == nil && ok {
+		v.SyncedAge = humanAge(time.Since(at))
+	}
 	if st, err := s.deps.Library.Stats(ctx); err == nil {
 		v.Total, v.Movies, v.WithoutSubs = st.Total, st.Movies, st.WithoutSubs
 	}

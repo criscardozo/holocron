@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cristian/holocron/web/templates"
 )
@@ -12,6 +13,27 @@ import (
 func (s *Server) handleNamingPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	view := templates.NamingPageView{HasMediaFolders: s.deps.Naming.HasMediaFolders(ctx)}
+	at, unreadable, scanned, err := s.deps.Naming.LastScan(ctx)
+	if err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	// Never checked: check now. It is a readdir of each library's top level,
+	// and without it the page would have nothing true to say.
+	if view.HasMediaFolders && !scanned {
+		if _, err := s.deps.Naming.Scan(ctx); err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		if at, unreadable, scanned, err = s.deps.Naming.LastScan(ctx); err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+	}
+	if scanned {
+		view.ScannedAge = humanAge(time.Since(at))
+	}
+	view.Unreadable = unreadable
 	issues, err := s.deps.Naming.Issues(ctx)
 	if err != nil {
 		s.serverError(w, r, err)

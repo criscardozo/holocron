@@ -94,7 +94,7 @@ templ ServicesLive(v ServicesView) {
 										<span class="muted">{ d.Model }</span>
 									}
 								</div>
-								if d.Asleep {
+								if d.Asleep && d.Health == "" {
 									// Not an error: the timer reads with -n standby so it never
 									// wakes a sleeping disk, and this one was asleep.
 									<div class="muted act-small" title="El disco estaba dormido cuando se midió, y no se lo despierta para esto: SMART se lee con -n standby.">dormido, sin lectura todavía</div>
@@ -107,6 +107,9 @@ templ ServicesLive(v ServicesView) {
 									</div>
 									for _, w := range d.Warn {
 										<div class="act-small act-warn">{ w }</div>
+									}
+									if d.Note != "" {
+										<div class="muted act-small">{ d.Note }</div>
 									}
 								}
 							</li>
