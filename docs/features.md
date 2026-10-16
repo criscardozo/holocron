@@ -102,6 +102,12 @@ encontrado, agrupadas por biblioteca.
 
 ---
 
+**Revisado, no supuesto** (16/10/2026): la revisión guarda cuándo corrió y qué
+carpeta no pudo leer. Antes, una tabla vacía se mostraba como «todas cumplen»
+aunque nunca se hubiera revisado nada, y así estuvo en Ginebra. Ahora la página
+revisa sola la primera vez, dice «Revisado hace…» y avisa la carpeta que no se
+pudo leer; la baldosa dice «Sin revisar» hasta entonces.
+
 ## Feature 4a — Inventario de medios desde Jellyfin
 
 Holocron inventaría la biblioteca desde Jellyfin: título, año, identificadores
@@ -130,6 +136,13 @@ recorre el disco para averiguarlo.
   así que hay que unir las pistas de todos.
 
 ---
+
+**Lo que ya no está, se va** (16/10/2026): la sincronización sólo agregaba, así
+que una película borrada o renombrada seguía en la cuenta (en Ginebra, 328
+contra 327 carpetas). Ahora borra lo que Jellyfin ya no lista, salvo que la
+lista venga vacía, y la página dice cuándo se sincronizó. La cuenta es por
+carpeta: una película con dos versiones (1080p y 4K) es una, aunque Jellyfin
+las liste por separado.
 
 ## Feature 4c — Panel de calidad de biblioteca
 
@@ -174,6 +187,11 @@ a la biblioteca», que es distinto de «cuánto hay»:
   totales reales y la UI dice cuándo la lista está cortada.
 
 ---
+
+**Especiales** (16/10/2026): un episodio de la temporada 0 sin archivo no es un
+fantasma. El plugin de TheTVDB de Jellyfin lista todos los especiales de cada
+serie y ni Sonarr los busca; eran buena parte de los fantasmas de Ginebra. Un
+especial que sí está en disco se revisa como cualquier episodio.
 
 ## Feature 4b — Búsqueda de subtítulos (OpenSubtitles)
 
