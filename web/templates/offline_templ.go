@@ -33,7 +33,7 @@ func OfflinePage() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><title>Ginebra no responde · Holocron</title><meta name=\"theme-color\" content=\"#07090e\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/holocron.svg\"><link rel=\"stylesheet\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><title>Ginebra no responde · Holocron</title><meta name=\"theme-color\" content=\"#07090e\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/ginebra.svg\"><link rel=\"stylesheet\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -59,7 +59,7 @@ func OfflinePage() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" defer></script></head><body class=\"offline-body\"><main class=\"card offline-card\"><img src=\"/static/holocron.svg\" alt=\"\" width=\"56\" height=\"56\"><h1>Ginebra no responde</h1><p class=\"muted\">No se pudo llegar al servidor. Suele ser una de estas:</p><ul class=\"offline-why\"><li>Estás fuera de casa y Tailscale está apagado en este teléfono.</li><li>El teléfono no tiene conexión.</li><li>Ginebra está apagada o reiniciándose.</li></ul><a class=\"btn btn-primary\" href=\"/\" data-reload>Reintentar</a></main></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" defer></script></head><body class=\"offline-body\"><main class=\"card offline-card\"><img src=\"/static/ginebra.svg\" alt=\"\" width=\"56\" height=\"56\"><h1>Ginebra no responde</h1><p class=\"muted\">No se pudo llegar al servidor. Suele ser una de estas:</p><ul class=\"offline-why\"><li>Estás fuera de casa y Tailscale está apagado en este teléfono.</li><li>El teléfono no tiene conexión.</li><li>Ginebra está apagada o reiniciándose.</li></ul><a class=\"btn btn-primary\" href=\"/\" data-reload>Reintentar</a></main></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

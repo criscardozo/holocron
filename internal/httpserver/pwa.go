@@ -19,7 +19,7 @@ import (
 // when it installs. The same versioned URLs the pages link, so a release
 // replaces them.
 func offlineAssets() []string {
-	return []string{templates.Asset("styles.css"), templates.Asset("app.js"), "/static/holocron.svg"}
+	return []string{templates.Asset("styles.css"), templates.Asset("app.js"), "/static/ginebra.svg"}
 }
 
 func (s *Server) handleManifest(w http.ResponseWriter, _ *http.Request) {
