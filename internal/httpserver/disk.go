@@ -219,7 +219,7 @@ func (s *Server) buildDiskDetail(ctx context.Context, f folders.Folder, disk dis
 		d.UsedHuman = system.HumanBytes(used)
 		d.FreeHuman = system.HumanBytes(avail)
 		if room := used + avail; room > 0 {
-			d.UsedPercent = int((used*100 + room - 1) / room)
+			d.UsedPercent = int((used*100 + room - 1) / room) //#nosec G115 -- a share of 100, at most 100
 		}
 	}
 

@@ -79,7 +79,7 @@ func (d Disk) UsedPercent() int {
 	if !d.StatOK || room == 0 {
 		return 0
 	}
-	return int((d.Used*100 + room - 1) / room)
+	return int((d.Used*100 + room - 1) / room) //#nosec G115 -- a share of 100, at most 100
 }
 
 // ReallocUp says the disk has more reallocated sectors than when first seen.

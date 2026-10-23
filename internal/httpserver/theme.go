@@ -39,9 +39,10 @@ func (s *Server) handleTheme(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name: themeCookie, Value: theme, Path: "/",
-		MaxAge:   int((400 * 24 * time.Hour).Seconds()), // the most browsers keep
-		HttpOnly: true, SameSite: http.SameSiteLaxMode,
-		Secure: r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https",
+		MaxAge: int((400 * 24 * time.Hour).Seconds()), // the most browsers keep
+		// Secure always: the site is only reached over HTTPS through Caddy,
+		// and browsers keep a secure cookie on http://localhost for development.
+		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: true,
 	})
 	http.Redirect(w, r, "/settings#apariencia", http.StatusSeeOther)
 }
