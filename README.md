@@ -143,6 +143,7 @@ Dos niveles:
   actualizaciones de Gestión), `HOLOCRON_DISKS` (Disco), `HOLOCRON_MEDIA_FOLDERS`,
   `HOLOCRON_QUALITY_SKIP_SUBS` (bibliotecas que Calidad no revisa por subtítulos),
   `HOLOCRON_DEVICES_DIR` (Dispositivos: la carpeta con `dispositivos.toml` y sus fotos),
+  `HOLOCRON_HOLLYWOOD_URL` (Hollywood: dónde contesta el launcher de la tele en la red de casa),
   `HOLOCRON_DIRECT_HOST` (Stack) y `HOLOCRON_MACHINE_NAME`. El detalle de cada una
   está en [`docs/features.md`](docs/features.md).
 - **Aplicación** (desde la UI, persistido en SQLite): carpetas de medios, dirección de

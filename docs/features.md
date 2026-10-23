@@ -1180,3 +1180,24 @@ Holocron tiene tema claro además del oscuro. Por defecto sigue al sistema; en
   el tema claro, conviene elegir **Claro** en Ajustes, que la pone en negro.
   Sin probar en el dispositivo.
 
+---
+
+## Feature 18 — Hollywood (`/hollywood`)
+
+La configuración del launcher propio de la tele del living
+([hollywood-launcher](https://github.com/criscardozo/hollywood-launcher)), como
+una página más del sitio: qué configura (Jellyfin, YouTube, Seerr, fijados,
+botones del control, reproductor), dónde apunta cada cosa, lo que conviene saber
+(el login de YouTube vence cada 7 días) y un botón a su propia página de
+configuración, `https://hollywood.<dominio>`.
+
+- **Estática a propósito**: el texto sale de `docs/launcher.md` del repo del
+  launcher. Toda la API del launcher pide el código de 6 dígitos que muestra la
+  tele, y Holocron no lo tiene ni lo guarda: no cambia nada ni muestra valores,
+  sólo qué hay configurado.
+- **¿Responde?**: con `HOLOCRON_HOLLYWOOD_URL` (en Ginebra,
+  `http://192.168.0.4:8765/`) la página le pide al launcher su portada, que no
+  pide código, con 2 s de tope, y dice «responde» o «no responde». La página
+  vive dentro del launcher: si no contesta, la tele está apagada o Hollywood no
+  es el inicio. Sin la variable no dice nada.
+
