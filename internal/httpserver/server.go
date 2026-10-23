@@ -69,6 +69,9 @@ type Deps struct {
 	// Devices reads the house's devices file. Unconfigured, the page says
 	// how to set it up.
 	Devices *devices.Store
+	// HollywoodURL is the TV launcher's settings page on the home network,
+	// checked to say whether it answers; "" skips the check.
+	HollywoodURL string
 }
 
 // Server serves the Holocron web UI.
@@ -100,6 +103,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /art/{kind}/{id}", s.handleArt)
 	mux.HandleFunc("GET /stack", s.handleStack)
 	mux.HandleFunc("GET /devices", s.handleDevices)
+	mux.HandleFunc("GET /hollywood", s.handleHollywood)
 	mux.HandleFunc("GET /devices/photo/{name}", s.handleDevicePhoto)
 	mux.HandleFunc("GET /{$}", s.handleDashboard)
 

@@ -881,6 +881,13 @@ button.fs-row { width: 100%; background: transparent; border: 0; font: inherit; 
 .svc-state { display: inline-flex; align-items: center; gap: var(--space-2); }
 .svc-since { font-size: 12px; font-weight: 400; color: var(--text-muted); }
 
+/* ── Hollywood (the TV launcher's settings) ───────────────────────── */
+.hl-launcher { margin-bottom: var(--space-2); }
+.hl-setting-icon { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: var(--radius-md); background: var(--color-accent-800); color: var(--color-accent); }
+.hl-setting-icon .ic { width: 20px; height: 20px; }
+/* .mono breaks anywhere, which suits a path; these are words. */
+.hl-where { word-break: normal; overflow-wrap: break-word; }
+
 /* ── theme picker (Ajustes) ───────────────────────────────────────── */
 .theme-picker { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: var(--radius-md); background: var(--color-surface-2); border: 1px solid var(--glass-border); }
 .theme-opt { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 14px; border: 0; border-radius: 9px; background: none; color: var(--text-soft); font: inherit; font-size: 14px; cursor: pointer; }

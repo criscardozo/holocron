@@ -153,6 +153,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		Disk:               diskService,
 		Disks:              diskWatcher,
 		Devices:            devices.NewStore(cfg.DevicesDir),
+		HollywoodURL:       cfg.HollywoodURL,
 		Hardware:           hardware.NewHub(2 * time.Second),
 		Activity:           activityHub,
 		Services:           servicesHub,

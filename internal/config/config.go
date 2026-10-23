@@ -49,6 +49,10 @@ type Config struct {
 	// dispositivos.toml and its photos, for the Dispositivos page. On the
 	// server, never in the repository: it lists the house's addresses.
 	DevicesDir string
+	// HollywoodURL is HOLOCRON_HOLLYWOOD_URL: where the TV's launcher serves
+	// its settings page on the home network, so the Hollywood page can say
+	// whether it answers. Empty skips the check.
+	HollywoodURL string
 	// DirectHost is HOLOCRON_DIRECT_HOST, the server's address on the home
 	// network for the Stack page's direct links. Found on its own when unset.
 	DirectHost string
@@ -110,13 +114,14 @@ func Load() Config {
 		DBPath:   envOr("HOLOCRON_DB", defaultDBPath()),
 		LogLevel: envOr("HOLOCRON_LOG_LEVEL", "info"),
 
-		WatchUnits:  strings.Fields(os.Getenv("HOLOCRON_WATCH_UNITS")),
-		WatchTimers: os.Getenv("HOLOCRON_WATCH_TIMERS"),
-		SmartFile:   os.Getenv("HOLOCRON_SMART_FILE"),
-		UpdatesFile: os.Getenv("HOLOCRON_UPDATES_FILE"),
-		DirectHost:  os.Getenv("HOLOCRON_DIRECT_HOST"),
-		DevicesDir:  os.Getenv("HOLOCRON_DEVICES_DIR"),
-		MachineName: envOr("HOLOCRON_MACHINE_NAME", hostTitle()),
+		WatchUnits:   strings.Fields(os.Getenv("HOLOCRON_WATCH_UNITS")),
+		WatchTimers:  os.Getenv("HOLOCRON_WATCH_TIMERS"),
+		SmartFile:    os.Getenv("HOLOCRON_SMART_FILE"),
+		UpdatesFile:  os.Getenv("HOLOCRON_UPDATES_FILE"),
+		DirectHost:   os.Getenv("HOLOCRON_DIRECT_HOST"),
+		DevicesDir:   os.Getenv("HOLOCRON_DEVICES_DIR"),
+		HollywoodURL: os.Getenv("HOLOCRON_HOLLYWOOD_URL"),
+		MachineName:  envOr("HOLOCRON_MACHINE_NAME", hostTitle()),
 	}
 	c.MediaFolders, c.BadFolders = parseFolders(os.Getenv("HOLOCRON_MEDIA_FOLDERS"))
 	c.Disks, c.BadDisks = parseDisks(os.Getenv("HOLOCRON_DISKS"))

@@ -1,0 +1,89 @@
+package templates
+
+// HollywoodPage is the TV launcher's configuration, read from its own docs
+// (docs/launcher.md in hollywood-launcher): what each setting is, where it
+// points, and what to know about it. It changes nothing: the launcher's own
+// page does that, behind the code the TV shows.
+templ HollywoodPage(v HollywoodView) {
+	@Layout("Hollywood") {
+		<div class="page-head">
+			<div>
+				<h1>Hollywood</h1>
+				<p class="sub">El inicio propio de la tele del living: qué tiene configurado y dónde se cambia</p>
+			</div>
+		</div>
+		<section class="card stack-feature hl-launcher">
+			<header class="stack-head">
+				<img src="/static/apps/hollywood.png" alt="" width="64" height="64"/>
+				<div class="stack-title">
+					<h2>Configuración del launcher</h2>
+					<span class="stack-meta">
+						if v.Checked {
+							if v.Up {
+								<span class="badge badge-yes">responde</span>
+							} else {
+								<span class="badge badge-no">no responde</span>
+							}
+						}
+						<span class="mono muted">dev.cardozo.hollywood.launcher</span>
+					</span>
+				</div>
+			</header>
+			<p class="stack-purpose">
+				La sirve el propio launcher, desde la tele. Cada cambio pide el código de 6 dígitos que
+				se ve en la tele en <strong>Todas las apps → Configuración del inicio</strong>; con 10
+				códigos equivocados se bloquea 5 minutos.
+			</p>
+			if v.Checked && !v.Up {
+				<p class="notice mb-6">
+					No contesta: la tele está apagada, o Hollywood no es el inicio en este momento. La página
+					vive dentro del launcher, así que sólo anda mientras él está abierto.
+				</p>
+			}
+			<div class="stack-actions">
+				<a class="btn btn-primary" href={ templ.SafeURL(v.URL) } hx-boost="false">
+					Abrir la configuración
+					@IconSm("external")
+				</a>
+				<span class="muted">Sólo desde la red de casa</span>
+			</div>
+		</section>
+		<h2 class="stack-heading">Qué tiene configurado</h2>
+		<ul class="stack-grid">
+			@hollywoodSetting("film", "Jellyfin", "Ginebra · 192.168.0.2:8096",
+				"Las filas de «en curso» y «agregado recientemente». Se entra con usuario y contraseña desde la página, o con Quick Connect desde la tele; el launcher guarda sólo el token.")
+			@hollywoodSetting("play", "YouTube", "Cliente OAuth propio · youtube.readonly",
+				"«Nuevo en tus suscripciones». Se conecta con un código en google.com/device. El cliente está en modo Testing: el login vence cada 7 días y hay que volver a tocar «Conectar YouTube».")
+			@hollywoodSetting("search", "Seerr", "192.168.0.2:5055",
+				"Busca series y películas para los fijados, con la imagen y la sinopsis de TMDB en español.")
+			@hollywoodSetting("tag", "Fijados", "Prime Video · Disney+ · Max",
+				"Esas apps no dejan leer lo que estás viendo, así que se fijan a mano: se busca, se elige el servicio y, si se quiere, se pega el link de Compartir. Sin link, abre la app.")
+			@hollywoodSetting("gear", "Botones del control", "Servicio de accesibilidad",
+				"Se aprieta un botón, la página muestra su código y se le asigna una app: sirve para los que quedan muertos, como Netflix. Todavía sin probar con el control real.")
+			@hollywoodSetting("tv", "Reproductor", "Wholphin (o el oficial de Jellyfin)",
+				"Wholphin arranca desde donde ibas; el oficial sólo abre la ficha. Lo visto queda en Jellyfin, así que cambiar de reproductor no pierde nada.")
+		</ul>
+		<p class="stack-note muted">
+			La tele es una FFALCON 75" U65 con Google TV, por cable en 192.168.0.4. Ninguna clave del
+			launcher pasa por Holocron: lo de arriba es lo que configura, no sus valores. El detalle está
+			en <a href="https://github.com/criscardozo/hollywood-launcher/blob/main/docs/launcher.md" hx-boost="false">docs/launcher.md</a> del repo del launcher.
+		</p>
+	}
+}
+
+templ hollywoodSetting(icon, name, where, what string) {
+	<li>
+		<article class="card stack-card">
+			<header class="stack-head">
+				<span class="hl-setting-icon">
+					@Icon(icon)
+				</span>
+				<div class="stack-title">
+					<h3>{ name }</h3>
+					<span class="stack-meta"><span class="mono muted hl-where">{ where }</span></span>
+				</div>
+			</header>
+			<p class="stack-purpose">{ what }</p>
+		</article>
+	</li>
+}

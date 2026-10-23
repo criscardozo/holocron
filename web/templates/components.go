@@ -17,7 +17,7 @@ var navGroups = []struct {
 	Label string
 	Items []navItem
 }{
-	{"", []navItem{{"Inicio", "/", "home"}, {"Stack", "/stack", "layers"}, {"Dispositivos", "/devices", "devices"}}},
+	{"", []navItem{{"Inicio", "/", "home"}, {"Stack", "/stack", "layers"}, {"Dispositivos", "/devices", "devices"}, {"Hollywood", "/hollywood", "tv"}}},
 	{"Ahora", []navItem{
 		{"Actividad", "/activity", "activity"},
 		{"Hardware", "/hardware", "cpu"},
